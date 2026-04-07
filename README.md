@@ -42,32 +42,15 @@ python3.10 -c "import asc; print('pyasc OK')"
 python3.10 -c "import torch; print('torch OK')"
 ```
 
-### Step 3. Install skills for OpenCode
+### Step 3. Start OpenCode
+
+From the repository root:
 
 ```bash
-TEAM_DIR=teams/pyasc-kernel-dev-team
-INSTALL_DIR=$TEAM_DIR/.opencode
-
-mkdir -p "$INSTALL_DIR/skills"
-ln -sfn "$(pwd)/$TEAM_DIR/AGENTS.md" "$INSTALL_DIR/AGENTS.md"
-
-for skill_dir in skills/*; do
-    ln -sfn "$(pwd)/$skill_dir" "$INSTALL_DIR/skills/$(basename "$skill_dir")"
-done
-```
-
-Quick check:
-
-```bash
-ls -la "$INSTALL_DIR/skills"
-```
-
-### Step 4. Start OpenCode
-
-```bash
-cd teams/pyasc-kernel-dev-team
 opencode
 ```
+
+Skill discovery is handled by `opencode.json` in the repo root — no additional installation step is needed.
 
 Then give the agent a short prompt:
 
@@ -78,30 +61,19 @@ The shape is mainly [1,128], [4,2048], [32,4096].
 
 The agent will autonomously walk through environment check, design, implementation, review, and verification. Do not intervene unless the agent hits an external platform issue.
 
-### Step 5. Verify the result
+### Step 4. Verify the result
 
 After the agent finishes, run the generated kernel manually:
 
 ```bash
 source $HOME/Ascend/cann/set_env.sh
 export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
-python3.10 teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py -r Model -v Ascend910B1
+python3.10 teams/pyasc-kernel-dev-team/kernels/<kernel_name>/kernel.py -r Model -v Ascend910B1
 ```
-
-### Alternative: run from repo root without installing skills
-
-If you prefer not to set up the `.opencode` directory, OpenCode can discover skills via the repo-level `opencode.json`:
-
-```bash
-cd ~/workspace/pyasc-skill-stack
-opencode
-```
-
-This mode relies on `opencode.json` for skill discovery. The installed-skills approach (Step 3) is recommended because it gives OpenCode explicit skill context, allowing shorter prompts.
 
 ## What the agent does
 
-When skills are installed correctly, the agent:
+When skills are discovered correctly, the agent:
 
 1. Loads `pyasc-codegen-workflow` and follows a 4-phase workflow (Phase 0 → 1 → 2 → 3)
 2. Initializes the kernel project directory
@@ -111,6 +83,18 @@ When skills are installed correctly, the agent:
 6. Conducts self-review and acceptance review against pyasc constraints
 7. Runs verification (simulator or JIT fallback) and writes a verification record
 8. Delivers a runnable kernel with all workflow artifacts
+
+## What the agent should not require from you
+
+If skills are loaded correctly, the agent should not:
+
+- ask you to manually read internal skill files
+- ask you to create `design.md`, `kernel.py`, or review documents
+- ask you to run internal phase scripts
+- require a long "management" prompt with all phases listed
+- stop at the first error without attempting to fix it
+
+If the agent requires any of the above, there is likely a problem with skill discovery or the `AGENTS.md` configuration.
 
 ## Project structure
 
@@ -140,7 +124,9 @@ pyasc-skill-stack/
 │   ├── unit/                         # L1: structure/content checks
 │   ├── behavior/                     # L2: trigger/action checks
 │   └── integration/                  # L3: end-to-end workflow
-└── opencode.json                     # Repo-level skill discovery
+├── opencode.json                     # Skill discovery config
+└── docs/
+    └── cann-setup.md                 # CANN environment setup guide
 ```
 
 ## Skills library
@@ -167,6 +153,18 @@ bash tests/run-tests.sh --all
 ```
 
 See [tests/README.md](tests/README.md) for details.
+
+## Headless run (CI / scripted)
+
+For non-interactive verification, use `opencode run` with a pseudo-TTY wrapper:
+
+```bash
+source $HOME/Ascend/cann/set_env.sh
+export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+script -qc 'opencode run "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]." --format json' /dev/null
+```
+
+The `script -qc` wrapper provides the pseudo-TTY that `opencode run` requires in headless environments.
 
 ## License
 
