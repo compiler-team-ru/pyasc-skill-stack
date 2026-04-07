@@ -39,6 +39,7 @@ description: pyasc kernel development standard workflow. Contains 4 phases with 
 - Phase 0 skips environment check -> pyasc not installed, CANN missing
 - Phase 2 uses unsupported syntax inside `@asc.jit` -> JIT compilation fails
 - Skipping acceptance review -> syntax constraint violations missed
+- Using fixed `core_num=8` / `tile_num=8` with small shapes (e.g. `[1,128]`) -> tile_length too small -> silent incorrect results on simulator. **Always use `_compute_tiling()` and pass `tile_num` as `asc.ConstExpr[int]`** (pyasc's JIT cache ignores ordinary globals — only `ConstExpr` values are cache-safe).
 
 ---
 
@@ -131,6 +132,7 @@ Main Agent
    - Also read the closest tutorial: `golden/tutorials/01_add.py` or another relevant golden tutorial
 3. **Select APIs**: Choose from `asc.language.basic`, `asc.language.core`, etc.
    - **MANDATORY READ**: Load skill `pyasc-api-patterns` to check correct API usage patterns
+   - **CRITICAL**: Read the "Dynamic tiling for variable shapes" section — you MUST use `_compute_tiling()` if any requested shape has fewer than ~4096 elements (e.g. `[1,128]`)
 4. **Check syntax constraints**: Verify all constructs you plan to use are supported.
    - **MANDATORY READ**: Load skill `pyasc-syntax-constraints` — confirm every construct is in the supported set
 5. **Write design document**: Use [templates/design-template.md](templates/design-template.md)

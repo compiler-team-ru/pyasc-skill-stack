@@ -18,28 +18,48 @@ import asc.runtime.config as config
 import asc.lib.runtime as rt
 
 BUFFER_NUM = 2
-TILE_NUM = 8
 MIN_TILE_LENGTH = 32
 
 logging.basicConfig(level=logging.INFO)
 
 
+def _compute_tiling(total_length: int) -> tuple:
+    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH.
+
+    Tries the highest core count and tile count first for maximum
+    parallelism, then reduces until the per-tile data length is at
+    least MIN_TILE_LENGTH (required for efficient DMA transfers).
+    """
+    for cores in (8, 4, 2, 1):
+        if total_length % cores != 0:
+            continue
+        block = total_length // cores
+        for tiles in (8, 4, 2, 1):
+            if block % (tiles * BUFFER_NUM) != 0:
+                continue
+            tile_len = block // tiles // BUFFER_NUM
+            if tile_len >= MIN_TILE_LENGTH:
+                return cores, tiles
+    return 1, 1
+
+
 @asc.jit
-def abs_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, block_length: int):
+def abs_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, block_length: int,
+               tile_num: asc.ConstExpr[int]):
     offset = asc.get_block_idx() * block_length
     x_gm = asc.GlobalTensor()
     y_gm = asc.GlobalTensor()
     x_gm.set_global_buffer(x + offset, block_length)
     y_gm.set_global_buffer(y + offset, block_length)
 
-    tile_length = block_length // TILE_NUM // BUFFER_NUM
+    tile_length = block_length // tile_num // BUFFER_NUM
     data_type = x.dtype
     buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
 
     x_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, 0, tile_length * BUFFER_NUM)
     y_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size, tile_length * BUFFER_NUM)
 
-    for i in range(TILE_NUM * BUFFER_NUM):
+    for i in range(tile_num * BUFFER_NUM):
         buf_id = i % BUFFER_NUM
 
         asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
@@ -58,22 +78,12 @@ def abs_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress, block_length: int):
         asc.wait_flag(asc.HardEvent.MTE3_MTE2, buf_id)
 
 
-def _compute_core_num(total_length: int) -> int:
-    """Pick a core count that keeps tile_length >= MIN_TILE_LENGTH."""
-    for cores in (8, 4, 2, 1):
-        block = total_length // cores
-        tile = block // TILE_NUM // BUFFER_NUM
-        if tile >= MIN_TILE_LENGTH and total_length % cores == 0:
-            return cores
-    return 1
-
-
 def abs_launch(x: torch.Tensor) -> torch.Tensor:
     y = torch.zeros_like(x)
     total_length = y.numel()
-    core_num = _compute_core_num(total_length)
+    core_num, tile_num = _compute_tiling(total_length)
     block_length = total_length // core_num
-    abs_kernel[core_num, rt.current_stream()](x, y, block_length)
+    abs_kernel[core_num, rt.current_stream()](x, y, block_length, tile_num)
     return y
 
 
@@ -81,7 +91,7 @@ def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
     device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
 
-    test_shapes = [[2, 256], [4, 2048], [32, 4096]]
+    test_shapes = [[1, 128], [4, 2048], [32, 4096]]
 
     for shape in test_shapes:
         x = torch.randn(shape, dtype=torch.float16, device=device)

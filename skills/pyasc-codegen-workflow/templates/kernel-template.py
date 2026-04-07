@@ -20,15 +20,36 @@ import asc
 import asc.runtime.config as config
 import asc.lib.runtime as rt
 
-USE_CORE_NUM = 8
 BUFFER_NUM = 2
-TILE_NUM = 8
+MIN_TILE_LENGTH = 32
 
 logging.basicConfig(level=logging.INFO)
 
 
+def _compute_tiling(total_length: int) -> tuple:
+    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH.
+
+    DMA transfers require a minimum data length per tile.  For small
+    tensors the default tile_num=8 / core_num=8 can make tile_length
+    too small.  This helper reduces core count and tile count until
+    the constraint is satisfied.
+    """
+    for cores in (8, 4, 2, 1):
+        if total_length % cores != 0:
+            continue
+        block = total_length // cores
+        for tiles in (8, 4, 2, 1):
+            if block % (tiles * BUFFER_NUM) != 0:
+                continue
+            tile_len = block // tiles // BUFFER_NUM
+            if tile_len >= MIN_TILE_LENGTH:
+                return cores, tiles
+    return 1, 1
+
+
 @asc.jit
-def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress, block_length: int):
+def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress,
+                block_length: int, tile_num: asc.ConstExpr[int]):
     """Replace this with your kernel implementation."""
     offset = asc.get_block_idx() * block_length
     x_gm = asc.GlobalTensor()
@@ -38,7 +59,7 @@ def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress
     y_gm.set_global_buffer(y + offset, block_length)
     z_gm.set_global_buffer(z + offset, block_length)
 
-    tile_length = block_length // TILE_NUM // BUFFER_NUM
+    tile_length = block_length // tile_num // BUFFER_NUM
     data_type = x.dtype
     buffer_size = tile_length * BUFFER_NUM * data_type.sizeof()
 
@@ -46,7 +67,7 @@ def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress
     y_local = asc.LocalTensor(data_type, asc.TPosition.VECIN, buffer_size, tile_length * BUFFER_NUM)
     z_local = asc.LocalTensor(data_type, asc.TPosition.VECOUT, buffer_size + buffer_size, tile_length * BUFFER_NUM)
 
-    for i in range(TILE_NUM * BUFFER_NUM):
+    for i in range(tile_num * BUFFER_NUM):
         buf_id = i % BUFFER_NUM
 
         asc.data_copy(x_local[buf_id * tile_length:], x_gm[i * tile_length:], tile_length)
@@ -71,21 +92,23 @@ def kernel_func(x: asc.GlobalAddress, y: asc.GlobalAddress, z: asc.GlobalAddress
 def kernel_launch(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     z = torch.zeros_like(x)
     total_length = z.numel()
-    block_length = total_length // USE_CORE_NUM
-    kernel_func[USE_CORE_NUM, rt.current_stream()](x, y, z, block_length)
+    core_num, tile_num = _compute_tiling(total_length)
+    block_length = total_length // core_num
+    kernel_func[core_num, rt.current_stream()](x, y, z, block_length, tile_num)
     return z
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):
     config.set_platform(backend, platform)
     device = "npu" if config.Backend(backend) == config.Backend.NPU else "cpu"
-    size = 8 * 2048
-    x = torch.rand(size, dtype=torch.float32, device=device)
-    y = torch.rand(size, dtype=torch.float32, device=device)
-    z = kernel_launch(x, y)
-    # TODO: Update expected result for your operation
-    assert torch.allclose(z, x + y), f"Output mismatch! Max diff: {(z - (x + y)).abs().max()}"
-    logging.info("[PASS] Kernel output verified.")
+    # TODO: Update shapes, dtype, and expected result for your operation
+    test_shapes = [[4, 2048], [32, 4096]]
+    for shape in test_shapes:
+        x = torch.rand(shape, dtype=torch.float32, device=device)
+        y = torch.rand(shape, dtype=torch.float32, device=device)
+        z = kernel_launch(x, y)
+        assert torch.allclose(z, x + y), f"Output mismatch for shape {shape}! Max diff: {(z - (x + y)).abs().max()}"
+        logging.info(f"[PASS] Kernel output verified for shape {shape}.")
 
 
 if __name__ == "__main__":

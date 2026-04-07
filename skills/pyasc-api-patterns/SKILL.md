@@ -74,6 +74,61 @@ asc.wait_flag(asc.HardEvent.V_MTE3, buf_id)
 asc.data_copy(z_gm[tile_offset:], z_local[buf_offset:], tile_length)
 ```
 
+### Dynamic tiling for variable shapes (CRITICAL)
+
+> **When the user specifies multiple shapes, some may be too small for the default
+> `tile_num=8` / `core_num=8`.  You MUST use dynamic tiling — otherwise the
+> simulator will produce incorrect results silently.**
+
+The tile length (`block_length / tile_num / BUFFER_NUM`) **must** be >= 32 for
+DMA to work correctly.  Use `_compute_tiling()` to pick safe values and pass
+`tile_num` as an `asc.ConstExpr[int]` kernel parameter.  This ensures the JIT
+generates a separate compiled kernel per `tile_num` value (pyasc caches by
+`ConstExpr` values; ordinary globals are NOT included in the cache key).
+
+```python
+BUFFER_NUM = 2
+MIN_TILE_LENGTH = 32
+
+def _compute_tiling(total_length: int) -> tuple:
+    """Pick (core_num, tile_num) that keep tile_length >= MIN_TILE_LENGTH."""
+    for cores in (8, 4, 2, 1):
+        if total_length % cores != 0:
+            continue
+        block = total_length // cores
+        for tiles in (8, 4, 2, 1):
+            if block % (tiles * BUFFER_NUM) != 0:
+                continue
+            if block // tiles // BUFFER_NUM >= MIN_TILE_LENGTH:
+                return cores, tiles
+    return 1, 1
+
+@asc.jit
+def my_kernel(x: asc.GlobalAddress, y: asc.GlobalAddress,
+              block_length: int, tile_num: asc.ConstExpr[int]):
+    tile_length = block_length // tile_num // BUFFER_NUM
+    # ... use tile_num inside range() and tile_length for DMA/compute ...
+    for i in range(tile_num * BUFFER_NUM):
+        ...
+
+def kernel_launch(x: torch.Tensor) -> torch.Tensor:
+    y = torch.zeros_like(x)
+    total_length = y.numel()
+    core_num, tile_num = _compute_tiling(total_length)
+    block_length = total_length // core_num
+    my_kernel[core_num, rt.current_stream()](x, y, block_length, tile_num)
+    return y
+```
+
+**Why `ConstExpr`?** pyasc's JIT file cache keys include `ConstExpr` parameter
+values but NOT ordinary module globals.  If you use `global TILE_NUM` mutation,
+a stale cache entry compiled with a different `TILE_NUM` may be silently reused,
+producing incorrect results.
+
+**Example**: shape `[1, 128]` has 128 elements.  With default `cores=8, tile_num=8`,
+`tile_length = 128/8/8/2 = 1` — far too small, produces garbage.
+`_compute_tiling(128)` returns `(2, 1)` → `tile_length = 64/1/2 = 32` — correct.
+
 ### Verification pattern
 
 ```python
