@@ -4,26 +4,23 @@
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
-  "date": "2026-04-14T15:42:40Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-04-14T16:23:23Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "design.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "skip",
-    "detail": "python3.11: can't open file '/home/runner/work/pyasc-skill-stack/pyasc-skill-stack/tests/tools/run_and_verify.py': [Errno 2] No such file or directory",
+    "status": "fail",
+    "detail": "File not found",
     "shapes_verified": []
   },
   "score": {

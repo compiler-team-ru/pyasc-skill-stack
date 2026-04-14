@@ -1,11 +1,11 @@
 {
   "schema_version": "2",
   "kind": "generative",
-  "operation": "add",
+  "operation": "softmax",
   "dtype": "float16",
-  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "prompt": "Help me develop a softmax operator that supports float16 data type. The shape is mainly [32, 4096]. Apply softmax along the last axis so each row sums to 1.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
-  "date": "2026-04-14T16:22:08Z",
+  "date": "2026-04-14T16:28:35Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
