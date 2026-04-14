@@ -15,11 +15,13 @@
 FROM ascendai/cann:9.0.0-beta.2-910b-ubuntu22.04-py3.11
 
 RUN pip install --no-cache-dir \
-    pyasc>=1.1.0 \
-    numpy<2.0 \
-    torch --index-url https://download.pytorch.org/whl/cpu \
-    pytest>=7.0 \
+    "pyasc>=1.1.0" \
+    "numpy<2.0" \
+    "pytest>=7.0" \
     pyyaml
+
+RUN pip install --no-cache-dir \
+    torch --index-url https://download.pytorch.org/whl/cpu
 
 # Verify pyasc imports work
 RUN python3 -c "import asc; print(f'asc: {asc.__version__}')"
