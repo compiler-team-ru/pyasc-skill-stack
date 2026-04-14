@@ -16,7 +16,7 @@ on:
         default: nightly
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -167,6 +167,21 @@ jobs:
               || echo "Generative evidence for $op/$dtype completed with exit code $?"
             echo ""
           done
+
+      - name: Commit evidence to main
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/*.json
+          if git diff --cached --quiet; then
+            echo "No new evidence to commit."
+          else
+            git commit -m "chore: update generative evidence from nightly run
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            git push
+          fi
 
       - name: Upload evidence artifacts
         if: always()
