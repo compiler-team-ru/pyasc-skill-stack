@@ -20,17 +20,12 @@ RUN pip install --no-cache-dir \
     "pytest>=7.0" \
     pyyaml
 
-RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
-
-# Verify pyasc imports work
-RUN python3 -c "import asc; print(f'asc: {asc.__version__}')"
-RUN python3 -c "import asc2; print('asc2: ok')"
-RUN python3 -c "import torch; print(f'torch: {torch.__version__}')"
-RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')"
-
-# Set up simulator library path (CANN is pre-installed in base image)
 ENV LD_LIBRARY_PATH="${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:${LD_LIBRARY_PATH}"
+
+# Smoke-test: verify pyasc and numpy import correctly
+RUN python3 -c "import asc; print(f'asc: {asc.__version__}')" && \
+    python3 -c "import asc2; print('asc2: ok')" && \
+    python3 -c "import numpy; print(f'numpy: {numpy.__version__}')"
 
 WORKDIR /workspace
 CMD ["/bin/bash"]
