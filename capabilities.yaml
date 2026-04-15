@@ -63,7 +63,7 @@ operations:
         golden_status: confirmed
         golden: golden/kernels/abs_f16.py
         golden_evidence: evidence/abs-f16-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/abs-f16-generative.json
 
   - name: add
@@ -83,7 +83,7 @@ operations:
           - [4, 2048]
           - [32, 4096]
         golden_status: untested
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/add-f16-generative.json
 
   # --- Tier 1: Reduction ---
@@ -103,10 +103,10 @@ operations:
           shape [32]. Each row should be summed independently.
         shapes:
           - [32, 4096]
-        golden_status: golden_only
+        golden_status: confirmed
         golden: golden/kernels/reduce_sum_f32.py
         golden_evidence: evidence/reduce_sum-f32-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/reduce_sum-f32-generative.json
       - dtype: float16
         prompt: >-
@@ -116,7 +116,7 @@ operations:
         shapes:
           - [32, 4096]
         golden_status: untested
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/reduce_sum-f16-generative.json
 
   # --- Tier 2: Composed ---
@@ -141,10 +141,10 @@ operations:
           - [1, 128]
           - [4, 2048]
           - [32, 4096]
-        golden_status: golden_only
+        golden_status: confirmed
         golden: golden/kernels/gelu_f16.py
         golden_evidence: evidence/gelu-f16-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/gelu-f16-generative.json
       - dtype: float32
         prompt: >-
@@ -156,7 +156,7 @@ operations:
           - [4, 2048]
           - [32, 4096]
         golden_status: untested
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/gelu-f32-generative.json
 
   - name: leaky_relu
@@ -172,10 +172,10 @@ operations:
           - [1, 128]
           - [4, 2048]
           - [32, 4096]
-        golden_status: golden_only
+        golden_status: confirmed
         golden: golden/kernels/leaky_relu_f16.py
         golden_evidence: evidence/leaky_relu-f16-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/leaky_relu-f16-generative.json
 
   # --- Tier 3: Advanced ---
@@ -195,7 +195,7 @@ operations:
         golden_status: confirmed
         golden: golden/kernels/softmax_f16.py
         golden_evidence: evidence/softmax-f16-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/softmax-f16-generative.json
 
   - name: matmul
@@ -212,5 +212,5 @@ operations:
           - [128, 256]
           - [256, 128]
         golden_status: untested
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/matmul-f16-generative.json

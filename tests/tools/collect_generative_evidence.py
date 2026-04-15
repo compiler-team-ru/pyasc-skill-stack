@@ -192,8 +192,14 @@ def find_artifacts(project_dir: Path) -> list[str]:
     return found
 
 
-def run_score(kernel_path: Path) -> dict | None:
-    code, out, _ = _run([PYTHON, str(SCORE_SCRIPT), str(kernel_path), "--json"])
+def run_score(kernel_path: Path, op: str | None = None,
+              dtype: str | None = None) -> dict | None:
+    cmd = [PYTHON, str(SCORE_SCRIPT), str(kernel_path), "--json"]
+    if op:
+        cmd += ["--op", op]
+    if dtype:
+        cmd += ["--dtype", dtype]
+    code, out, _ = _run(cmd)
     if code == 0:
         try:
             return json.loads(out)
@@ -318,6 +324,8 @@ def main() -> None:
                         help="URL to the CI run for linking from evidence")
     parser.add_argument("--prompt-variant", default=None,
                         help="Named variant from prompt_variants in capabilities.yaml")
+    parser.add_argument("--output-suffix", default=None,
+                        help="Suffix appended to evidence filename (e.g. 'minimal' -> abs-f16-generative-minimal.json)")
     args = parser.parse_args()
 
     prompt = args.prompt
@@ -379,7 +387,7 @@ def main() -> None:
                             "markers_found": []}
 
     if kernel and kernel.is_file():
-        score_data = run_score(kernel)
+        score_data = run_score(kernel, op=args.op, dtype=args.dtype)
         static_result = run_static_verify(kernel)
         semantic_check = check_op_semantics(kernel, args.op)
         print(f"  Static verify: {static_result}")
@@ -433,7 +441,8 @@ def main() -> None:
         evidence["ci_run_url"] = args.ci_run_url
 
     dtype_short = args.dtype.replace("float", "f")
-    out_name = f"{args.op}-{dtype_short}-generative.json"
+    suffix = f"-{args.output_suffix}" if args.output_suffix else ""
+    out_name = f"{args.op}-{dtype_short}-generative{suffix}.json"
     out_path = EVIDENCE_DIR / out_name
 
     history: list[dict] = []

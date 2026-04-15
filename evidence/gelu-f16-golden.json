@@ -1,75 +1,17 @@
 {
-  "schema_version": "2",
+  "schema_version": "3",
   "kind": "golden",
   "operation": "gelu",
   "dtype": "float16",
   "kernel_path": "golden/kernels/gelu_f16.py",
-  "date": "2026-04-14T14:03:04Z",
+  "date": "2026-04-15T17:56:09Z",
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend910B1",
     "status": "pass",
-    "shapes_verified": [
-      [
-        1,
-        128
-      ],
-      [
-        4,
-        2048
-      ],
-      [
-        32,
-        4096
-      ]
-    ]
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed"
   },
-  "score": {
-    "value": 10.0,
-    "threshold": 8.5,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "allclose present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      }
-    }
-  },
-  "static_verify": "pass",
-  "notes": "Golden composed GELU kernel (erf + mul + add). Static-only verification; runtime pending simulator."
+  "runtime_verified": true,
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker (honest run)."
 }

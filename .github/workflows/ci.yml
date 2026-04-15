@@ -5,7 +5,6 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # Nightly at 03:00 UTC
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
@@ -17,15 +16,15 @@ on:
 
 permissions:
   contents: write
-  packages: write
+  packages: read
 
 env:
   PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11
-  PYTHON: python3.10
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ==========================================================================
-  # PR gate: L1 unit tests + JIT verification (no Docker, no CANN)
+  # PR gate: L1 unit tests + static checks (no Docker, no CANN)
   # ==========================================================================
   pr-gate:
     runs-on: ubuntu-latest
@@ -43,43 +42,14 @@ jobs:
         run: bash tests/ci-gate.sh --tier pr
 
   # ==========================================================================
-  # Build Docker image (only when Dockerfile changes or on nightly/dispatch)
-  # ==========================================================================
-  build-image:
-    runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push pyasc-sim image
-        uses: docker/build-push-action@v6
-        with:
-          context: docker/
-          file: docker/Dockerfile
-          push: true
-          tags: ${{ env.PYASC_SIM_IMAGE }}
-          cache-from: type=registry,ref=${{ env.PYASC_SIM_IMAGE }}
-          cache-to: type=inline
-
-  # ==========================================================================
   # Merge gate: PR gate + simulator verification of golden kernels in Docker
+  #
+  # The Docker image is pre-built locally (contains a native C++ extension)
+  # and pushed to ghcr.io.  CI only pulls it.
   # ==========================================================================
   merge-gate:
     runs-on: ubuntu-latest
-    needs: [pr-gate, build-image]
+    needs: [pr-gate]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' ||
       github.event_name == 'schedule' ||
@@ -99,21 +69,31 @@ jobs:
 
       - name: Simulator verification of golden kernels
         run: |
+          FAILED=0
           for kernel in golden/kernels/*.py; do
             [ -f "$kernel" ] || continue
             base=$(basename "$kernel")
             echo "--- Verifying: $base ---"
-            docker run --rm \
-              -v "$(pwd)":/workspace \
+            if docker run --rm \
+              -v "$(pwd)":/workspace:ro \
               -w /workspace \
               ${{ env.PYASC_SIM_IMAGE }} \
-              python3.11 tests/tools/run_and_verify.py "$kernel" --mode simulator \
-              && echo "[PASS] $base" \
-              || echo "[FAIL] $base"
+              python3.11 tests/tools/run_and_verify.py "$kernel" \
+                --mode simulator --timeout 300; then
+              echo "[PASS] $base"
+            else
+              echo "[FAIL] $base"
+              FAILED=$((FAILED + 1))
+            fi
           done
+          if [ "$FAILED" -gt 0 ]; then
+            echo "ERROR: $FAILED golden kernel(s) failed simulator verification"
+            exit 1
+          fi
+          echo "All golden kernels passed."
 
   # ==========================================================================
-  # Nightly gate: merge gate + generative evidence collection
+  # Nightly gate: merge gate + generative evidence collection via opencode
   # ==========================================================================
   nightly-gate:
     runs-on: ubuntu-latest
@@ -142,23 +122,34 @@ jobs:
         run: docker pull ${{ env.PYASC_SIM_IMAGE }}
 
       - name: Install opencode
-        run: |
-          npm install -g opencode-ai @ai-sdk/openai-compatible
+        run: npm install -g opencode-ai @ai-sdk/openai-compatible
 
       - name: Configure opencode provider
         run: |
           mkdir -p ~/.config/opencode
           echo '${{ secrets.OPENCODE_CONFIG }}' > ~/.config/opencode/opencode.json
 
-      - name: Run generative evidence collection (multi-attempt per tier)
+      - name: Run generative evidence collection
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
         run: |
           mkdir -p generative-archive
-          declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "reduce_sum:float16" "gelu:float16" "gelu:float32" "leaky_relu:float16" "softmax:float16" "matmul:float16")
+          declare -a OPS=(
+            "abs:float16"
+            "add:float16"
+            "reduce_sum:float32"
+            "reduce_sum:float16"
+            "gelu:float16"
+            "gelu:float32"
+            "leaky_relu:float16"
+            "softmax:float16"
+            "matmul:float16"
+          )
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           ATTEMPTS=2
+          PASS=0
+          TOTAL=${#OPS[@]}
           for entry in "${OPS[@]}"; do
             op="${entry%%:*}"
             dtype="${entry##*:}"
@@ -175,10 +166,37 @@ jobs:
                 || echo "  Attempt $attempt failed (exit $?)"
               echo ""
             done
-            if [ $best_exit -ne 0 ]; then
+            if [ $best_exit -eq 0 ]; then
+              PASS=$((PASS + 1))
+            else
               echo "  All $ATTEMPTS attempts failed for $op/$dtype"
             fi
           done
+          echo ""
+          echo "=== Generative evidence summary: $PASS/$TOTAL passed ==="
+
+      - name: Summarize evidence
+        if: always()
+        run: |
+          python3.10 - <<'PYEOF'
+          import json, glob, sys
+          files = sorted(glob.glob("evidence/*-generative.json"))
+          if not files:
+              print("No generative evidence files found.")
+              sys.exit(0)
+          rt_pass = rt_skip = rt_fail = 0
+          for f in files:
+              with open(f) as fh:
+                  d = json.load(fh)
+              status = d.get("verification", {}).get("status", "unknown")
+              score = d.get("score", {}).get("value", 0)
+              if status == "pass": rt_pass += 1
+              elif status == "skip": rt_skip += 1
+              else: rt_fail += 1
+              print(f"  {f}: runtime={status}  score={score}")
+          total = len(files)
+          print(f"\n  Runtime pass: {rt_pass}/{total} | Skip: {rt_skip}/{total} | Fail: {rt_fail}/{total}")
+          PYEOF
 
       - name: Commit evidence to main
         if: always()

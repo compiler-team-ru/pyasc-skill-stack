@@ -14,26 +14,29 @@ import asc.runtime.config as config
 import asc2
 
 CORE_NUM = 16
+OUT_PAD = 8  # min last-dim for 32-byte alignment with float32
 
 logging.basicConfig(level=logging.INFO)
 
 
 @asc2.jit(always_compile=True)
 def reduce_sum_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
-                      num_rows: int, num_cols: asc.ConstExpr[int]):
+                      num_rows: int, num_cols: asc.ConstExpr[int],
+                      out_pad: asc.ConstExpr[int]):
     x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
-    out_gm = asc2.tensor(out_ptr, [num_rows])
+    out_gm = asc2.tensor(out_ptr, [num_rows, out_pad])
     for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
         row = asc2.load(x_gm, [1, num_cols], offsets=[i, 0])
         s = asc2.reduce_sum(row)
-        asc2.store(s, out_gm, offsets=[i])
+        result = asc2.full([1, out_pad], s, dtype=row.dtype)
+        asc2.store(result, out_gm, offsets=[i, 0])
 
 
 def reduce_sum_launch(x: np.ndarray) -> np.ndarray:
     num_rows, num_cols = x.shape
-    out = np.empty(num_rows, dtype=x.dtype)
-    reduce_sum_kernel[CORE_NUM](x, out, num_rows, num_cols)
-    return out
+    out = np.zeros((num_rows, OUT_PAD), dtype=x.dtype)
+    reduce_sum_kernel[CORE_NUM](x, out, num_rows, num_cols, OUT_PAD)
+    return out[:, 0]
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):

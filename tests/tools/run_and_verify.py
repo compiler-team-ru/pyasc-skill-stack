@@ -106,6 +106,7 @@ def _run_simulator(
     backend: str,
     platform: str,
     use_json: bool,
+    timeout: int = 300,
 ) -> tuple[int, str]:
     cmd = [
         PYTHON,
@@ -121,12 +122,12 @@ def _run_simulator(
             cmd,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=timeout,
             env=env,
             cwd=str(Path(kernel_abs).parent),
         )
     except subprocess.TimeoutExpired:
-        return 1, "Timeout after 120s"
+        return 1, f"Timeout after {timeout}s"
     except FileNotFoundError:
         return 2, f"{PYTHON} not found on PATH"
     except Exception as exc:
@@ -187,6 +188,12 @@ def main() -> None:
         action="store_true",
         help="JSON report on stdout",
     )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="Timeout in seconds for kernel execution (default: 300)",
+    )
     args = parser.parse_args()
 
     kernel_path = args.kernel_py
@@ -220,6 +227,7 @@ def main() -> None:
             args.backend,
             args.platform,
             use_json,
+            timeout=args.timeout,
         )
         status = {0: "PASS", 1: "FAIL", 2: "SKIP"}[code]
         _report(use_json, kernel_path, status, detail, "simulator")
@@ -231,6 +239,7 @@ def main() -> None:
         args.backend,
         args.platform,
         use_json,
+        timeout=args.timeout,
     )
     if sim_code == 0:
         _report(use_json, kernel_path, "PASS", sim_detail, "auto (simulator)")

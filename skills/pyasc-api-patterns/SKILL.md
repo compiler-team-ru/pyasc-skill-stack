@@ -100,6 +100,12 @@ for i in asc2.range(tile_per_block):
 
 **Why `ConstExpr`?** `tile_size` and `tile_per_block` are passed as `asc.ConstExpr[int]` so the JIT compiler can optimize tile-level code and include these values in the cache key.
 
+> **CRITICAL**: Any value used in the **shape** argument of `asc2.load` or `asc2.tensor`
+> MUST be either a literal integer, a `ConstExpr[int]` parameter, or a compile-time
+> expression. Using a plain `int` parameter in load shape (e.g., `asc2.load(gm, [cols])` where
+> `cols: int`) will cause `RuntimeError: All values in 'shape' must be integers` at JIT time.
+> Always declare such parameters as `asc.ConstExpr[int]`.
+
 ### asc2.range() options
 
 ```python
@@ -167,8 +173,13 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 - Dynamic Python features (exceptions, generators, etc.)
 
 **Type constraints for kernel parameters**:
-- Supported: `bool`, `int`, `float`, numpy scalars/ndarray, `torch.Tensor`, `asc.GlobalAddress`
+- Supported: `bool`, `int`, `float`, numpy scalars/ndarray, `asc.GlobalAddress`
 - Not supported as runtime args: `str`, `tuple`, `list`, `dict` (use `asc.ConstExpr[T]` for compile-time)
+- Use `asc.ConstExpr[int]` for any parameter that appears in `asc2.load` shape or `asc2.tensor` shape
+
+**Host-side data preparation**:
+- Use **numpy** arrays (NOT torch tensors) for data inputs and verification
+- Do NOT import `scipy`, `torch`, or other heavy libraries — they are not available in the simulator environment
 
 **What asc2 handles automatically** (do NOT do manually):
 - Pipeline synchronization (`set_flag`/`wait_flag`) — `@asc2.jit` sets `insert_sync=True`

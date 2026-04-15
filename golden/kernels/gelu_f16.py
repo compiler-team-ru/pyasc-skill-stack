@@ -8,8 +8,8 @@ Verified on CANN simulator with Ascend910B1 platform.
 
 import logging
 import argparse
+import math
 import numpy as np
-from scipy import special  # type: ignore[import-untyped]
 
 import asc
 import asc.runtime.config as config
@@ -44,8 +44,10 @@ def gelu_launch(x: np.ndarray) -> np.ndarray:
     return out
 
 
+_verf = np.vectorize(math.erf)
+
 def gelu_numpy(x: np.ndarray) -> np.ndarray:
-    return 0.5 * x * (1.0 + special.erf(x / np.sqrt(2.0)))
+    return 0.5 * x * (1.0 + _verf(x / np.sqrt(2.0)))
 
 
 def run_kernel(backend: config.Backend, platform: config.Platform):

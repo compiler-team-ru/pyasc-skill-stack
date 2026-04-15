@@ -96,7 +96,12 @@ Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`
 
 ## Verification Patterns
 
-### numpy verification (primary for asc2)
+### numpy verification (REQUIRED for asc2)
+
+> **CRITICAL**: Always use **numpy** for host-side verification and data preparation.
+> Do NOT use `scipy`, `torch`, or any other library — they are not available in
+> the simulator Docker environment and will cause runtime verification failures.
+> For reference implementations (e.g., softmax, gelu), write a pure numpy version.
 
 ```python
 import numpy as np
@@ -105,13 +110,21 @@ expected = np.abs(x)  # or whatever the operation should produce
 np.testing.assert_allclose(result, expected, atol=1e-3, rtol=1e-3)
 ```
 
-### torch verification (alternative)
+For operations that need `erf`, use `math.erf` with `np.vectorize`:
 
 ```python
-import torch
-result = torch.from_numpy(kernel_launch(x.numpy()))
-expected = torch.abs(x)
-assert torch.allclose(result, expected, atol=1e-3)
+import math
+_verf = np.vectorize(math.erf)
+expected = 0.5 * x * (1.0 + _verf(x / np.sqrt(2.0)))
+```
+
+For softmax, implement a pure numpy reference:
+
+```python
+def softmax_numpy(x):
+    shifted = x - x.max(axis=-1, keepdims=True)
+    exp_x = np.exp(shifted)
+    return exp_x / exp_x.sum(axis=-1, keepdims=True)
 ```
 
 ### Verification script

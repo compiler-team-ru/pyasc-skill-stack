@@ -13,7 +13,7 @@ description: pyasc kernel development standard workflow using the asc2 tile-base
 - There is a kernel function decorated with `@asc2.jit(always_compile=True)`
 - There is a launch function using `kernel[core_num](...)`
 - There is a host-side driver (`if __name__ == "__main__"`) AND a `test_*` function (for pytest)
-- There is output verification (`np.testing.assert_allclose` or `torch.allclose`)
+- There is output verification using `np.testing.assert_allclose` (use numpy only; do NOT use torch or scipy)
 - The kernel runs successfully (on NPU or Model backend)
 
 **Golden reference**: `golden/kernels/abs_f16.py` (local) or `~/workspace/pyasc/python/test/kernels/asc2/test_vadd.py` (external)

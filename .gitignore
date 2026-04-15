@@ -14,3 +14,6 @@ _site/
 
 # CI-only generative kernel archive (uploaded as artifact, not committed)
 generative-archive/
+
+# Large binary files in Docker overlay (built locally, not tracked)
+docker/pyasc-overlay/asc_C/*.so

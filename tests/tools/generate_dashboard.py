@@ -153,12 +153,31 @@ def build_data(cap: dict) -> dict:
 
             rows.append(row)
 
+    rt_pass = rt_static = rt_skip = rt_none = 0
+    for row in rows:
+        ev = row.get("generative_evidence")
+        if not ev:
+            rt_none += 1
+        elif ev.get("runtime_verified"):
+            rt_pass += 1
+        elif ev.get("verification_status") == "skip":
+            rt_skip += 1
+        else:
+            rt_static += 1
+
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "tiers": tier_progress,
         "dtypes": all_dtypes,
         "total_cells": len(rows),
         "rows": rows,
+        "runtime_summary": {
+            "runtime_pass": rt_pass,
+            "static_only": rt_static,
+            "skipped": rt_skip,
+            "no_evidence": rt_none,
+            "total": len(rows),
+        },
     }
 
 
@@ -227,7 +246,28 @@ body {
   margin: 0 auto;
 }
 h1 { font-size: 24px; margin-bottom: 4px; }
-.subtitle { color: var(--fg-muted); margin-bottom: 24px; font-size: 14px; }
+.subtitle { color: var(--fg-muted); margin-bottom: 12px; font-size: 14px; }
+.runtime-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  align-items: center;
+}
+.runtime-banner .rb-label { font-weight: 600; color: var(--fg-muted); }
+.runtime-banner .rb-item { display: flex; align-items: center; gap: 4px; }
+.runtime-banner .rb-dot {
+  width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+}
+.rb-dot-pass { background: var(--confirmed); }
+.rb-dot-static { background: var(--golden-only); }
+.rb-dot-skip { background: var(--pending); }
+.rb-dot-none { background: var(--untested); }
 .tier-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -501,6 +541,7 @@ td.prompt-col {
 .spark-pass { background: var(--confirmed); }
 .spark-fail { background: var(--blocked); }
 .spark-skip { background: var(--untested); }
+.spark-regression { background: #d29922; }
 .tier-header td {
   background: var(--bg-alt);
   font-weight: 600;
@@ -523,6 +564,8 @@ footer a { color: var(--fg-muted); }
 
 <h1>pyasc-skill-stack Capabilities</h1>
 <p class="subtitle">Auto-generated from <code>capabilities.yaml</code> (v3) and <code>evidence/*.json</code></p>
+
+<div class="runtime-banner" id="runtime-banner"></div>
 
 <div class="tier-cards" id="tier-cards"></div>
 
@@ -586,12 +629,24 @@ const TIER_ORDER = Object.entries(DATA.tiers)
 
 function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
+  renderRuntimeBanner();
   renderTierCards();
   populateTierFilter();
   renderTable();
   document.getElementById("filter-tier").addEventListener("change", renderTable);
   document.getElementById("filter-status").addEventListener("change", renderTable);
   document.getElementById("filter-dimension").addEventListener("change", renderTable);
+}
+
+function renderRuntimeBanner() {
+  const s = DATA.runtime_summary;
+  if (!s) return;
+  const el = document.getElementById("runtime-banner");
+  el.innerHTML = '<span class="rb-label">Runtime Verification:</span>'
+    + '<span class="rb-item"><span class="rb-dot rb-dot-pass"></span> Verified: ' + s.runtime_pass + '/' + s.total + '</span>'
+    + '<span class="rb-item"><span class="rb-dot rb-dot-static"></span> Static only: ' + s.static_only + '/' + s.total + '</span>'
+    + '<span class="rb-item"><span class="rb-dot rb-dot-skip"></span> Skipped: ' + s.skipped + '/' + s.total + '</span>'
+    + '<span class="rb-item"><span class="rb-dot rb-dot-none"></span> No evidence: ' + s.no_evidence + '/' + s.total + '</span>';
 }
 
 function renderTierCards() {
@@ -679,7 +734,7 @@ function toggleDetail(el) {
   if (detailStr) {
     const d = JSON.parse(detailStr);
     if (d.date) html += `<dt>Date</dt><dd>${d.date}</dd>`;
-    if (d.score !== undefined) html += `<dt>Score</dt><dd>${d.score}/10</dd>`;
+    if (d.score !== undefined) html += `<dt>Score</dt><dd>${d.score}/16</dd>`;
     if (d.verification_mode) {
       const rtLabel = d.runtime_verified ? "&#9745; runtime pass" : (d.verification_status === "skip" ? "&#9744; runtime skipped" : d.verification_status);
       html += `<dt>Verification</dt><dd>${d.verification_mode} &mdash; ${rtLabel}</dd>`;
@@ -737,9 +792,20 @@ function copyCmd() {
 function renderSparkline(history) {
   if (!history || !history.length) return "";
   const recent = history.slice(-10);
-  const dots = recent.map(h => {
-    const cls = h.overall_pass ? "spark-pass" : (h.skipped ? "spark-skip" : "spark-fail");
-    const title = h.date + ": " + (h.overall_pass ? "pass" : "fail");
+  const dots = recent.map((h, i) => {
+    let cls;
+    const isRegression = i > 0 && recent[i-1].overall_pass && !h.overall_pass && !h.skipped;
+    if (isRegression) {
+      cls = "spark-regression";
+    } else if (h.overall_pass) {
+      cls = "spark-pass";
+    } else if (h.skipped) {
+      cls = "spark-skip";
+    } else {
+      cls = "spark-fail";
+    }
+    const label = isRegression ? "regression" : (h.overall_pass ? "pass" : "fail");
+    const title = h.date + ": " + label;
     return '<span class="spark-dot ' + cls + '" title="' + title + '"></span>';
   }).join("");
   return '<span class="sparkline">' + dots + '</span>';
