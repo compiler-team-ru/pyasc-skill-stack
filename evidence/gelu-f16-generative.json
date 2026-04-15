@@ -5,16 +5,17 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-04-15T04:49:57Z",
+  "date": "2026-04-15T12:25:32Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "verification": {
@@ -80,5 +81,26 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (tier sweep)"
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24451690582",
+  "history": [
+    {
+      "date": "2026-04-15T04:49:57Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "pass",
+      "runtime": "skip",
+      "semantic": true,
+      "skipped": true
+    },
+    {
+      "date": "2026-04-15T12:18:04Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "pass",
+      "runtime": "skip",
+      "semantic": true,
+      "skipped": true
+    }
+  ]
 }

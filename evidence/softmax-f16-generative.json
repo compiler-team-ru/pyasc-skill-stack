@@ -5,16 +5,17 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator that supports float16 data type. The shape is mainly [32, 4096]. Apply softmax along the last axis so each row sums to 1.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-04-15T05:09:59Z",
+  "date": "2026-04-15T13:21:21Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 600,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "verification": {
@@ -26,9 +27,12 @@
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "none of ['asc2.softmax'] found in kernel source",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
   },
   "score": {
     "value": 10.0,
@@ -78,5 +82,26 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (tier sweep)"
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24451690582",
+  "history": [
+    {
+      "date": "2026-04-15T05:09:59Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "pass",
+      "runtime": "skip",
+      "semantic": false,
+      "skipped": true
+    },
+    {
+      "date": "2026-04-15T13:13:48Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "pass",
+      "runtime": "skip",
+      "semantic": true,
+      "skipped": true
+    }
+  ]
 }
