@@ -104,6 +104,8 @@ def build_data(cap: dict) -> dict:
             if gn_ref:
                 gen_ev = _load_evidence(REPO_ROOT / gn_ref)
 
+            prompt_variants = cell.get("prompt_variants", {})
+
             row: dict = {
                 "op": op_name,
                 "tier": op_tier,
@@ -114,6 +116,7 @@ def build_data(cap: dict) -> dict:
                 "representative_of": representative_of,
                 "note": note,
                 "prompt": prompt,
+                "prompt_variants": prompt_variants,
             }
 
             if golden_ev:
@@ -144,6 +147,8 @@ def build_data(cap: dict) -> dict:
                     "agent_completed": gen_ev.get("agent", {}).get("completed", False),
                     "artifacts": gen_ev.get("agent", {}).get("artifacts_found", []),
                     "semantic_check": gen_ev.get("semantic_check", {}),
+                    "history": gen_ev.get("history", []),
+                    "ci_run_url": gen_ev.get("ci_run_url", ""),
                 }
 
             rows.append(row)
@@ -379,6 +384,123 @@ td.api-col { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px
   font-style: italic;
   color: var(--fg-muted);
 }
+td.prompt-col {
+  max-width: 280px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.prompt-trunc {
+  display: inline;
+  font-style: italic;
+}
+.prompt-actions {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--fg-muted);
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.icon-btn:hover { background: var(--bg-alt); color: var(--fg); }
+.icon-btn.copied { color: var(--confirmed); border-color: var(--confirmed); }
+.try-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.try-overlay.open { display: flex; }
+.try-modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 720px;
+  width: 92%;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+.try-modal h3 { font-size: 16px; margin-bottom: 12px; }
+.try-modal .prompt-full {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--fg-muted);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+.try-modal .cmd-block {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: var(--radius);
+  padding: 12px 48px 12px 16px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  position: relative;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.try-modal .cmd-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2d2d2d;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 11px;
+}
+.try-modal .cmd-copy:hover { background: #3d3d3d; }
+.try-modal .close-btn {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-alt);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 13px;
+}
+.try-modal .close-btn:hover { background: var(--border); }
+.sparkline {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.spark-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.spark-pass { background: var(--confirmed); }
+.spark-fail { background: var(--blocked); }
+.spark-skip { background: var(--untested); }
 .tier-header td {
   background: var(--bg-alt);
   font-weight: 600;
@@ -436,6 +558,19 @@ footer a { color: var(--fg-muted); }
   </thead>
   <tbody id="tbody"></tbody>
 </table>
+
+<div class="try-overlay" id="try-overlay" onclick="closeTryModal(event)">
+  <div class="try-modal" onclick="event.stopPropagation()">
+    <h3>Try this prompt</h3>
+    <div class="prompt-full" id="try-prompt-text"></div>
+    <p style="font-size:13px;color:var(--fg-muted);margin-bottom:8px;">Run in your terminal:</p>
+    <div class="cmd-block">
+      <button class="cmd-copy" onclick="copyCmd()">Copy</button>
+      <code id="try-cmd-text"></code>
+    </div>
+    <button class="close-btn" onclick="closeTryModal()">Close</button>
+  </div>
+</div>
 
 <footer>
   Generated <span id="gen-time"></span> &mdash;
@@ -530,6 +665,17 @@ function toggleDetail(el) {
   if (promptStr) {
     html += `<dt>Prompt</dt><dd><div class="prompt-text">${promptStr}</div></dd>`;
   }
+  const rowData = DATA.rows.find(r => {
+    const dp = el.getAttribute("data-prompt");
+    return dp && r.prompt === dp;
+  });
+  if (rowData && rowData.prompt_variants && Object.keys(rowData.prompt_variants).length) {
+    html += `<dt>Variants</dt><dd>`;
+    for (const [vname, vprompt] of Object.entries(rowData.prompt_variants)) {
+      html += `<div style="margin:4px 0;"><strong>${vname}:</strong> <em style="color:var(--fg-muted)">${vprompt}</em></div>`;
+    }
+    html += `</dd>`;
+  }
   if (detailStr) {
     const d = JSON.parse(detailStr);
     if (d.date) html += `<dt>Date</dt><dd>${d.date}</dd>`;
@@ -543,6 +689,14 @@ function toggleDetail(el) {
     if (kind === "generative") {
       if (d.agent_platform) html += `<dt>Agent</dt><dd>${d.agent_platform}${d.agent_completed ? " (completed)" : " (incomplete)"}</dd>`;
       if (d.artifacts && d.artifacts.length) html += `<dt>Artifacts</dt><dd>${d.artifacts.join(", ")}</dd>`;
+      if (d.semantic_check && d.semantic_check.passed !== undefined) {
+        html += `<dt>Semantic</dt><dd>${d.semantic_check.passed ? "&#9745; pass" : "&#9744; fail"} &mdash; ${d.semantic_check.detail || ""}</dd>`;
+      }
+      if (d.ci_run_url) html += `<dt>CI run</dt><dd><a href="${d.ci_run_url}" target="_blank" rel="noopener">View run &amp; artifacts &#8599;</a></dd>`;
+      if (d.history && d.history.length) {
+        const rate = d.history.filter(h => h.overall_pass).length;
+        html += `<dt>History</dt><dd>${rate}/${d.history.length} recent runs passed</dd>`;
+      }
     }
     if (d.notes) html += `<dt>Notes</dt><dd>${d.notes}</dd>`;
   }
@@ -551,6 +705,56 @@ function toggleDetail(el) {
   panel.className = "detail-panel open";
   panel.innerHTML = html;
   el.parentElement.appendChild(panel);
+}
+
+function copyToClipboard(text, btnEl) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (btnEl) { btnEl.classList.add("copied"); btnEl.textContent = "\u2713"; setTimeout(() => { btnEl.classList.remove("copied"); btnEl.textContent = "\ud83d\udccb"; }, 1200); }
+  });
+}
+
+function showTryModal(prompt) {
+  document.getElementById("try-prompt-text").textContent = prompt;
+  const cmd = 'opencode run "' + prompt.replace(/"/g, '\\"') + '"';
+  document.getElementById("try-cmd-text").textContent = cmd;
+  document.getElementById("try-overlay").classList.add("open");
+}
+
+function closeTryModal(ev) {
+  if (ev && ev.target !== document.getElementById("try-overlay")) return;
+  document.getElementById("try-overlay").classList.remove("open");
+}
+
+function copyCmd() {
+  const cmd = document.getElementById("try-cmd-text").textContent;
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector(".try-modal .cmd-copy");
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Copy"; }, 1200);
+  });
+}
+
+function renderSparkline(history) {
+  if (!history || !history.length) return "";
+  const recent = history.slice(-10);
+  const dots = recent.map(h => {
+    const cls = h.overall_pass ? "spark-pass" : (h.skipped ? "spark-skip" : "spark-fail");
+    const title = h.date + ": " + (h.overall_pass ? "pass" : "fail");
+    return '<span class="spark-dot ' + cls + '" title="' + title + '"></span>';
+  }).join("");
+  return '<span class="sparkline">' + dots + '</span>';
+}
+
+function makePromptCell(prompt) {
+  if (!prompt) return '<td class="prompt-col"><span style="color:var(--fg-muted);">&mdash;</span></td>';
+  const trunc = prompt.length > 55 ? prompt.substring(0, 55) + "\u2026" : prompt;
+  const escaped = prompt.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+  return '<td class="prompt-col">'
+    + '<span class="prompt-trunc">' + trunc + '</span>'
+    + '<span class="prompt-actions">'
+    + '<button class="icon-btn" title="Copy prompt" onclick="event.stopPropagation();copyToClipboard(\'' + escaped + '\', this)">\ud83d\udccb</button>'
+    + '<button class="icon-btn" title="Try this prompt" onclick="event.stopPropagation();showTryModal(\'' + escaped + '\')">\u25b6</button>'
+    + '</span></td>';
 }
 
 let sortCol = null;
@@ -594,6 +798,7 @@ function renderTable() {
     { key: "tier", label: "Tier" },
     { key: "dtype", label: "dtype" },
     { key: "asc2_api", label: "asc2 API" },
+    { key: "prompt", label: "Prompt" },
     { key: "golden_status", label: "Golden" },
     { key: "generative_status", label: "Generative" },
   ];
@@ -622,8 +827,10 @@ function renderTable() {
     html += `<td>${r.tier.replace(/_/g, " ")}</td>`;
     html += `<td>${r.dtype}</td>`;
     html += `<td class="api-col">${r.asc2_api}</td>`;
+    html += makePromptCell(r.prompt);
     html += `<td>${makeBadge(r.golden_status, r.golden_evidence, "golden", r.prompt)}</td>`;
-    html += `<td>${makeBadge(r.generative_status, r.generative_evidence, "generative", r.prompt)}</td>`;
+    const genHistory = r.generative_evidence ? r.generative_evidence.history : null;
+    html += `<td>${makeBadge(r.generative_status, r.generative_evidence, "generative", r.prompt)}${renderSparkline(genHistory)}</td>`;
     html += "</tr>";
   }
 

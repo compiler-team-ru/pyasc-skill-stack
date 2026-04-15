@@ -150,24 +150,34 @@ jobs:
           mkdir -p ~/.config/opencode
           echo '${{ secrets.OPENCODE_CONFIG }}' > ~/.config/opencode/opencode.json
 
-      - name: Run generative evidence collection (one per tier)
+      - name: Run generative evidence collection (multi-attempt per tier)
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
         run: |
           mkdir -p generative-archive
-          declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "gelu:float16" "leaky_relu:float16" "softmax:float16")
+          declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "reduce_sum:float16" "gelu:float16" "gelu:float32" "leaky_relu:float16" "softmax:float16" "matmul:float16")
+          CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          ATTEMPTS=3
           for entry in "${OPS[@]}"; do
             op="${entry%%:*}"
             dtype="${entry##*:}"
-            echo "=== Generative evidence: $op / $dtype ==="
-            python3.10 tests/tools/collect_generative_evidence.py \
-              --op "$op" --dtype "$dtype" \
-              --runtime --timeout 600 \
-              --archive-dir generative-archive \
-              --notes "Nightly CI run (tier sweep)" \
-              || echo "Generative evidence for $op/$dtype completed with exit code $?"
-            echo ""
+            best_exit=1
+            for attempt in $(seq 1 $ATTEMPTS); do
+              echo "=== Generative evidence: $op / $dtype (attempt $attempt/$ATTEMPTS) ==="
+              python3.10 tests/tools/collect_generative_evidence.py \
+                --op "$op" --dtype "$dtype" \
+                --runtime --timeout 600 \
+                --archive-dir generative-archive \
+                --ci-run-url "$CI_RUN_URL" \
+                --notes "Nightly CI run (attempt $attempt/$ATTEMPTS)" \
+                && best_exit=0 && break \
+                || echo "  Attempt $attempt failed (exit $?)"
+              echo ""
+            done
+            if [ $best_exit -ne 0 ]; then
+              echo "  All $ATTEMPTS attempts failed for $op/$dtype"
+            fi
           done
 
       - name: Commit evidence to main

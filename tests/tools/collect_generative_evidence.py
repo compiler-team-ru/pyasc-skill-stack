@@ -64,8 +64,13 @@ def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
         return 1, "", str(exc)
 
 
-def load_prompt_from_capabilities(op: str, dtype: str) -> str | None:
-    """Extract the prompt for a given op/dtype from capabilities.yaml."""
+def load_prompt_from_capabilities(op: str, dtype: str,
+                                   variant: str | None = None) -> str | None:
+    """Extract the prompt for a given op/dtype from capabilities.yaml.
+
+    If *variant* is given, look up that key in ``prompt_variants`` instead
+    of using the primary ``prompt``.
+    """
     if not CAPABILITIES_FILE.exists():
         return None
 
@@ -87,6 +92,9 @@ def load_prompt_from_capabilities(op: str, dtype: str) -> str | None:
             continue
         for cell in operation.get("cells", []):
             if cell.get("dtype") == dtype:
+                if variant:
+                    variants = cell.get("prompt_variants", {})
+                    return variants.get(variant)
                 return cell.get("prompt")
     return None
 
@@ -221,7 +229,7 @@ OP_SEMANTIC_MARKERS: dict[str, list[str]] = {
     "reduce_min": [".min("],
     "gelu": ["asc2.erf"],
     "leaky_relu": ["asc2.where"],
-    "softmax": ["asc2.softmax"],
+    "softmax": ["asc2.softmax", "asc2.exp", "softmax"],
     "matmul": ["asc2.matmul", "@ "],
 }
 
@@ -306,11 +314,16 @@ def main() -> None:
                         help="Don't delete the test project after run")
     parser.add_argument("--archive-dir", default=None,
                         help="Copy generated kernel directory here for archival")
+    parser.add_argument("--ci-run-url", default=None,
+                        help="URL to the CI run for linking from evidence")
+    parser.add_argument("--prompt-variant", default=None,
+                        help="Named variant from prompt_variants in capabilities.yaml")
     args = parser.parse_args()
 
     prompt = args.prompt
     if not prompt:
-        prompt = load_prompt_from_capabilities(args.op, args.dtype)
+        prompt = load_prompt_from_capabilities(args.op, args.dtype,
+                                               variant=args.prompt_variant)
     if not prompt:
         print(f"ERROR: No prompt provided and none found in capabilities.yaml "
               f"for {args.op}/{args.dtype}", file=sys.stderr)
@@ -416,10 +429,40 @@ def main() -> None:
         "static_verify": static_result,
         "notes": args.notes,
     }
+    if args.ci_run_url:
+        evidence["ci_run_url"] = args.ci_run_url
 
     dtype_short = args.dtype.replace("float", "f")
     out_name = f"{args.op}-{dtype_short}-generative.json"
     out_path = EVIDENCE_DIR / out_name
+
+    history: list[dict] = []
+    if out_path.exists():
+        try:
+            with open(out_path) as f:
+                prev = json.load(f)
+            history = prev.get("history", [])
+            history.append({
+                "date": prev.get("date", ""),
+                "overall_pass": (
+                    prev.get("static_verify") == "pass"
+                    and prev.get("score", {}).get("accepted", False)
+                    and prev.get("semantic_check", {}).get("passed", False)
+                    and prev.get("agent", {}).get("completed", False)
+                    and bool(prev.get("kernel_path"))
+                ),
+                "score": prev.get("score", {}).get("value", 0),
+                "static": prev.get("static_verify", ""),
+                "runtime": prev.get("verification", {}).get("status", ""),
+                "semantic": prev.get("semantic_check", {}).get("passed", False),
+                "skipped": prev.get("verification", {}).get("status") == "skip",
+            })
+            if len(history) > 30:
+                history = history[-30:]
+        except (json.JSONDecodeError, OSError, KeyError):
+            pass
+
+    evidence["history"] = history
 
     if args.dry_run:
         print()

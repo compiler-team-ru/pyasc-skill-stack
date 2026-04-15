@@ -51,6 +51,11 @@ operations:
         prompt: >-
           Help me develop an abs operator that supports float16 data type.
           The shape is mainly [1,128], [4,2048], [32,4096].
+        prompt_variants:
+          minimal: "Generate an abs kernel for float16."
+          guided: >-
+            Generate an abs kernel using asc2.abs() with tiling via asc2.range.
+            Use float16, shapes [1,128], [4,2048], [32,4096].
         shapes:
           - [1, 128]
           - [4, 2048]
@@ -103,6 +108,15 @@ operations:
         golden_evidence: evidence/reduce_sum-f32-golden.json
         generative_status: confirmed
         generative_evidence: evidence/reduce_sum-f32-generative.json
+      - dtype: float16
+        prompt: >-
+          Help me develop a reduce_sum operator that supports float16 data type.
+          The input shape is [32, 4096], reduce along the last axis to produce
+          shape [32]. Each row should be summed independently.
+        shapes:
+          - [32, 4096]
+        golden_status: untested
+        generative_status: pending
 
   # --- Tier 2: Composed ---
 
@@ -116,6 +130,12 @@ operations:
           Help me develop a GELU activation operator that supports float16 data
           type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is
           defined as 0.5*x*(1+erf(x/sqrt(2))).
+        prompt_variants:
+          minimal: "Generate a GELU activation kernel for float16."
+          guided: >-
+            Generate a GELU kernel composing asc2.erf, multiplication, and
+            addition: 0.5*x*(1+erf(x/sqrt(2))). Use float16, shapes [1,128],
+            [4,2048], [32,4096]. Use asc2.load/store and asc2.range for tiling.
         shapes:
           - [1, 128]
           - [4, 2048]
@@ -125,6 +145,17 @@ operations:
         golden_evidence: evidence/gelu-f16-golden.json
         generative_status: confirmed
         generative_evidence: evidence/gelu-f16-generative.json
+      - dtype: float32
+        prompt: >-
+          Help me develop a GELU activation operator that supports float32 data
+          type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is
+          defined as 0.5*x*(1+erf(x/sqrt(2))).
+        shapes:
+          - [1, 128]
+          - [4, 2048]
+          - [32, 4096]
+        golden_status: untested
+        generative_status: pending
 
   - name: leaky_relu
     tier: composed
@@ -171,9 +202,10 @@ operations:
       - dtype: float16
         prompt: >-
           Help me develop a matrix multiplication operator that supports float16
-          data type. The shapes are mainly M=128, K=256, N=128.
+          data type. The shapes are mainly M=128, K=256, N=128. Use asc2.matmul
+          for the core computation.
         shapes:
           - [128, 256]
           - [256, 128]
         golden_status: untested
-        generative_status: untested
+        generative_status: pending
