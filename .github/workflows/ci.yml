@@ -158,7 +158,7 @@ jobs:
           mkdir -p generative-archive
           declare -a OPS=("abs:float16" "add:float16" "reduce_sum:float32" "reduce_sum:float16" "gelu:float16" "gelu:float32" "leaky_relu:float16" "softmax:float16" "matmul:float16")
           CI_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          ATTEMPTS=3
+          ATTEMPTS=2
           for entry in "${OPS[@]}"; do
             op="${entry%%:*}"
             dtype="${entry##*:}"
@@ -167,7 +167,7 @@ jobs:
               echo "=== Generative evidence: $op / $dtype (attempt $attempt/$ATTEMPTS) ==="
               python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --timeout 600 \
+                --runtime --timeout 420 \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
                 --notes "Nightly CI run (attempt $attempt/$ATTEMPTS)" \

@@ -4,11 +4,11 @@
 Supports three strategies:
 
 * **jit** — Runs ``pytest_verify_kernel.py``: mocks ``Launcher.run``, no simulator.
-* **simulator** — Runs ``python3.10 kernel.py -r <backend> -v <platform>`` with
+* **simulator** — Runs ``python kernel.py -r <backend> -v <platform>`` with
   simulator ``LD_LIBRARY_PATH`` derived from ``ASCEND_HOME_PATH``.
 * **auto** — Tries simulator first; on SKIP (exit 2), falls back to JIT.
 
-Requires ``python3.10`` on PATH. Exit codes: 0 = PASS, 1 = FAIL, 2 = SKIP.
+Exit codes: 0 = PASS, 1 = FAIL, 2 = SKIP.
 
 Usage::
 
@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PYTHON310 = "python3.10"
+PYTHON = sys.executable or "python3"
 SCRIPT_DIR = Path(__file__).resolve().parent
 JIT_VERIFY_SCRIPT = SCRIPT_DIR / "pytest_verify_kernel.py"
 
@@ -75,7 +75,7 @@ def _report(
 
 
 def _run_jit(kernel_abs: str, use_json: bool) -> tuple[int, str]:
-    cmd = [PYTHON310, str(JIT_VERIFY_SCRIPT), kernel_abs]
+    cmd = [PYTHON, str(JIT_VERIFY_SCRIPT), kernel_abs]
     if use_json:
         cmd.append("--json")
     try:
@@ -89,7 +89,7 @@ def _run_jit(kernel_abs: str, use_json: bool) -> tuple[int, str]:
     except subprocess.TimeoutExpired:
         return 1, "JIT verify timeout after 120s"
     except FileNotFoundError:
-        return 2, f"{PYTHON310} or pytest_verify_kernel.py not found"
+        return 2, f"{PYTHON} or pytest_verify_kernel.py not found"
     except Exception as exc:
         return 1, f"JIT verify error: {exc}"
 
@@ -108,7 +108,7 @@ def _run_simulator(
     use_json: bool,
 ) -> tuple[int, str]:
     cmd = [
-        PYTHON310,
+        PYTHON,
         kernel_abs,
         "-r",
         backend,
@@ -128,7 +128,7 @@ def _run_simulator(
     except subprocess.TimeoutExpired:
         return 1, "Timeout after 120s"
     except FileNotFoundError:
-        return 2, f"{PYTHON310} not found on PATH"
+        return 2, f"{PYTHON} not found on PATH"
     except Exception as exc:
         return 1, f"Execution error: {exc}"
 

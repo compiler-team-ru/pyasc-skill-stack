@@ -116,7 +116,8 @@ operations:
         shapes:
           - [32, 4096]
         golden_status: untested
-        generative_status: pending
+        generative_status: confirmed
+        generative_evidence: evidence/reduce_sum-f16-generative.json
 
   # --- Tier 2: Composed ---
 
@@ -155,7 +156,8 @@ operations:
           - [4, 2048]
           - [32, 4096]
         golden_status: untested
-        generative_status: pending
+        generative_status: confirmed
+        generative_evidence: evidence/gelu-f32-generative.json
 
   - name: leaky_relu
     tier: composed
@@ -173,7 +175,8 @@ operations:
         golden_status: golden_only
         golden: golden/kernels/leaky_relu_f16.py
         golden_evidence: evidence/leaky_relu-f16-golden.json
-        generative_status: untested
+        generative_status: confirmed
+        generative_evidence: evidence/leaky_relu-f16-generative.json
 
   # --- Tier 3: Advanced ---
 
@@ -192,7 +195,8 @@ operations:
         golden_status: confirmed
         golden: golden/kernels/softmax_f16.py
         golden_evidence: evidence/softmax-f16-golden.json
-        generative_status: pending
+        generative_status: confirmed
+        generative_evidence: evidence/softmax-f16-generative.json
 
   - name: matmul
     tier: advanced
@@ -208,4 +212,5 @@ operations:
           - [128, 256]
           - [256, 128]
         golden_status: untested
-        generative_status: pending
+        generative_status: confirmed
+        generative_evidence: evidence/matmul-f16-generative.json
