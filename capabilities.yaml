@@ -63,7 +63,7 @@ operations:
         golden_status: confirmed
         golden: golden/kernels/abs_f16.py
         golden_evidence: evidence/abs-f16-golden.json
-        generative_status: confirmed
+        generative_status: pending
         generative_evidence: evidence/abs-f16-generative.json
 
   - name: add
