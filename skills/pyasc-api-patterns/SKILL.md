@@ -118,10 +118,22 @@ for i in asc2.range(n, parallel=True):               # parallel iteration
 
 ```python
 import numpy as np
+rng = np.random.default_rng(seed=2026)
+
+# CRITICAL: numpy Generator does NOT support dtype=float16.
+# Always generate as float32, then cast:
+x = (rng.random(size, dtype=np.float32) * 10 - 5).astype(np.float16)
+
 out = kernel_launch(x)
 expected = np.abs(x)
 np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 ```
+
+**Recommended tolerances** (simulator introduces rounding):
+- float16 elementwise: `atol=1e-3, rtol=1e-3`
+- float16 composed (gelu, softmax): `atol=5e-2, rtol=5e-2`
+- float32 elementwise: `atol=1e-5, rtol=1e-5`
+- float32 composed (gelu): `atol=1e-3, rtol=1e-3`
 
 ## Available asc2 Operations
 
@@ -277,6 +289,9 @@ softmax_kernel[CORE_NUM](x, out, num_rows, num_cols, block_size)
 | `num_cols: int` in kernel when used in `asc2.load` shape | Shape args must be compile-time known | Declare as `num_cols: asc.ConstExpr[int]` |
 | Skipping `asc.ceildiv` for tiling | Manual division causes wrong tile counts | Always use `asc.ceildiv(a, b)` |
 | Using `range()` instead of `asc2.range()` inside kernel | Python `range` is not JIT-compatible | Replace with `asc2.range()` |
+| `rng.random(shape, dtype=np.float16)` for test data | numpy Generator does not support float16 | Generate as float32, then cast: `rng.random(shape, dtype=np.float32).astype(np.float16)` |
+| Tolerance too tight for simulator (`atol=1e-5`) | Simulator introduces rounding; composed ops accumulate error | Use `atol=1e-3, rtol=1e-3` for float16; `atol=1e-3, rtol=1e-3` for composed float32 |
+| Testing many/large shapes on simulator | Simulator is ~1000x slower than NPU; large shapes cause timeouts | Test 1-2 shapes per run; keep total elements ≤ 131072 for float16 |
 
 ## API Restrictions
 

@@ -103,10 +103,16 @@ Note: `insert_sync=True` and `run_asc2_passes=True` are defaults for `@asc2.jit`
 > the simulator Docker environment and will cause runtime verification failures.
 > For reference implementations (e.g., softmax, gelu), write a pure numpy version.
 
+> **CRITICAL**: numpy's `default_rng().random()` does NOT support `dtype=np.float16`.
+> Always generate test data as `float32`, then cast:
+> `x = (rng.random(shape, dtype=np.float32) * 10 - 5).astype(np.float16)`
+
 ```python
 import numpy as np
+rng = np.random.default_rng(seed=2026)
+x = (rng.random(size, dtype=np.float32) * 10 - 5).astype(np.float16)
 result = kernel_launch(x)
-expected = np.abs(x)  # or whatever the operation should produce
+expected = np.abs(x)
 np.testing.assert_allclose(result, expected, atol=1e-3, rtol=1e-3)
 ```
 

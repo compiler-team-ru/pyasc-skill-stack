@@ -155,10 +155,15 @@ def _run_simulator(
             or "LD_LIBRARY_PATH" in combined
         ):
             return 2, "CANN runtime not available (simulator libs missing)"
-        return (
-            1,
-            f"Exit code {result.returncode}: {combined[:500]}",
-        )
+        error_line = ""
+        for line in reversed(combined.splitlines()):
+            stripped = line.strip()
+            if stripped and not stripped.startswith("[") and not stripped.startswith(">>>"):
+                error_line = stripped
+                break
+        detail = f"Exit code {result.returncode}: {error_line}" if error_line else f"Exit code {result.returncode}"
+        detail += f"\n{combined[-500:]}" if len(combined) > 500 else f"\n{combined}"
+        return 1, detail
 
     passed = False
     if "PASS" in combined or (
