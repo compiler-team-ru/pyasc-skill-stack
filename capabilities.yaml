@@ -146,7 +146,7 @@ operations:
     - - 32
       - 4096
     golden_status: untested
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
