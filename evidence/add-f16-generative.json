@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-04-18T04:23:19Z",
+  "date": "2026-04-19T04:30:18Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -13,7 +13,8 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
@@ -33,7 +34,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -90,8 +91,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "allclose x2, shape loop=yes"
+        "passed": false,
+        "detail": "single allclose, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -105,7 +106,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24596436500",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24620634957",
   "history": [
     {
       "date": "2026-04-15T18:52:04Z",
@@ -165,6 +166,15 @@
       "date": "2026-04-17T04:31:05Z",
       "overall_pass": true,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-18T04:23:19Z",
+      "overall_pass": true,
+      "score": 16.0,
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
