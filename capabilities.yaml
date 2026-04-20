@@ -168,21 +168,17 @@ operations:
     generative_status: confirmed
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
-    prompt: >-
-      Help me develop a GELU activation operator that supports float32 data
-      type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined
-      as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf
-      with np.vectorize (not np.erf or scipy). IMPORTANT: The simulator erf has
-      significant numerical error for float32. Use np.testing.assert_allclose(out,
-      expected, atol=2.0, rtol=0.1).
+    prompt: 'Help me develop a GELU activation operator that supports float32 data
+      type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).
+      For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).
+      IMPORTANT: The simulator erf has significant numerical error for float32. Use
+      np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).'
     prompt_variants:
-      guided: >-
-        Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf
-        for the kernel op. For host-side verification, use: import math; _verf =
-        np.vectorize(math.erf); expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use
-        np.erf or scipy.special.erf. The simulator erf has large numerical error for
-        float32 -- use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).
-        Shapes [1,128], [4,2048], [32,4096].
+      guided: 'Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf
+        for the kernel op. For host-side verification, use: import math; _verf = np.vectorize(math.erf);
+        expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use np.erf or scipy.special.erf.
+        The simulator erf has large numerical error for float32 -- use np.testing.assert_allclose(out,
+        expected, atol=2.0, rtol=0.1). Shapes [1,128], [4,2048], [32,4096].'
     shapes:
     - - 1
       - 128
@@ -193,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -231,14 +227,13 @@ operations:
       slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2,
       rtol=5e-2 for verification.
     prompt_variants:
-      guided: >-
-        Generate a softmax kernel for float16, shape [32, 4096] ONLY. Use asc2.softmax()
+      guided: 'Generate a softmax kernel for float16, shape [32, 4096] ONLY. Use asc2.softmax()
         on a block of full rows. Distribute rows across cores: block_size = ceildiv(num_rows,
         CORE_NUM), start_row = block_idx * block_size. Do NOT test additional shapes.
         For reference, compute numpy softmax: shifted = x - x.max(axis=1, keepdims=True);
-        e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True). Do NOT use scipy.
-        Verify: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32),
-        atol=5e-2, rtol=5e-2). Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).
+        e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True). Do NOT use
+        scipy. Verify: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32),
+        atol=5e-2, rtol=5e-2). Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).'
     shapes:
     - - 32
       - 4096
