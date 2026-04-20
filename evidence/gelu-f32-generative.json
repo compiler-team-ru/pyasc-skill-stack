@@ -3,33 +3,40 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy). IMPORTANT: Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
-  "date": "2026-04-20T04:55:49Z",
+  "prompt": "Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf for the kernel op. For host-side verification, use: import math; _verf = np.vectorize(math.erf); expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use np.erf or scipy.special.erf. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
+  "date": "2026-04-20T16:41:54Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: 4.113890e-01, -1.629835e-01,  1.201472e+00,  1.019599e+00,...\nabsolute difference: 1.83509578\nMax relative difference: 1.\n x: array([[ 1.295303, -0.127817, -0.055107,  0.398552, -0.158875, -0.058644,\n        -0.078004, -0.156554,  0.411389, -0.162983,  1.201472,  1.019599,\n         0.648639,  1.535407,  0.718377, -0.127024,  1.325119,  0.445793,...\n y: array([[ 1.295303e+00, -1.278165e-01, -5.510721e-02,  3.985520e-01,\n        -1.588750e-01, -5.864421e-02, -7.800372e-02, -1.565544e-01,\n         4.113890e-01, -1.629835e-01,  1.201472e+00,  1.019599e+00,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "none of ['asc2.erf'] found in kernel source",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.erf', 'erf(', 'gelu', '0.5 * x']",
+    "markers_found": [
+      "asc2.erf",
+      "erf(",
+      "gelu",
+      "0.5 * x"
+    ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -75,7 +82,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 3"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -87,21 +94,21 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "allclose x2, shape loop=no"
+        "detail": "allclose x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": false,
-        "detail": "none of ['asc2.erf'] found in source"
+        "passed": true,
+        "detail": "found ['asc2.erf']"
       }
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24648038131",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24674753361",
   "history": [
     {
       "date": "2026-04-15T19:48:00Z",
@@ -236,6 +243,42 @@
       "static": "pass",
       "runtime": "pass",
       "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T04:55:49Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T16:20:12Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T16:27:32Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T16:34:34Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
       "skipped": false
     }
   ]

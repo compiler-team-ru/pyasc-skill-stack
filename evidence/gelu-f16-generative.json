@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-04-20T04:53:04Z",
+  "date": "2026-04-20T16:12:53Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -27,13 +27,16 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.erf']",
+    "detail": "found ['asc2.erf', 'erf(', 'gelu', '0.5 * x']",
     "markers_found": [
-      "asc2.erf"
+      "asc2.erf",
+      "erf(",
+      "gelu",
+      "0.5 * x"
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -90,8 +93,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "allclose x1, shape loop=yes"
+        "passed": false,
+        "detail": "single allclose, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -104,8 +107,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24648038131",
+  "notes": "Nightly CI run (attempt 1/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24674753361",
   "history": [
     {
       "date": "2026-04-15T19:33:57Z",
@@ -201,6 +204,15 @@
       "date": "2026-04-19T04:52:32Z",
       "overall_pass": true,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T04:53:04Z",
+      "overall_pass": true,
+      "score": 16.0,
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
