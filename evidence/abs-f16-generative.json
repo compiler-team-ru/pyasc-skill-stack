@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-04-19T04:22:10Z",
+  "date": "2026-04-20T04:26:20Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -33,7 +33,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -90,8 +90,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "allclose x2, shape loop=yes"
+        "passed": false,
+        "detail": "single allclose, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -105,7 +105,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24620634957",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24648038131",
   "history": [
     {
       "date": "2026-04-15T18:37:19Z",
@@ -172,6 +172,15 @@
     },
     {
       "date": "2026-04-18T04:15:02Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-19T04:22:10Z",
       "overall_pass": true,
       "score": 16.0,
       "static": "pass",

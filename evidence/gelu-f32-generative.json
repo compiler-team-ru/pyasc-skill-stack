@@ -4,35 +4,32 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy). IMPORTANT: Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
-  "date": "2026-04-19T05:07:03Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-04-20T04:55:49Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md"
+      "design.md"
     ]
   },
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "fail",
-    "detail": "Exit code 1: 1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\n/ 128 (39.8%)\nMax absolute difference: 4.72641214\nMax relative difference: 1.\n x: array([[ 3.517757e+00, -2.125927e-03, -5.080989e-06,  1.285960e+00,\n        -1.200968e-01, -1.216682e-01, -5.584857e-05, -1.264706e-01,\n         1.325900e+00, -1.065111e-01,  3.309070e+00,  2.899851e+00,...\n y: array([[ 3.517757e+00, -2.126002e-03, -5.165969e-06,  1.285960e+00,\n        -1.200968e-01, -1.216682e-01, -5.565070e-05, -1.264705e-01,\n         1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.erf']",
-    "markers_found": [
-      "asc2.erf"
-    ]
+    "passed": false,
+    "detail": "none of ['asc2.erf'] found in kernel source",
+    "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -78,7 +75,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 3"
       },
       "output_dtype": {
         "passed": true,
@@ -90,21 +87,21 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "allclose x1, shape loop=yes"
+        "detail": "allclose x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.erf']"
+        "passed": false,
+        "detail": "none of ['asc2.erf'] found in source"
       }
     }
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24620634957",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24648038131",
   "history": [
     {
       "date": "2026-04-15T19:48:00Z",
@@ -221,6 +218,24 @@
       "static": "fail",
       "runtime": "fail",
       "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-19T05:07:03Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T04:54:42Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
       "skipped": false
     }
   ]

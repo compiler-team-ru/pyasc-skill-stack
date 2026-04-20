@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator that supports float16 data type with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/kernel.py",
-  "date": "2026-04-19T05:14:56Z",
+  "date": "2026-04-20T05:10:37Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -13,7 +13,8 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "verification": {
@@ -90,7 +91,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "allclose x2, shape loop=yes"
+        "detail": "allclose x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -103,8 +104,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/2)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24620634957",
+  "notes": "Nightly CI run (attempt 2/2)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24648038131",
   "history": [
     {
       "date": "2026-04-15T19:57:57Z",
@@ -158,6 +159,24 @@
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-19T05:14:56Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-20T05:02:54Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": false,
       "skipped": false
     }
   ]
