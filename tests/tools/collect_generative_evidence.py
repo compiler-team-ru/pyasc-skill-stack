@@ -150,13 +150,14 @@ def find_kernel(project_dir: Path, op: str) -> Path | None:
     def _is_excluded(p: str) -> bool:
         return any(p.startswith(pfx) for pfx in exclude_prefixes)
 
-    candidates = [
-        project_dir / "kernels" / f"{op}_f16" / "kernel.py",
-        project_dir / "kernels" / f"{op}_f32" / "kernel.py",
-        project_dir / "kernel.py",
-        project_dir / f"{op}_f16" / "kernel.py",
-        project_dir / f"{op}_f32" / "kernel.py",
-    ]
+    op_clean = op.replace("_", "")
+    dtype_suffixes = ["f16", "f32", "float16", "float32"]
+    candidates = []
+    for sfx in dtype_suffixes:
+        candidates.append(project_dir / "kernels" / f"{op}_{sfx}" / "kernel.py")
+        candidates.append(project_dir / f"{op}_{sfx}" / "kernel.py")
+        candidates.append(project_dir / "teams" / "pyasc-kernel-dev-team" / "kernels" / f"{op}_{sfx}" / "kernel.py")
+    candidates.append(project_dir / "kernel.py")
     for c in candidates:
         if c.is_file():
             return c
@@ -164,7 +165,7 @@ def find_kernel(project_dir: Path, op: str) -> Path | None:
     all_kernels = glob.glob(str(project_dir / "**" / "kernel.py"), recursive=True)
     all_kernels = [m for m in all_kernels if not _is_excluded(m)]
 
-    op_matches = [m for m in all_kernels if op in Path(m).parent.name]
+    op_matches = [m for m in all_kernels if op in Path(m).parent.name or op_clean in Path(m).parent.name.replace("_", "")]
     if op_matches:
         return Path(op_matches[0])
     if all_kernels:
@@ -232,7 +233,7 @@ OP_SEMANTIC_MARKERS: dict[str, list[str]] = {
     "reduce_sum": ["asc2.reduce_sum", ".sum("],
     "reduce_max": ["asc2.reduce_max", ".max("],
     "reduce_min": [".min("],
-    "gelu": ["asc2.erf"],
+    "gelu": ["asc2.erf", "erf(", "gelu", "0.5 * x", "0.5*x"],
     "leaky_relu": ["asc2.where"],
     "softmax": ["asc2.softmax", "asc2.exp", "softmax"],
     "matmul": ["asc2.matmul", "@ "],

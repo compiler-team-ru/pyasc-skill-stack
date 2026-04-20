@@ -50,6 +50,23 @@ operations:
     golden_evidence: evidence/abs-f16-golden.json
     generative_status: confirmed
     generative_evidence: evidence/abs-f16-generative.json
+  - dtype: float32
+    prompt: Help me develop an abs operator that supports float32 data type. The shape
+      is mainly [1,128], [4,2048], [32,4096].
+    prompt_variants:
+      minimal: Generate an abs kernel for float32.
+      guided: Generate an abs kernel using asc2.abs() with tiling via asc2.range.
+        Use float32, shapes [1,128], [4,2048], [32,4096].
+    shapes:
+    - - 1
+      - 128
+    - - 4
+      - 2048
+    - - 32
+      - 4096
+    golden_status: untested
+    generative_status: pending
+    generative_evidence: evidence/abs-f32-generative.json
 - name: add
   tier: elementwise
   asc2_api: x + y
@@ -61,6 +78,12 @@ operations:
   - dtype: float16
     prompt: Help me develop an add operator that supports float16 data type. The shape
       is mainly [1,128], [4,2048], [32,4096].
+    prompt_variants:
+      guided: >-
+        Generate an add (element-wise addition) kernel for float16. Two input tensors
+        x and y, output x+y. Use asc2.load/store and asc2.range for tiling. Shapes
+        [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape,
+        dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.
     shapes:
     - - 1
       - 128
@@ -83,6 +106,12 @@ operations:
     prompt: Help me develop a reduce_sum operator that supports float32 data type.
       The input shape is [32, 4096], reduce along the last axis to produce shape [32].
       Each row should be summed independently.
+    prompt_variants:
+      guided: >-
+        Generate a reduce_sum kernel for float32 with shape [32, 4096]. Use asc2.reduce_sum
+        on each row, wrap scalar result with asc2.full([1, OUT_PAD], s, dtype=row.dtype)
+        for 32-byte alignment (OUT_PAD=8 for float32). Use asc2.range for row distribution.
+        Verify with np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-3).
     shapes:
     - - 32
       - 4096
@@ -97,6 +126,13 @@ operations:
       Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment
       with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate
       error).
+    prompt_variants:
+      guided: >-
+        Generate a reduce_sum kernel for float16 with shape [32, 4096]. Use asc2.reduce_sum
+        on each row, wrap scalar result with asc2.full([1, OUT_PAD], s, dtype=row.dtype)
+        for 32-byte alignment (OUT_PAD=16 for float16). Use asc2.range for row distribution.
+        Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).
+        Verify with np.testing.assert_allclose(out_f32, expected_f32, atol=2.0, rtol=5e-2).
     shapes:
     - - 32
       - 4096
@@ -138,6 +174,13 @@ operations:
       type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).
       For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).
       IMPORTANT: Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).'
+    prompt_variants:
+      guided: >-
+        Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf
+        for the kernel op. For host-side verification, use: import math; _verf =
+        np.vectorize(math.erf); expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use
+        np.erf or scipy.special.erf. Use np.testing.assert_allclose(out, expected,
+        atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].
     shapes:
     - - 1
       - 128
@@ -156,6 +199,11 @@ operations:
   - dtype: float16
     prompt: Help me develop a leaky_relu operator that supports float16 data type
       with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].
+    prompt_variants:
+      guided: >-
+        Generate a leaky_relu kernel for float16 with alpha=0.01. Use asc2.where(x >= 0, x,
+        x * alpha) for the kernel op. Shapes [1,128], [4,2048], [32,4096]. Generate test
+        data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.
     shapes:
     - - 1
       - 128
@@ -178,6 +226,13 @@ operations:
       with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is
       slow. Apply softmax along the last axis so each row sums to 1. Use atol=1e-2,
       rtol=1e-2 for verification.
+    prompt_variants:
+      guided: >-
+        Generate a softmax kernel for float16, shape [32, 4096] ONLY. Use asc2.softmax()
+        on a block of full rows. Distribute rows across cores: block_size = ceildiv(num_rows,
+        CORE_NUM), start_row = block_idx * block_size. Do NOT test additional shapes.
+        Verify: np.testing.assert_allclose(out, scipy_softmax(x, axis=1), atol=1e-2, rtol=1e-2).
+        Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).
     shapes:
     - - 32
       - 4096
