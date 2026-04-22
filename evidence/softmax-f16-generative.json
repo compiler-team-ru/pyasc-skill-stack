@@ -3,37 +3,111 @@
   "kind": "generative",
   "operation": "softmax",
   "dtype": "float16",
-  "prompt": "Generate a softmax kernel for float16, shape [32, 4096] ONLY. Use asc2.softmax() on a block of full rows. Distribute rows across cores: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size. Do NOT test additional shapes. For reference, compute numpy softmax: shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True). Do NOT use scipy. Verify: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).",
-  "kernel_path": "",
-  "date": "2026-04-22T06:43:53Z",
+  "prompt": "Help me develop a softmax operator that supports float16 data type. Test with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2, rtol=5e-2 for verification.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
+  "date": "2026-04-22T12:44:08Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend910B1",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 14.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {}
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "allclose present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single allclose, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.softmax', 'softmax']"
+      }
+    }
   },
-  "static_verify": "fail",
-  "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24763919198",
+  "static_verify": "pass",
+  "notes": "Nightly CI run (attempt 1/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24776464258",
   "history": [
     {
       "date": "2026-04-15T20:04:58Z",
@@ -226,6 +300,15 @@
     },
     {
       "date": "2026-04-22T06:43:50Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T06:43:53Z",
       "overall_pass": false,
       "score": 0.0,
       "static": "fail",

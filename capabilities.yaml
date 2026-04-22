@@ -48,7 +48,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/abs_f16.py
     golden_evidence: evidence/abs-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/abs-f16-generative.json
   - dtype: float32
     prompt: Help me develop an abs operator that supports float32 data type. The shape
@@ -65,7 +65,7 @@ operations:
     - - 32
       - 4096
     golden_status: untested
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/abs-f32-generative.json
 - name: add
   tier: elementwise
@@ -117,7 +117,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/reduce_sum_f32.py
     golden_evidence: evidence/reduce_sum-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/reduce_sum-f32-generative.json
   - dtype: float16
     prompt: Help me develop a reduce_sum operator that supports float16 data type.
@@ -137,7 +137,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/reduce_sum_f16.py
     golden_evidence: evidence/reduce_sum-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/reduce_sum-f16-generative.json
 - name: gelu
   tier: composed
@@ -165,7 +165,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f16.py
     golden_evidence: evidence/gelu-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
     prompt: 'Help me develop a GELU activation operator that supports float32 data
@@ -189,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -214,7 +214,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/leaky_relu_f16.py
     golden_evidence: evidence/leaky_relu-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/leaky_relu-f16-generative.json
 - name: softmax
   tier: advanced
@@ -240,7 +240,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/softmax_f16.py
     golden_evidence: evidence/softmax-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/softmax-f16-generative.json
 - name: matmul
   tier: advanced

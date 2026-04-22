@@ -3,56 +3,114 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf for the kernel op. For host-side verification, use: import math; _verf = np.vectorize(math.erf); expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use np.erf or scipy.special.erf. The simulator erf has large numerical error for float32 -- use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1). Shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "",
-  "date": "2026-04-22T06:43:34Z",
+  "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy). IMPORTANT: The simulator erf has significant numerical error for float32. Use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
+  "date": "2026-04-22T12:34:07Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend910B1",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.erf', 'erf(', 'gelu', '0.5 * x']",
+    "markers_found": [
+      "asc2.erf",
+      "erf(",
+      "gelu",
+      "0.5 * x"
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {}
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "allclose present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "allclose x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.erf', 'erf(', 'gelu', '0.5 * x']"
+      }
+    }
   },
-  "static_verify": "fail",
-  "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24763919198",
+  "static_verify": "pass",
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/24776464258",
   "history": [
-    {
-      "date": "2026-04-16T07:19:27Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-16T07:26:47Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-16T09:36:22Z",
       "overall_pass": false,
@@ -303,6 +361,24 @@
       "static": "fail",
       "runtime": "fail",
       "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T06:43:34Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-22T12:27:45Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
       "skipped": false
     }
   ]
