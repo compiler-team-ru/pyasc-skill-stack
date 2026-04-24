@@ -11,12 +11,33 @@
 | numpy | < 2.0 | Required by pyasc |
 | torch | any | For tensor management and verification |
 
+## Locating your CANN install
+
+CANN can be installed in several places depending on how you obtained it. This guide uses a `CANN_HOME` environment variable so the commands below work regardless of where CANN lives on your machine. Common locations:
+
+- `$HOME/Ascend/cann` (default user install)
+- `$HOME/Ascend/ascend-toolkit/latest`
+- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0`)
+- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide; also the location used inside the provided Docker image)
+
+Export it once per shell (replace the default if your install lives elsewhere):
+
+```bash
+export CANN_HOME="${CANN_HOME:-$HOME/Ascend/cann}"
+```
+
+Similarly, if you build `pyasc` from source or reference its tutorials/tests, point `PYASC_SRC` at your checkout:
+
+```bash
+export PYASC_SRC="${PYASC_SRC:-$HOME/workspace/pyasc}"
+```
+
 ## Environment Setup
 
 ### 1. Source CANN environment
 
 ```bash
-source $HOME/Ascend/cann/set_env.sh
+source "$CANN_HOME/set_env.sh"
 ```
 
 This sets `ASCEND_HOME_PATH` and adds CANN binaries to `PATH`.
@@ -24,7 +45,7 @@ This sets `ASCEND_HOME_PATH` and adds CANN binaries to `PATH`.
 ### 2. Set simulator library path
 
 ```bash
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
 ```
 
 This is required for the Model backend (simulator). Without it, pyasc kernels will fail with missing library errors.
@@ -33,13 +54,13 @@ This is required for the Model backend (simulator). Without it, pyasc kernels wi
 
 ```bash
 # Check CANN version
-grep '^Version=' $ASCEND_HOME_PATH/compiler/version.info
+grep '^Version=' "$ASCEND_HOME_PATH/compiler/version.info"
 
 # Check simulator libs exist
-ls $ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib/
+ls "$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib/"
 
 # Run a pyasc tutorial to verify end-to-end
-cd ~/workspace/pyasc
+cd "$PYASC_SRC"
 python3.10 python/tutorials/01_add/add.py -r Model -v Ascend910B1
 ```
 
@@ -50,7 +71,7 @@ Success criteria: The tutorial prints "Sample add run success." with no ISA erro
 Always use `python3.10` (not `python` or `python3`) since pyasc and torch are installed under Python 3.10.
 
 ```bash
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
 python3.10 kernel.py -r Model -v Ascend910B1
 ```
 
@@ -61,12 +82,12 @@ python3.10 kernel.py -r Model -v Ascend910B1
 
 ```bash
 # Unit tests (mocked launcher, no simulator needed)
-cd ~/workspace/pyasc
+cd "$PYASC_SRC"
 python3.10 -m pytest python/test/unit/ -v
 
 # Kernel integration tests (requires simulator)
-source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+source "$CANN_HOME/set_env.sh"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
 python3.10 -m pytest python/test/kernels/test_vadd.py -v
 ```
 

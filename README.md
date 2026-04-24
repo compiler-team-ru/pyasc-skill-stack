@@ -14,12 +14,14 @@ With skills installed, a short prompt like _"Develop an abs operator for float16
 
 ### Prerequisites
 
-These must be available before starting:
+These must be available on the host before starting:
 
 - `opencode` CLI installed
-- Python 3.10.x with `pyasc` (asc2 API) and `numpy`
-- CANN Toolkit (see [docs/cann-setup.md](docs/cann-setup.md))
-- Simulator libraries for `Ascend910B1`
+- CANN Toolkit installed somewhere on disk (see [docs/cann-setup.md](docs/cann-setup.md))
+- Simulator libraries for `Ascend910B1` (shipped with CANN)
+- Either: Python 3.10.x (for the local-build path) **or** Docker (for the containerized path)
+
+> **Note on `asc2`.** The `asc2` tile-based API is not yet published to PyPI — the PyPI `pyasc` wheel ships only the `asc` v1 API. To get `asc2` you currently need either the Docker image (Option A) or a build from the `v2` branch of the `pyasc` source (Option B).
 
 ### Step 1. Clone the repository
 
@@ -28,24 +30,83 @@ git clone git@github.com:aloschilov/pyasc-skill-stack.git
 cd pyasc-skill-stack
 ```
 
-### Step 2. Set up the CANN environment
+### Step 2. Configure paths (once per shell)
+
+The repo does not assume a fixed location for CANN or for your `pyasc` checkout — both are expressed as environment variables with sensible defaults:
 
 ```bash
-source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+export CANN_HOME="${CANN_HOME:-$HOME/Ascend/cann}"
+export PYASC_SRC="${PYASC_SRC:-$HOME/workspace/pyasc}"
 ```
 
-Quick check:
+Common CANN install locations you may need to point `CANN_HOME` at:
+
+- `$HOME/Ascend/cann` (default user install)
+- `$HOME/Ascend/ascend-toolkit/latest`
+- `$HOME/Ascend/cann-<version>` (e.g. `cann-9.0.0`)
+- `/usr/local/Ascend/ascend-toolkit/latest` (system-wide install, and the location used inside the Docker image)
+
+`PYASC_SRC` is only needed for Options B and C below.
+
+### Step 3. Install `pyasc` (with `asc2`) — choose one option
+
+#### Option A — Docker (self-contained, recommended for a clean machine)
+
+The default `docker/Dockerfile` builds `pyasc` from the `v2` source inside the image; no pyasc checkout is required on the host.
 
 ```bash
-python3.10 -c "import asc; import asc2; print('pyasc OK')"
+docker build -f docker/Dockerfile -t pyasc-sim:latest docker/
+docker run --rm -it \
+  -v "$(pwd)":/workspace -w /workspace \
+  pyasc-sim:latest
 ```
 
-### Step 3. Start OpenCode
+All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**. Inside the container, `CANN_HOME` is already set to `/usr/local/Ascend/ascend-toolkit/latest`.
 
-From the repository root:
+An advanced overlay-based variant is also provided for developers who want to graft their local `pyasc` build onto a prebuilt CANN image:
 
 ```bash
+docker build -f docker/Dockerfile.overlay -t pyasc-sim:overlay docker/
+```
+
+See the header of [`docker/Dockerfile.overlay`](docker/Dockerfile.overlay) for when and why to use this variant.
+
+#### Option B — Local build from `pyasc` source (recommended for developers)
+
+Requires CANN and a C++ toolchain on the host. Clone `pyasc` anywhere (`$PYASC_SRC` tells the rest of the workflow where it lives) and build it into a venv:
+
+```bash
+git clone https://gitcode.com/cann/pyasc.git "$PYASC_SRC"
+( cd "$PYASC_SRC" && git fetch origin +refs/merge-requests/85/head:v2 && git checkout v2 )
+
+python3.10 -m venv .venv
+source .venv/bin/activate
+
+export LLVM_INSTALL_PREFIX=/path/to/prebuilt-llvm   # see note below
+pip install "$PYASC_SRC"
+```
+
+See the upstream [`pyasc` build-from-source guide](https://gitcode.com/cann/pyasc) (file `docs/installation/build-from-source.rst`) for prebuilt LLVM archive URLs and optional build flags (`PYASC_SETUP_CCACHE`, `PYASC_SETUP_CLANG_LLD`, etc.).
+
+#### Option C — Shortcut: existing system-wide `pyasc` dev install
+
+If `asc2` is already importable from the base `python3.10` (for example, you maintain a `pip install -e "$PYASC_SRC"` globally), create a venv that inherits system site-packages:
+
+```bash
+python3.10 -m venv --system-site-packages .venv
+source .venv/bin/activate
+```
+
+This is the fastest path but depends entirely on your pre-existing Python environment — prefer A or B for a reproducible setup.
+
+### Step 4. Source CANN and start OpenCode
+
+Same commands for all three options (for Docker, run them inside the container — `CANN_HOME` is preset there):
+
+```bash
+source "$CANN_HOME/set_env.sh"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
+python3.10 -c "import asc, asc2; print('pyasc OK')"
 opencode
 ```
 
@@ -60,13 +121,13 @@ The shape is mainly [1,128], [4,2048], [32,4096].
 
 The agent will autonomously walk through environment check, design, implementation, review, and verification. Do not intervene unless the agent hits an external platform issue.
 
-### Step 4. Verify the result
+### Step 5. Verify the result
 
 After the agent finishes, run the generated kernel manually:
 
 ```bash
-source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+source "$CANN_HOME/set_env.sh"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
 python3.10 teams/pyasc-kernel-dev-team/kernels/<kernel_name>/kernel.py -r Model -v Ascend910B1
 ```
 
@@ -159,8 +220,8 @@ See [tests/README.md](tests/README.md) for details.
 For non-interactive verification, use `opencode run` with a pseudo-TTY wrapper:
 
 ```bash
-source $HOME/Ascend/cann/set_env.sh
-export LD_LIBRARY_PATH=$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH
+source "$CANN_HOME/set_env.sh"
+export LD_LIBRARY_PATH="$ASCEND_HOME_PATH/tools/simulator/Ascend910B1/lib:$LD_LIBRARY_PATH"
 script -qc 'opencode run "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]." --format json' /dev/null
 ```
 
