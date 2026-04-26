@@ -189,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
