@@ -189,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -245,39 +245,34 @@ operations:
 - name: matmul
   tier: advanced
   asc2_api: asc2.matmul(a, b) or `a @ b`
-  note: 'Matmul uses the cube unit and requires the Ascend950PR_9599 simulator.
-    Inputs must be torch.Tensor (numpy arrays produce zeros on the simulator).
-    Result tile dtype is always float32 (cube accumulator). Load A to L0A and
-    B to L0B before computing.'
+  note: Matmul uses the cube unit and requires the Ascend950PR_9599 simulator. Inputs
+    must be torch.Tensor (numpy arrays produce zeros on the simulator). Result tile
+    dtype is always float32 (cube accumulator). Load A to L0A and B to L0B before
+    computing.
   cells:
   - dtype: float16
     platform: Ascend950PR_9599
-    prompt: 'Help me develop a tiled matrix multiplication operator (asc2 API)
-      for float16 inputs producing float32 output. Use small fixed shapes such
-      as M=K=N=16 or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT
-      numpy) for host-side data and torch.testing.assert_close for verification.
-      Load A to asc2.TileLocation.L0A and B to asc2.TileLocation.L0B, then use
-      `a @ b` (or asc2.matmul) and asc2.store the float32 result. Target the
-      Ascend950PR_9599 simulator (pass -v Ascend950PR_9599). Verify with
-      torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where
-      c_ref = a.to(torch.float32) @ b.to(torch.float32).'
+    prompt: Help me develop a tiled matrix multiplication operator (asc2 API) for
+      float16 inputs producing float32 output. Use small fixed shapes such as M=K=N=16
+      or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT numpy) for host-side
+      data and torch.testing.assert_close for verification. Load A to asc2.TileLocation.L0A
+      and B to asc2.TileLocation.L0B, then use `a @ b` (or asc2.matmul) and asc2.store
+      the float32 result. Target the Ascend950PR_9599 simulator (pass -v Ascend950PR_9599).
+      Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where
+      c_ref = a.to(torch.float32) @ b.to(torch.float32).
     prompt_variants:
       guided: 'Generate a tiled matmul kernel for float16 inputs (float32 output)
         using the asc2 API. Reference golden/kernels/matmul_f16.py for the proven
-        pattern. Requirements:
-        (1) Use torch.Tensor for host inputs (a, b dtype=torch.float16) and a
-        torch.float32 zero-initialized output buffer c. The simulator silently
-        produces zeros for matmul with numpy arrays, so torch is mandatory.
-        (2) Inside @asc2.jit: asc2.tensor for a/b/c, asc2.load with
-        location=asc2.TileLocation.L0A for the left operand and L0B for the
-        right operand, then `a_tile @ b_tile`, then asc2.store the float32 result.
-        (3) Use small shapes that fit L0A/L0B (each ≤ 64 KiB): start with
-        m=k=n=16, core_num=1, m_tile=n_tile=16. Tile sizes must be multiples
-        of 16.
-        (4) Set platform="Ascend950PR_9599" in argparse default. matmul does NOT
-        run on Ascend910B1.
-        (5) Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)
-        where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
+        pattern. Requirements: (1) Use torch.Tensor for host inputs (a, b dtype=torch.float16)
+        and a torch.float32 zero-initialized output buffer c. The simulator silently
+        produces zeros for matmul with numpy arrays, so torch is mandatory. (2) Inside
+        @asc2.jit: asc2.tensor for a/b/c, asc2.load with location=asc2.TileLocation.L0A
+        for the left operand and L0B for the right operand, then `a_tile @ b_tile`,
+        then asc2.store the float32 result. (3) Use small shapes that fit L0A/L0B
+        (each ≤ 64 KiB): start with m=k=n=16, core_num=1, m_tile=n_tile=16. Tile sizes
+        must be multiples of 16. (4) Set platform="Ascend950PR_9599" in argparse default.
+        matmul does NOT run on Ascend910B1. (5) Verify with torch.testing.assert_close(c,
+        c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
     shapes:
     - - 16
       - 16
@@ -286,6 +281,10 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/matmul_f16.py
     golden_evidence: evidence/matmul-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/matmul-f16-generative.json
-    semantic_check: ['asc2.matmul', '@', 'torch.Tensor', 'TileLocation.L0A']
+    semantic_check:
+    - asc2.matmul
+    - '@'
+    - torch.Tensor
+    - TileLocation.L0A
