@@ -22,5 +22,5 @@ OP_SEMANTIC_MARKERS: dict[str, list[str]] = {
     "leaky_relu": ["asc2.where"],
     "softmax": ["asc2.softmax", "asc2.exp", "softmax"],
     "matmul": ["asc2.matmul", "@ "],
-    "rms_norm": ["asc2.rms_norm"],
+    "rms_norm": ["asc2.sqrt", "sum_sq"],
 }

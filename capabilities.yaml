@@ -290,50 +290,73 @@ operations:
     - TileLocation.L0A
 - name: rms_norm
   tier: advanced
-  asc2_api: asc2.rms_norm(x, gamma, eps)
-  note: Single builtin that normalizes along the last dim only. Supports float16/float32
-    and 1D or 2D inputs. Multi-core layout follows the softmax pattern (dynamic batch
-    dim, ConstExpr norm dim).
+  asc2_api: asc2.reduce_sum + asc2.sqrt (single-vector-lane streaming)
+  note: 'Truly runtime-dynamic num_cols via single-vector-lane streaming: tile_cols=64
+    (one Ascend910B1 SIMD lane), scalar PlainValue accumulator for sum_sq across tiles,
+    host-side zero padding to a multiple of tile_cols. Both num_rows and num_cols
+    are runtime int. The pure scalar column-loop from
+    pyasc-fork/docs/e2e-rms-norm-column-loop-en.md is blocked in MR-85 by a multi-
+    core SetValueOp bug; this form is the production substitute. See
+    docs/streaming-rms-norm-status.md.'
   cells:
   - dtype: float16
     prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
       must utilize all available AI Cores by processing the data along the first or
       last dimension.
     prompt_variants:
-      guided: 'Build an asc2 RMSNorm kernel for float16. Use asc2.rms_norm(x, gamma,
-        eps). The number of rows is runtime-dynamic (`num_rows: int`); the normalization
-        dim is compile-time (`num_cols: asc.ConstExpr[int]`). Distribute rows across
-        AI cores via asc2.block_idx() and `kernel[CORE_NUM](...)`. Load gamma once
-        as a 1D tile of length num_cols. Use atol=5e-2, rtol=5e-2 with a numpy reference:
-        rms=sqrt(mean(x*x)+eps); y=(x/rms)*gamma. Test shape (32, 4096).'
+      guided: 'Build an asc2 RMSNorm kernel for float16. Both num_rows and num_cols
+        must be runtime int (NOT ConstExpr). Use a single-vector-lane streaming layout:
+        tile_cols=64 as asc.ConstExpr[int]; the host pads x and gamma to a multiple
+        of tile_cols and slices the output back. Distribute rows across AI cores via
+        `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Seed
+        sum_sq via `asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`
+        (PlainValue zero — required because Python `0.0` triggers a type-mismatch
+        with the loop-carried PlainValue). For each tile load `[1, tile_cols]`, cast
+        to float32 with `.to(asc.float32)`, accumulate `sum_sq += asc2.reduce_sum(x_f32
+        * x_f32)`. Compute `inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)`
+        normalizing by REAL num_cols (padded zeros do not bias sum_sq). Second pass:
+        load x and gamma tiles, cast both to float32, compute `out = x_f32 * gamma_f32
+        * inv_rms`, cast back via `.to(x.dtype)`, store. Use atol=5e-2, rtol=5e-2
+        with a numpy reference: rms=sqrt(mean(x*x)+eps); y=(x/rms)*gamma. Test shape
+        (8, 1055) with non-aligned num_cols to exercise the padding path.'
     shapes:
-    - - 32
-      - 4096
+    - - 8
+      - 1055
     golden_status: confirmed
     golden: golden/kernels/rms_norm_f16.py
     golden_evidence: evidence/rms_norm-f16-golden.json
     generative_status: confirmed
     generative_evidence: evidence/rms_norm-f16-generative.json
     semantic_check:
-    - asc2.rms_norm
+    - asc2.sqrt
+    - sum_sq
   - dtype: float32
     prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
       must utilize all available AI Cores by processing the data along the first or
       last dimension. Use float32 inputs.
     prompt_variants:
-      guided: 'Build an asc2 RMSNorm kernel for float32. Use asc2.rms_norm(x, gamma,
-        eps). The number of rows is runtime-dynamic (`num_rows: int`); the normalization
-        dim is compile-time (`num_cols: asc.ConstExpr[int]`). Distribute rows across
-        AI cores via asc2.block_idx() and `kernel[CORE_NUM](...)`. Load gamma once
-        as a 1D tile of length num_cols. Use atol=1e-2, rtol=1e-2 with a numpy reference:
-        rms=sqrt(mean(x*x)+eps); y=(x/rms)*gamma. Test shape (8, 1024).'
+      guided: 'Build an asc2 RMSNorm kernel for float32. Both num_rows and num_cols
+        must be runtime int (NOT ConstExpr). Use a single-vector-lane streaming layout:
+        tile_cols=64 as asc.ConstExpr[int]; the host pads x and gamma to a multiple
+        of tile_cols and slices the output back. Distribute rows across AI cores via
+        `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Seed
+        sum_sq via `asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`
+        (PlainValue zero — required because Python `0.0` triggers a type-mismatch
+        with the loop-carried PlainValue). First pass: for each tile load `[1, tile_cols]`,
+        accumulate `sum_sq += asc2.reduce_sum(x * x)`. Compute `inv_rms = 1.0 / asc2.sqrt(sum_sq
+        / num_cols + epsilon)` normalizing by REAL num_cols (padded zeros do not bias
+        sum_sq). Second pass: load x and gamma tiles, compute `out = x * gamma * inv_rms`,
+        store. Use atol=1e-4, rtol=1e-4 with a numpy reference: rms=sqrt(mean(x*x)+eps);
+        y=(x/rms)*gamma. Test shape (8, 1055) with non-aligned num_cols to exercise
+        the padding path.'
     shapes:
     - - 8
-      - 1024
+      - 1055
     golden_status: confirmed
     golden: golden/kernels/rms_norm_f32.py
     golden_evidence: evidence/rms_norm-f32-golden.json
     generative_status: confirmed
     generative_evidence: evidence/rms_norm-f32-generative.json
     semantic_check:
-    - asc2.rms_norm
+    - asc2.sqrt
+    - sum_sq

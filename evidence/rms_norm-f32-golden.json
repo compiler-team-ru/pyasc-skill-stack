@@ -4,7 +4,7 @@
   "operation": "rms_norm",
   "dtype": "float32",
   "kernel_path": "golden/kernels/rms_norm_f32.py",
-  "date": "2026-04-28T19:05:37Z",
+  "date": "2026-04-29T11:24:00Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
@@ -13,5 +13,5 @@
     "detail": "Kernel executed on Model/Ascend910B1, verification passed"
   },
   "runtime_verified": true,
-  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker. Multi-core (CORE_NUM=8) row distribution, dynamic num_rows, ConstExpr num_cols=1024, atol=rtol=1e-2. Streaming form (truly runtime-dynamic num_cols per pyasc-fork e2e-rms-norm-streaming-en.md) is blocked upstream — see docs/streaming-rms-norm-status.md."
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker. Single-vector-lane streaming pattern: tile_cols=64 (one Ascend910B1 SIMD lane), host-side zero padding to a multiple of tile_cols, multi-core (CORE_NUM=8) row distribution. Both num_rows and num_cols are runtime int. Test shape (8, 1055) — non-aligned num_cols exercises the host-padding tail path; rescales to (64, 100003) by changing only launcher constants. Tolerances atol=rtol=1e-4. Replaces the asc2.rms_norm builtin form because the user-visible prompt asks for truly dynamic string lengths; replaces the doc-exact column-loop form because MR-85 multi-core SetValueOp is broken (see docs/streaming-rms-norm-status.md)."
 }

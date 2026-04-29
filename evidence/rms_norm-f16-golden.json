@@ -4,7 +4,7 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "kernel_path": "golden/kernels/rms_norm_f16.py",
-  "date": "2026-04-28T19:05:37Z",
+  "date": "2026-04-29T11:25:00Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
@@ -13,5 +13,5 @@
     "detail": "Kernel executed on Model/Ascend910B1, verification passed"
   },
   "runtime_verified": true,
-  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker. Multi-core (CORE_NUM=16) row distribution, dynamic num_rows, ConstExpr num_cols=4096. Requires Dockerfile patch for asc.language.tile.unary_ops.rms_norm casing (RmsnormOp -> RmsNormOp)."
+  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker. Single-vector-lane streaming pattern with float32 accumulator: tile_cols=64 (one Ascend910B1 SIMD lane), host-side zero padding to a multiple of tile_cols, multi-core (CORE_NUM=16) row distribution, x and gamma loaded as float16 then cast via .to(asc.float32) inside the inner loop and cast back via .to(x.dtype) before asc2.store. Both num_rows and num_cols are runtime int. Test shape (8, 1055) — non-aligned num_cols exercises the host-padding tail path. Tolerances atol=rtol=5e-2."
 }

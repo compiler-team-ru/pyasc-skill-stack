@@ -106,3 +106,43 @@ The reproducers above were written and exercised against
 `pyasc-sim:rmsnorm` (the patched MR-85 image). They were intentionally
 deleted after diagnosis to keep the repo root clean — re-create them
 from this document if needed when revisiting.
+
+## Resolution: single-vector-lane streaming with host padding
+
+The capability cells `rms_norm/float16` and `rms_norm/float32` no longer
+use the `asc2.rms_norm` builtin or the wide-tile streaming pattern from
+the doc. Both have been replaced with a **single-vector-lane streaming
+kernel** that:
+
+- pins `tile_cols = 64` (one Ascend910B1 SIMD lane = 256 bytes), which
+  sidesteps both wide-tile bugs above (`asc2.mask` and the 64-lane
+  `asc2.full` / scalar-broadcast issue);
+- writes outputs as `[1, 64]` tile stores rather than scalar
+  `SetValueOp`, sidestepping a third MR-85 multi-core bug discovered
+  while exploring `pyasc-fork/docs/e2e-rms-norm-column-loop-en.md`:
+  pure-scalar `asc2.store(plain_value, gm, offsets=[r,c])` is silently
+  dropped on even-indexed blocks (rows from `block_idx ∈ {0, 2, 4, …}`
+  come back as zero, deterministically reproduced with an 8-row probe);
+- pads `x` and `gamma` to a multiple of `tile_cols` host-side, so the
+  kernel sees a clean rectangle and the tail vanishes; `sum_sq` is
+  divided by the REAL `num_cols`, so padded zeros do not bias the result;
+- accepts both `num_rows` and `num_cols` as runtime `int`, giving the
+  truly dynamic norm dim that the user-visible prompt asks for.
+
+The pinned production goldens are
+[`golden/kernels/rms_norm_f32.py`](../golden/kernels/rms_norm_f32.py)
+(atol=rtol=1e-4) and
+[`golden/kernels/rms_norm_f16.py`](../golden/kernels/rms_norm_f16.py)
+(float32 accumulator, atol=rtol=5e-2), both verified at shape `(8, 1055)`
+on `Ascend910B1` and rescalable to `(64, 100003)` by changing only the
+launcher constants. The teaching pattern lives in
+`skills/pyasc-api-patterns/SKILL.md` under "Normalization layers —
+single-vector-lane streaming RMSNorm". See also
+[`pyasc-fork/docs/e2e-rms-norm-column-loop-en.md`](../../pyasc-fork/docs/e2e-rms-norm-column-loop-en.md)
+for the alternative pattern that motivated this resolution.
+
+The two upstream bugs above (and the multi-core SetValueOp bug
+described here) remain open; once they are fixed in a future pyasc
+image, the kernel can be simplified back toward either the doc's wide-
+tile streaming or its pure-scalar column-loop without changing the
+capability matrix shape.

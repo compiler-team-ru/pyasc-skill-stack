@@ -184,7 +184,7 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 |-----------|-------|-------|
 | `asc2.softmax(x)` | Softmax | Operates on full rows of a 2D tile |
 | `asc2.matmul(a, b)` or `a @ b` | Matrix multiply | Requires `asc2.TileLocation` for memory placement |
-| `asc2.rms_norm(x, gamma, eps)` | Root-mean-square layer norm | Normalizes along the **last** dim only; supports float16/float32 and 1D or 2D inputs |
+| `asc2.reduce_sum(x*x)` + `asc2.sqrt(...)` | Root-mean-square layer norm (manual) | Use single-vector-lane streaming with `tile_cols=64` and host-side padding for truly runtime-dynamic `num_cols`; the `asc2.rms_norm` builtin is currently NOT used (the multi-core scalar path needed for tail handling is broken in MR-85) |
 
 ## Proven Kernel Patterns
 
@@ -362,72 +362,122 @@ softmax_kernel[CORE_NUM](x, out, num_rows, num_cols, block_size)
 **Softmax simulator constraint:** Test ONLY the shape specified in the prompt.
 The simulator is extremely slow for large softmax shapes. Do NOT add extra shapes.
 
-#### Normalization layers — `asc2.rms_norm`
+#### Normalization layers — single-vector-lane streaming RMSNorm
 
-**Signature:** `asc2.rms_norm(x, gamma, eps) -> Tile`. Normalizes along the **last
-dim only**, supports `float16`/`float32`, accepts 1D or 2D tiles. The op performs
-`y = x / sqrt(mean(x*x, axis=-1, keepdims=True) + eps) * gamma` internally.
+**Both `num_rows` and `num_cols` are runtime `int`** — RMSNorm in this skill
+stack honestly handles "dynamic string lengths". The norm dim is NOT a
+`ConstExpr`. The implementation is a two-pass tile streaming kernel with
+`tile_cols = 64` (one Ascend910B1 vector lane: 64 floats = 256 bytes), the
+only compile-time constant in the inner loop. Host-side zero padding makes
+the tail vanish.
 
-**Dynamic-batch / static-norm-dim contract** (same shape contract as softmax):
+**Why this shape and not the doc's column-loop or wide-tile streaming:**
 
-- Express "dynamic string lengths" or runtime-variable batch as `num_rows: int`.
-- The normalization (hidden) dim **must** be `num_cols: asc.ConstExpr[int]`,
-  because it appears in `asc2.tensor`/`asc2.load` shape expressions.
-- Distribute rows across cores via `block_size = asc.ceildiv(num_rows, CORE_NUM)`
-  and load `[block_size, num_cols]` slices using `asc2.block_idx() * block_size`
-  offsets — exactly the softmax pattern.
-- Load `gamma` once per block as a 1D tile of length `num_cols`; the op
-  broadcasts internally over the row dim.
+- `pyasc-fork/docs/e2e-rms-norm-column-loop-en.md` uses pure scalar
+  `asc2.store(plain_value, gm, offsets=[r,c])`, which lowers to `SetValueOp`.
+  `SetValueOp` is dropped on even-indexed blocks in MR-85 multi-core launches,
+  so rows produced by `block_idx ∈ {0, 2, 4, ...}` come back as zero. Verified
+  with an 8-row probe.
+- `pyasc-fork/docs/e2e-rms-norm-streaming-en.md` with the doc's `tile_cols=1024`
+  triggers two MR-85 wide-tile bugs (`asc2.mask` ignored, `asc2.full([1, big],
+  scalar)` only fills 64 lanes).
+- `tile_cols = 64` is exactly one SIMD lane, so neither wide-tile bug applies,
+  and tile stores avoid the multi-core scalar bug. See
+  [`docs/streaming-rms-norm-status.md`](../../docs/streaming-rms-norm-status.md)
+  for full diagnosis.
 
-Proven kernel pattern (from `golden/kernels/rms_norm_f16.py`):
+**Padding contract (host-side):**
+
+```text
+padded_cols = ceil(num_cols / tile_cols) * tile_cols
+x_padded[:, :num_cols] = x      ; x_padded[:, num_cols:] = 0
+gamma_padded[:num_cols] = gamma  ; gamma_padded[num_cols:] = 0
+out_padded = empty(num_rows, padded_cols)
+return out_padded[:, :num_cols]
+```
+
+Padded zeros do not contribute to `sum_sq`; the kernel divides by REAL
+`num_cols` for mean-square, so the result is identical to a no-padding
+implementation.
+
+**`sum_sq` PlainValue seed (REQUIRED):** the codegen rejects
+`sum_sq = 0.0` because the loop-carried value becomes a `PlainValue`,
+giving `'sum_sq' was re-assigned to an object with different type` ([function_visitor.py L241-244](../../pyasc-fork/python/asc/codegen/function_visitor.py)).
+Seed with a 1-vector-lane reduce-of-zero:
+
+```python
+zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
+sum_sq = asc2.reduce_sum(zero_seed)
+```
+
+The `[1, tile_cols=64]` size is well below the wide-fill breakage point.
+
+**Proven kernel pattern (from `golden/kernels/rms_norm_f32.py`):**
 
 ```python
 @asc2.jit(always_compile=True)
-def rms_norm_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddress,
-                    out_ptr: asc.GlobalAddress,
-                    num_rows: int, num_cols: asc.ConstExpr[int],
-                    block_size: asc.ConstExpr[int],
-                    eps: asc.ConstExpr[float]):
-    x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
-    gamma_gm = asc2.tensor(gamma_ptr, [num_cols])
-    out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
-    start_row = asc2.block_idx() * block_size
-    rows = asc2.load(x_gm, [block_size, num_cols], offsets=[start_row, 0])
-    gamma = asc2.load(gamma_gm, [num_cols], offsets=[0])
-    out = asc2.rms_norm(rows, gamma, eps)
-    asc2.store(out, out_gm, offsets=[start_row, 0])
+def rms_norm_streaming_kernel(x_ptr, gamma_ptr, out_ptr,
+                              num_rows: int, num_cols: int, padded_cols: int,
+                              num_tiles: int,
+                              tile_cols: asc.ConstExpr[int],
+                              epsilon: asc.ConstExpr[float]):
+    x_gm = asc2.tensor(x_ptr, [num_rows, padded_cols])
+    gamma_gm_2d = asc2.tensor(gamma_ptr, [1, padded_cols])
+    out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
 
-# Launch:
-block_size = asc.ceildiv(num_rows, CORE_NUM)
-rms_norm_kernel[CORE_NUM](x, gamma, out, num_rows, num_cols, block_size, eps)
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+        zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
+        sum_sq = asc2.reduce_sum(zero_seed)
+
+        for tile_id in asc2.range(num_tiles):
+            col = tile_id * tile_cols
+            x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
+            sum_sq = sum_sq + asc2.reduce_sum(x * x)
+
+        inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
+
+        for tile_id in asc2.range(num_tiles):
+            col = tile_id * tile_cols
+            x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
+            gamma = asc2.load(gamma_gm_2d, [1, tile_cols], offsets=[0, col])
+            out = x * gamma * inv_rms
+            asc2.store(out, out_gm, offsets=[row, col])
 ```
 
-**Host-side reference** (numpy only):
+For `float16` input, accumulate in `float32` via `.to(asc.float32)` on the
+loaded tile and cast back via `out_f32.to(x.dtype)` before `asc2.store`. See
+`golden/kernels/rms_norm_f16.py`.
+
+**Launch (host):**
+
+```python
+padded_cols = ((num_cols + tile_cols - 1) // tile_cols) * tile_cols
+num_tiles = padded_cols // tile_cols
+# pad x and gamma with zeros, run kernel, slice out_padded[:, :num_cols]
+rms_norm_streaming_kernel[CORE_NUM](x_padded, gamma_padded, out_padded,
+                                    num_rows, num_cols, padded_cols,
+                                    num_tiles, tile_cols, epsilon)
+```
+
+**Host-side reference (numpy only):**
 
 ```python
 def rms_norm_numpy(x, gamma, eps):
     x32 = x.astype(np.float32)
     mean_sq = (x32 * x32).mean(axis=-1, keepdims=True)
-    y = x32 / np.sqrt(mean_sq + eps)
-    return (y * gamma.astype(np.float32)).astype(x.dtype)
+    return (x32 / np.sqrt(mean_sq + eps) * gamma.astype(np.float32)).astype(x.dtype)
 ```
 
-**Tolerances:** float16 `atol=rtol=5e-2`; float32 `atol=rtol=1e-2`.
+**Tolerances:** float16 `atol=rtol=5e-2`; float32 `atol=rtol=1e-4`.
 
-**Note on "first or last dim":** `asc2.rms_norm` only supports last-dim
-normalization. If a prompt mentions "first or last dimension", pick last-dim;
-the runtime and shape contract above is what makes the row dim dynamic.
+**Test shape:** `(8, 1055)` exercises a non-aligned `num_cols` (the host pads
+to `1088 = 17 * 64`). Rescale to `(64, 100003)` by changing only `CORE_NUM`
+and the test-shape constants — the kernel is unchanged.
 
-**Note on truly runtime-dynamic norm dim (streaming RMSNorm):** the design
-pattern in `pyasc-fork/docs/e2e-rms-norm-streaming-en.md` (two-pass scalar
-`sum_sq` accumulator over fixed-size `tile_cols` tiles) is currently blocked
-in the pinned MR-85 simulator build by two upstream codegen issues:
-`asc2.mask(count=N)` does not constrain `asc2.store`, and
-`asc2.full([1, tile_cols], scalar)` plus `tile * scalar` only fills one
-hardware vector lane (64 floats). Until those are fixed upstream, the
-ConstExpr-norm-dim form above is the only correct way to implement
-RMSNorm; see [`docs/streaming-rms-norm-status.md`](../../docs/streaming-rms-norm-status.md)
-for reproducers and the path forward.
+**Note on "first or last dim":** RMSNorm here normalizes along the last dim
+only. Prompts that mention "first or last dimension" should be answered with
+the last-dim form above; the runtime contract above is what makes the row
+dim dynamic.
 
 ## Common Mistakes
 
@@ -438,8 +488,10 @@ for reproducers and the path forward.
 | `break`, `continue`, or early `return` inside `@asc2.jit` | Not supported by the AST codegen | Remove; restructure loop logic |
 | `if row_idx >= num_rows: pass` bounds guard | asc2 handles bounds automatically; `if` with `pass` confuses codegen | Remove the guard entirely |
 | Tiling softmax with sub-row chunks | `asc2.softmax` needs the full row to compute the denominator | Load full `[block_size, num_cols]` and call `asc2.softmax` once |
-| Trying to make the norm dim dynamic for `asc2.rms_norm` / `asc2.softmax` | Shape entries in `asc2.tensor` / `asc2.load` must be compile-time known | Keep the norm (last) dim `asc.ConstExpr[int]`; only the batch/row dim can be runtime `int` |
-| Hand-rolling streaming RMSNorm with `asc2.mask` / `asc2.full([1, tile_cols], inv_rms)` | In MR-85, `asc2.mask` does not constrain stores and wide `asc2.full`/scalar broadcast only fill one 64-lane vector | Use `asc2.rms_norm` builtin with `ConstExpr` norm dim — see streaming status doc for upstream issues |
+| Making the norm dim of `asc2.softmax` dynamic | `asc2.softmax`'s shape entries must be compile-time known | Keep the softmax norm (last) dim `asc.ConstExpr[int]`; only the batch/row dim can be runtime `int`. RMSNorm has its own dynamic-num_cols path (single-vector-lane streaming + host padding) |
+| Initializing a loop-carried scalar accumulator with a Python literal: `sum_sq = 0.0; sum_sq = sum_sq + plain_value` | Codegen does a strict `type(old) is not type(new)` check, so `float` vs `PlainValue` raises `'sum_sq' was re-assigned to an object with different type` | Seed with a 1-vector-lane reduce-of-zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))` |
+| Hand-rolling streaming RMSNorm with `asc2.mask` / wide `asc2.full([1, tile_cols], inv_rms)` for `tile_cols > 64` | In MR-85, `asc2.mask` does not constrain stores, and wide `asc2.full` / scalar broadcast only fill one 64-lane vector | Use `tile_cols=64` (one SIMD lane) plus host-side zero padding; see `golden/kernels/rms_norm_f32.py` |
+| Pure scalar `asc2.store(plain_value, gm, offsets=[r, c])` from a multi-core kernel (the doc's column-loop pattern) | MR-85 multi-core `SetValueOp` is dropped on even-indexed blocks: rows from `block_idx ∈ {0, 2, 4, ...}` come back as zero | Use tile stores (`asc2.store(tile, gm, offsets=...)`) of `[1, 64]` tiles instead — same row-distribution scheme, no SetValueOp |
 | Storing scalar reduction result directly | Tile last-dim must be >= 32 bytes; scalar is too small | Wrap with `asc2.full([1, pad], scalar, dtype=...)` |
 | Using `scipy` for verification | Not installed in the simulator Docker image | Use only `numpy` and `math` stdlib (or `torch` for matmul I/O only) |
 | Using numpy arrays for `asc2.matmul` inputs | The simulator silently lowers numpy arrays to zero for matmul | Use `torch.Tensor` (CPU) for matmul host-side data; verify with `torch.testing.assert_close` |
