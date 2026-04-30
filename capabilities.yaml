@@ -189,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: confirmed
+    generative_status: pending
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -294,10 +294,9 @@ operations:
   note: 'Truly runtime-dynamic num_cols via single-vector-lane streaming: tile_cols=64
     (one Ascend910B1 SIMD lane), scalar PlainValue accumulator for sum_sq across tiles,
     host-side zero padding to a multiple of tile_cols. Both num_rows and num_cols
-    are runtime int. The pure scalar column-loop from
-    pyasc-fork/docs/e2e-rms-norm-column-loop-en.md is blocked in MR-85 by a multi-
-    core SetValueOp bug; this form is the production substitute. See
-    docs/streaming-rms-norm-status.md.'
+    are runtime int. The pure scalar column-loop from pyasc-fork/docs/e2e-rms-norm-column-loop-en.md
+    is blocked in MR-85 by a multi- core SetValueOp bug; this form is the production
+    substitute. See docs/streaming-rms-norm-status.md.'
   cells:
   - dtype: float16
     prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It

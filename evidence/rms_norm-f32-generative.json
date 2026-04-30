@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension. Use float32 inputs.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float32/kernel.py",
-  "date": "2026-04-29T05:32:11Z",
+  "date": "2026-04-30T05:44:11Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -28,13 +28,14 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.rms_norm']",
+    "detail": "found ['asc2.sqrt', 'sum_sq']",
     "markers_found": [
-      "asc2.rms_norm"
+      "asc2.sqrt",
+      "sum_sq"
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -59,8 +60,8 @@
         "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
@@ -100,18 +101,36 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.rms_norm']"
+        "detail": "found ['asc2.sqrt', 'sum_sq']"
       }
     }
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 2/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25090654555",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25147140071",
   "history": [
     {
       "date": "2026-04-29T05:26:15Z",
       "overall_pass": false,
       "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-29T05:32:11Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-04-30T05:39:57Z",
+      "overall_pass": false,
+      "score": 15.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,
