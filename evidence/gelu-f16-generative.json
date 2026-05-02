@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-05-01T05:13:59Z",
+  "date": "2026-05-02T04:51:20Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -109,17 +109,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25202244899",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25243436575",
   "history": [
-    {
-      "date": "2026-04-16T09:21:25Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-16T09:28:54Z",
       "overall_pass": false,
@@ -376,6 +367,15 @@
       "date": "2026-04-30T11:17:47Z",
       "overall_pass": true,
       "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-01T05:13:59Z",
+      "overall_pass": true,
+      "score": 15.0,
       "static": "pass",
       "runtime": "pass",
       "semantic": true,

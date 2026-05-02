@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Build an asc2 RMSNorm capability for float16 on C310 (Ascend950PR_9599). Use torch.Tensor inputs (numpy is silently zeroed on C310). Provide TWO @asc2.jit kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase analogue) where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding. Both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum; cast back via `.to(x.dtype)` before asc2.store. Seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`. Provide a host-side dispatcher rms_norm_launch(x, gamma, eps) that picks full_row when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d. Verify both regimes in one run with atol=2e-2, rtol=2e-2 (full_row, shape (8, 256)) and atol=5e-2, rtol=5e-2 (split_d, shape (8, 1055)) against a torch reference.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm-float16/kernel.py",
-  "date": "2026-05-01T06:23:09Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/kernel.py",
+  "date": "2026-05-02T05:47:58Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -23,7 +23,7 @@
     "backend": "Model",
     "platform": "Ascend910B1",
     "status": "fail",
-    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (0, 64) (up to 0.02 allowed)\npy\", line 167, in run_kernel\n    torch.testing.assert_close(out_full, expected_full, atol=2e-2, rtol=2e-2)\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1530, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 1440 / 2048 (70.3%)\nGreatest absolute difference: 7.3125 at index (0, 219) (up to 0.02 allowed)\nGreatest relative difference: 1.0 at index (0, 64) (up to 0.02 allowed)\n",
+    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (0, 64) (up to 0.02 allowed)\n/kernel.py\", line 152, in run_kernel\n    torch.testing.assert_close(out1, expected1, atol=2e-2, rtol=2e-2)\n  File \"/usr/local/python3.11.15/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1530, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 1440 / 2048 (70.3%)\nGreatest absolute difference: 7.3125 at index (0, 219) (up to 0.02 allowed)\nGreatest relative difference: 1.0 at index (0, 64) (up to 0.02 allowed)\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -108,7 +108,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25202244899",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25243436575",
   "history": [
     {
       "date": "2026-04-29T05:21:47Z",
@@ -184,6 +184,42 @@
     },
     {
       "date": "2026-05-01T06:17:48Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-01T06:23:09Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-02T05:30:19Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-02T05:36:15Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-02T05:42:58Z",
       "overall_pass": false,
       "score": 14.0,
       "static": "pass",
