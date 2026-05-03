@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-02T04:28:00Z",
+  "date": "2026-05-03T04:43:09Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -106,17 +106,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25243436575",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25269755180",
   "history": [
-    {
-      "date": "2026-04-16T06:28:37Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-16T08:37:32Z",
       "overall_pass": true,
@@ -371,6 +362,15 @@
     },
     {
       "date": "2026-05-01T04:47:45Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-02T04:28:00Z",
       "overall_pass": true,
       "score": 16.0,
       "static": "pass",

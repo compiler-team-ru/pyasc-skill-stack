@@ -189,7 +189,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
@@ -291,15 +291,14 @@ operations:
 - name: rms_norm
   tier: advanced
   asc2_api: two-kernel + host dispatcher (full_row, split_d)
-  note: 'C310 (Ascend950PR_9599) host-side dispatch between full_row and split_d
-    kernels, mirroring CANN KernelRmsNormRegBase (tiling key 5000) and
-    KernelRmsNormRegBaseSplitD (tiling key 2001) in
-    opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp.
+  note: C310 (Ascend950PR_9599) host-side dispatch between full_row and split_d kernels,
+    mirroring CANN KernelRmsNormRegBase (tiling key 5000) and KernelRmsNormRegBaseSplitD
+    (tiling key 2001) in opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp.
     Inputs are torch.Tensor (numpy is silently zeroed on the C310 simulator path).
     The dispatcher picks full_row when num_cols * dtype_bytes fits a conservative
-    UB budget (and num_cols % 8 == 0), otherwise streams along D in tile_cols=64
-    tiles with host-side zero padding. Both shape regimes are exercised in a
-    single verification call.'
+    UB budget (and num_cols % 8 == 0), otherwise streams along D in tile_cols=64 tiles
+    with host-side zero padding. Both shape regimes are exercised in a single verification
+    call.
   cells:
   - dtype: float16
     prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
@@ -307,21 +306,21 @@ operations:
       last dimension.
     prompt_variants:
       guided: 'Build an asc2 RMSNorm capability for float16 on C310 (Ascend950PR_9599).
-        Use torch.Tensor inputs (numpy is silently zeroed on C310). Provide TWO
-        @asc2.jit kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase
-        analogue) where num_cols is asc.ConstExpr[int] and the row tile fits in UB,
-        and a split_d kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows
-        and num_cols are runtime int and the kernel streams along D in tile_cols=64
-        tiles with host-side zero padding. Both kernels distribute rows via `for row
-        in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Cast loaded
-        tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via
-        asc2.reduce_sum; cast back via `.to(x.dtype)` before asc2.store. Seed sum_sq
-        in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1,
-        tile_cols], 0.0, dtype=asc.float32))`. Provide a host-side dispatcher
-        rms_norm_launch(x, gamma, eps) that picks full_row when num_cols *
-        dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d. Verify both
-        regimes in one run with atol=2e-2, rtol=2e-2 (full_row, shape (8, 256)) and
-        atol=5e-2, rtol=5e-2 (split_d, shape (8, 1055)) against a torch reference.'
+        Use torch.Tensor inputs (numpy is silently zeroed on C310). Provide TWO @asc2.jit
+        kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase analogue)
+        where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d
+        kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows and num_cols
+        are runtime int and the kernel streams along D in tile_cols=64 tiles with
+        host-side zero padding. Both kernels distribute rows via `for row in asc2.range(asc2.block_idx(),
+        num_rows, asc2.block_num())`. Cast loaded tiles to float32 via `.to(asc.float32)`
+        before accumulating sum_sq via asc2.reduce_sum; cast back via `.to(x.dtype)`
+        before asc2.store. Seed sum_sq in split_d with a PlainValue zero: `sum_sq
+        = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`. Provide
+        a host-side dispatcher rms_norm_launch(x, gamma, eps) that picks full_row
+        when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d.
+        Verify both regimes in one run with atol=2e-2, rtol=2e-2 (full_row, shape
+        (8, 256)) and atol=5e-2, rtol=5e-2 (split_d, shape (8, 1055)) against a torch
+        reference.'
     shapes:
     - - 8
       - 256
@@ -342,19 +341,18 @@ operations:
       last dimension. Use float32 inputs.
     prompt_variants:
       guided: 'Build an asc2 RMSNorm capability for float32 on C310 (Ascend950PR_9599).
-        Use torch.Tensor inputs (numpy is silently zeroed on C310). Provide TWO
-        @asc2.jit kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase
-        analogue) where num_cols is asc.ConstExpr[int] and the row tile fits in UB,
-        and a split_d kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows
-        and num_cols are runtime int and the kernel streams along D in tile_cols=64
-        tiles with host-side zero padding. Both kernels distribute rows via `for row
-        in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Use asc2.reduce_sum
-        for sum_sq accumulation. Seed sum_sq in split_d with a PlainValue zero:
-        `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`.
-        Provide a host-side dispatcher rms_norm_launch(x, gamma, eps) that picks
-        full_row when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise
-        split_d. Verify both regimes in one run with atol=1e-4, rtol=1e-4 against a
-        torch reference at shapes (8, 256) and (8, 1055).'
+        Use torch.Tensor inputs (numpy is silently zeroed on C310). Provide TWO @asc2.jit
+        kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase analogue)
+        where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d
+        kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows and num_cols
+        are runtime int and the kernel streams along D in tile_cols=64 tiles with
+        host-side zero padding. Both kernels distribute rows via `for row in asc2.range(asc2.block_idx(),
+        num_rows, asc2.block_num())`. Use asc2.reduce_sum for sum_sq accumulation.
+        Seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1,
+        tile_cols], 0.0, dtype=asc.float32))`. Provide a host-side dispatcher rms_norm_launch(x,
+        gamma, eps) that picks full_row when num_cols * dtype_bytes <= 64KB and num_cols
+        % 8 == 0, otherwise split_d. Verify both regimes in one run with atol=1e-4,
+        rtol=1e-4 against a torch reference at shapes (8, 256) and (8, 1055).'
     shapes:
     - - 8
       - 256

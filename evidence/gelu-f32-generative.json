@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Generate a GELU kernel for float32: 0.5*x*(1+erf(x/sqrt(2))). Use asc2.erf for the kernel op. For host-side verification, use: import math; _verf = np.vectorize(math.erf); expected = 0.5*x*(1+_verf(x/np.sqrt(2))). Do NOT use np.erf or scipy.special.erf. The simulator erf has large numerical error for float32 -- use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1). Shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32/kernel.py",
-  "date": "2026-05-02T05:10:16Z",
+  "prompt": "Help me develop a GELU activation operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy). IMPORTANT: The simulator erf has significant numerical error for float32. Use np.testing.assert_allclose(out, expected, atol=2.0, rtol=0.1).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float32/kernel.py",
+  "date": "2026-05-03T05:26:56Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,8 +22,8 @@
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend910B1",
-    "status": "fail",
-    "detail": "Exit code 1: 1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\ns: 16 / 128 (12.5%)\nMax absolute difference: 4.72641214\nMax relative difference: 1.\n x: array([ 3.517757e+00, -2.125927e-03, -5.080989e-06,  1.285960e+00,\n       -1.200968e-01, -1.216682e-01, -5.584857e-05, -1.264706e-01,\n        1.325900e+00, -1.065111e-01,  3.309070e+00,  2.899851e+00,...\n y: array([ 3.517757e+00, -2.126002e-03, -5.165969e-06,  1.285960e+00,\n       -1.200968e-01, -1.216682e-01, -5.565070e-05, -1.264705e-01,\n        1.325900e+00, -1.065110e-01,  3.309070e+00,  2.899851e+00,...\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend910B1, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -108,36 +108,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25243436575",
+  "notes": "Nightly CI run (attempt 3/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25269755180",
   "history": [
-    {
-      "date": "2026-04-24T04:47:23Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-24T04:51:35Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-25T04:41:55Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-26T04:52:50Z",
       "overall_pass": false,
@@ -376,6 +349,33 @@
       "date": "2026-05-02T05:06:01Z",
       "overall_pass": false,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-02T05:10:16Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-03T05:13:57Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-03T05:20:07Z",
+      "overall_pass": false,
+      "score": 16.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,
