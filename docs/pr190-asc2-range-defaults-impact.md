@@ -51,8 +51,29 @@ verification (`run_and_verify.py … --mode simulator`) and `score_kernel.py`
 
 ## Follow-up
 
-The `reduce_sum_*` regression deserves a separate issue (not blocking PR 190
-adoption): investigate whether the regression is `asc2.range` lowering, the
-`asc2.reduce_sum` codegen interaction with `parallel=True`, or a row-count
-heuristic that should silently downgrade to non-parallel when
-`num_rows / asc2.block_num() <= 2`.
+A targeted post-nightly sweep (`Ascend910B1`, fixed `num_cols=4096`, varying
+`num_rows`) refutes the row-count heuristic theory — the regression is
+monotonic but stays positive even at 16 rows / core:
+
+| `num_rows` | rows/core | Baseline ticks | PR 190 ticks | Δ % |
+|---|---|---|---|---|
+| 32 | 2 | 4 938 | 6 440 | +30.42% |
+| 64 | 4 | 6 530 | 8 130 | +24.50% |
+| 128 | 8 | 9 694 | 11 334 | +16.92% |
+| 256 | 16 | 15 913 | 18 009 | +13.17% |
+
+Translation: the regression is not "trip count too low for `parallel=True` to
+amortise" — it is the body itself. Each iteration does a wide load
+(`row = asc2.load(x_gm, [1, 4096])`, ~8 KB) followed by a heavy
+`asc2.reduce_sum`. Doubling the in-flight bodies via `unroll_factor=2 +
+parallel=True` causes memory-bank contention on the load side and SIMD
+serialization on the reduce side; both costs grow with body weight, not trip
+count. The rule's wins on elementwise / RMSNorm bodies hold because those
+bodies are light enough that two in-flight iterations actually overlap.
+
+Filed as
+[issue #1](https://github.com/aloschilov/pyasc-skill-stack/issues/1) —
+investigate whether `asc2.reduce_sum` codegen serialises the SIMD reduction
+across `parallel=True` iterations, and whether the SKILL doc rule should add a
+"wide-load + per-iteration reduction" caveat to the row-distribution row of
+the pattern table.
