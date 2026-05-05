@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension. Use float32 inputs.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-05-05T05:42:45Z",
+  "date": "2026-05-05T10:09:05Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -94,7 +94,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x3, shape loop=no"
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -108,7 +108,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25357331161",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25365930079",
   "history": [
     {
       "date": "2026-04-29T05:26:15Z",
@@ -303,6 +303,15 @@
       "date": "2026-05-04T05:49:51Z",
       "overall_pass": true,
       "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-05T05:42:45Z",
+      "overall_pass": true,
+      "score": 15.0,
       "static": "pass",
       "runtime": "pass",
       "semantic": true,
