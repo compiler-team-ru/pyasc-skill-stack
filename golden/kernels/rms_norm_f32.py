@@ -53,7 +53,8 @@ def rms_norm_full_row_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddr
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, num_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
 
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                          unroll_factor=2, parallel=True):
         x_row = asc2.load(x_gm, [1, num_cols], offsets=[row, 0])
         x_row_f32 = x_row.to(asc.float32)
         sum_sq = asc2.reduce_sum(x_row_f32 * x_row_f32)
@@ -83,11 +84,13 @@ def rms_norm_split_d_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddre
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, padded_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
 
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                          unroll_factor=2, parallel=True):
         zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
         sum_sq = asc2.reduce_sum(zero_seed)
 
-        for tile_id in asc2.range(num_tiles):
+        # Inner reduction loop carries `sum_sq` across iterations -> NOT parallel.
+        for tile_id in asc2.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             x_f32 = x.to(asc.float32)
@@ -95,7 +98,8 @@ def rms_norm_split_d_kernel(x_ptr: asc.GlobalAddress, gamma_ptr: asc.GlobalAddre
 
         inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
 
-        for tile_id in asc2.range(num_tiles):
+        # Disjoint write-back -> safe to parallelise.
+        for tile_id in asc2.range(num_tiles, unroll_factor=2, parallel=True):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             gamma = asc2.load(gamma_gm_2d, [1, tile_cols], offsets=[0, col])

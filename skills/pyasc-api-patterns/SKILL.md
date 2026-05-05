@@ -56,7 +56,7 @@ def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block):
+    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
         out = asc2.abs(x)  # your operation here
@@ -91,7 +91,7 @@ tile_per_block = asc.ceildiv(num_tiles, CORE_NUM)
 Inside the kernel:
 ```python
 base_offset = asc2.block_idx() * tile_size * tile_per_block
-for i in asc2.range(tile_per_block):
+for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
     tile_offset = base_offset + i * tile_size
     x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
     # ... compute ...
@@ -106,12 +106,70 @@ for i in asc2.range(tile_per_block):
 > `cols: int`) will cause `RuntimeError: All values in 'shape' must be integers` at JIT time.
 > Always declare such parameters as `asc.ConstExpr[int]`.
 
-### asc2.range() options
+### Recommended `asc2.range` parameters (PR 190 defaults)
+
+Two kwargs of `asc2.range` (signature in
+[docker/pyasc-overlay/asc_language_tile/range.py](../../docker/pyasc-overlay/asc_language_tile/range.py))
+materially change codegen quality:
+
+- `unroll_factor: int = 1` — loop unroll attribute placed on the emitted
+  `ForOp`. Higher values give the compiler more scheduling freedom.
+- `parallel: bool = False` — flags the loop as having no carried
+  dependencies, allowing iteration-level reordering / vectorisation.
+
+The compiler-team [PR 190](https://gitcode.com/compiler-team/pyasc/pull/190)
+upgrades these from "advanced tuning knob" to "expected default": every
+`asc2.range` should set `unroll_factor=2`, and `parallel=True` should be
+applied whenever the loop has no read-after-write through a value defined
+outside the loop.
+
+**Decision rule:**
+
+```mermaid
+flowchart TD
+    Start["asc2.range(...) loop body"] --> Carried{"Reads any tile, scalar, or accumulator that a PREVIOUS iteration WROTE?"}
+    Carried -- "No (independent tiles, disjoint stores)" --> Par["unroll_factor=2, parallel=True"]
+    Carried -- "Yes (sum/max accumulator, prefix scan, in-place mutation)" --> NoPar["unroll_factor=2 (parallel omitted)"]
+```
+
+**Pattern table** (which form to ship for each loop kind in the proven
+golden patterns):
+
+| Loop kind | Example | `unroll_factor` | `parallel` |
+|---|---|---|---|
+| Elementwise tile loop | `for i in asc2.range(tile_per_block)` | 2 | True |
+| Row distribution | `for r in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())` | 2 | True |
+| Disjoint slice loop inside a row (e.g. RMSNorm split_d write-back) | `for tile_id in asc2.range(num_tiles)` | 2 | True |
+| Reduction accumulator (e.g. RMSNorm split_d `sum_sq = sum_sq + ...`) | `for tile_id in asc2.range(num_tiles)` | 2 | omit (default `False`) |
+| Compile-time loop over `asc.ConstExpr[int]` (matmul m / n loops) | `for i in range(m_tiles_per_block)` (Python `range`, not `asc2.range`) | n/a | n/a |
+
+Compile-time loops (last row) are already fully traced/unrolled at JIT
+time; wrapping them in `asc2.range(unroll_factor=2)` would emit a runtime
+`ForOp` and is a regression. Leave them as plain Python `range`.
+
+**Worked examples:**
 
 ```python
-for i in asc2.range(tile_per_block):                # basic loop
-for i in asc2.range(n, unroll_factor=2):             # unroll by 2
-for i in asc2.range(n, parallel=True):               # parallel iteration
+# (1) elementwise tile loop -- no carry, fully parallel
+for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
+    tile_offset = base_offset + i * tile_size
+    x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+    asc2.store(asc2.abs(x), out_gm, offsets=[tile_offset])
+
+# (2) row distribution -- each row independent
+for r in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                    unroll_factor=2, parallel=True):
+    row = asc2.load(x_gm, [1, num_cols], offsets=[r, 0])
+    s = asc2.reduce_sum(row)            # accumulation is INSIDE one call
+    asc2.store(asc2.full([1, OUT_PAD], s, dtype=asc.float32), out_gm,
+               offsets=[r, 0])
+
+# (3) reduction accumulator -- scalar carry across iterations -> NOT parallel
+sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))
+for tile_id in asc2.range(num_tiles, unroll_factor=2):     # parallel omitted
+    col = tile_id * tile_cols
+    x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col]).to(asc.float32)
+    sum_sq = sum_sq + asc2.reduce_sum(x * x)
 ```
 
 ### Verification pattern (numpy)
@@ -206,7 +264,7 @@ def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block):
+    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
         out = asc2.abs(x)  # replace with your op
@@ -216,6 +274,11 @@ def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
 num_tiles = asc.ceildiv(size, TILE_SIZE)
 my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
 ```
+
+The `unroll_factor=2, parallel=True` form on the tile loop is the PR 190
+default for any loop with no carried dependency — see the rule above.
+Tier 2 (gelu, leaky_relu) inherits this pattern unchanged; the loop body
+chains more `asc2` ops but iterations stay independent.
 
 ### Tier 2 — Composed (gelu, leaky_relu)
 
@@ -280,9 +343,10 @@ def reduce_sum_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
                       out_pad: asc.ConstExpr[int]):
     x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, out_pad])
-    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                        unroll_factor=2, parallel=True):
         row = asc2.load(x_gm, [1, num_cols], offsets=[i, 0])
-        s = asc2.reduce_sum(row)
+        s = asc2.reduce_sum(row)            # accumulation is INSIDE one call
         result = asc2.full([1, out_pad], s, dtype=row.dtype)
         asc2.store(result, out_gm, offsets=[i, 0])
 
@@ -432,7 +496,8 @@ def rms_norm_full_row_kernel(x_ptr, gamma_ptr, out_ptr,
     x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, num_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, num_cols])
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                          unroll_factor=2, parallel=True):
         x_row = asc2.load(x_gm, [1, num_cols], offsets=[row, 0])
         x_row_f32 = x_row.to(asc.float32)
         sum_sq = asc2.reduce_sum(x_row_f32 * x_row_f32)
@@ -463,16 +528,19 @@ def rms_norm_split_d_kernel(x_ptr, gamma_ptr, out_ptr,
     x_gm = asc2.tensor(x_ptr, [num_rows, padded_cols])
     gamma_gm_2d = asc2.tensor(gamma_ptr, [1, padded_cols])
     out_gm = asc2.tensor(out_ptr, [num_rows, padded_cols])
-    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num()):
+    for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(),
+                          unroll_factor=2, parallel=True):
         zero_seed = asc2.full([1, tile_cols], 0.0, dtype=asc.float32)
         sum_sq = asc2.reduce_sum(zero_seed)
-        for tile_id in asc2.range(num_tiles):
+        # Inner reduction loop carries `sum_sq` -> NOT parallel.
+        for tile_id in asc2.range(num_tiles, unroll_factor=2):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             x_f32 = x.to(asc.float32)
             sum_sq = sum_sq + asc2.reduce_sum(x_f32 * x_f32)
         inv_rms = 1.0 / asc2.sqrt(sum_sq / num_cols + epsilon)
-        for tile_id in asc2.range(num_tiles):
+        # Disjoint write-back -> safe to parallelise.
+        for tile_id in asc2.range(num_tiles, unroll_factor=2, parallel=True):
             col = tile_id * tile_cols
             x = asc2.load(x_gm, [1, tile_cols], offsets=[row, col])
             gamma = asc2.load(gamma_gm_2d, [1, tile_cols], offsets=[0, col])
@@ -560,6 +628,8 @@ what makes the row dim dynamic.
 | `np.erf(x)` or `scipy.special.erf(x)` for host-side reference | numpy has no `erf`; scipy not in Docker | Use `import math; _verf = np.vectorize(math.erf); result = _verf(x)` |
 | Tolerance too tight for simulator (`atol=1e-5`) | Simulator introduces rounding; composed ops accumulate error | Use `atol=1e-3, rtol=1e-3` for float16; `atol=1e-3, rtol=1e-3` for composed float32 |
 | Testing many/large shapes on simulator | Simulator is ~1000x slower than NPU; large shapes cause timeouts | Test 1-2 shapes per run; keep total elements ≤ 131072 for float16 |
+| `asc2.range(...)` without `unroll_factor=2` | Defaults to `unroll_factor=1`; leaves PR 190 perf on the table | Always pass `unroll_factor=2` (and `parallel=True` when the loop body has no carried dependency — see "Recommended asc2.range parameters" above) |
+| `parallel=True` on a loop with a carried scalar accumulator (`sum_sq = sum_sq + ...`, running max, prefix scan) | Iteration order is no longer guaranteed; accumulator updates collide and the reduction is silently wrong | Omit `parallel` (default `False`) on accumulator loops. Only the *outer* row distribution and *disjoint-tile* inner loops can be `parallel=True` |
 
 ### Editing `capabilities.yaml`
 

@@ -47,7 +47,7 @@ def gelu_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     x_gm = asc2.tensor(x_ptr, [size])
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
-    for i in asc2.range(tile_per_block):
+    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
         inner = (x + x * x * x * GELU_C) * GELU_K
