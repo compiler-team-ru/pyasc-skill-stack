@@ -163,10 +163,13 @@ jobs:
             op="${entry%%:*}"
             dtype="${entry##*:}"
             best_exit=1
-            DOCKER_TO=300
-            if [ "$op" = "softmax" ] || [ "$op" = "gelu" ] || [ "$op" = "matmul" ]; then
-              DOCKER_TO=600
-            fi
+            # Uniform 1500s docker timeout (matches merge-gate post-C310 migration).
+            # Pre-migration nightly used 300s/600s on Ascend910B1, but the C310
+            # camodel is markedly slower (~80s wall per launch in our probes), and
+            # opencode-generated kernels with shapes [32,4096] easily exceeded the
+            # smaller budgets — see docs/perf-methodology/ticks-calculation.md and
+            # the 2026-05-07 nightly post-mortem.
+            DOCKER_TO=1500
             for attempt in $(seq 1 $ATTEMPTS); do
               echo "=== Generative evidence: $op / $dtype (attempt $attempt/$ATTEMPTS) ==="
               python3.10 tests/tools/collect_generative_evidence.py \

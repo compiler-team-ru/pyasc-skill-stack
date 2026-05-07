@@ -175,23 +175,33 @@ operations:
     generative_evidence: evidence/gelu-f16-generative.json
   - dtype: float32
     platform: Ascend950PR_9599
-    prompt: Help me develop a GELU activation operator (tanh / Padé approximation
+    prompt: 'Help me develop a GELU activation operator (tanh / Padé approximation
       form) that supports float32 data type. The shape is mainly [1,128], [4,2048],
       [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh;
-      do NOT use asc2.erf (simulator erf is too noisy on float32). For host-side reference,
-      use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).
+      do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when
+      multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile
+      MUST be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`).
+      The asc2 Tile class does not implement __rmul__, so scalar-on-left raises
+      AttributeError at codegen time. Compute sqrt(2/pi) and 0.044715 as Python
+      module-level constants outside the @asc2.jit function. For host-side reference,
+      use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).'
     prompt_variants:
       guided: 'Generate a GELU kernel for float32 using the tanh/Padé approximation
         (PyTorch gelu(approximate=''tanh'')): out = 0.5 * x * (1 + tanh(sqrt(2/pi)
         * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf
         (simulator erf has up to 4.7 absolute error on float32 and is excluded from
-        this prompt). Use TILE_SIZE=64 (a conservative single-lane width that is the
-        safe default for goldens on C310; wider tiles can hit lowering bugs that only
-        write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python module-level
-        constants outside the @asc2.jit function. For host-side reference, use: k
-        = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x + 0.044715
-        * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).
-        Shapes [1,128], [4,2048], [32,4096].'
+        this prompt). CRITICAL ordering rule: inside the @asc2.jit body, every
+        scalar-times-tile multiplication MUST place the Tile on the left. Write
+        `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`; write `inner * GELU_K`,
+        NOT `GELU_K * inner`. The asc2 Tile class lacks __rmul__, so scalar-on-left
+        fails at codegen with `AttributeError: ''Tile'' object has no attribute
+        ''__rmul__''`. Use TILE_SIZE=64 (a conservative single-lane width that is
+        the safe default for goldens on C310; wider tiles can hit lowering bugs
+        that only write the first 64 elements). Compute sqrt(2/pi) and 0.044715
+        as Python module-level constants outside the @asc2.jit function. For
+        host-side reference, use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x
+        * (1.0 + np.tanh(k * (x + 0.044715 * x**3))). Use np.testing.assert_allclose(out,
+        expected, atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].'
     shapes:
     - - 1
       - 128
