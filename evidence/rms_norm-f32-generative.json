@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float32",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension. Use float32 inputs.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float32/kernel.py",
-  "date": "2026-05-06T21:05:22Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/kernel.py",
+  "date": "2026-05-07T09:02:33Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -36,7 +36,7 @@
     ]
   },
   "score": {
-    "value": 13.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -73,8 +73,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -93,8 +93,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -107,8 +107,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 3/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "notes": "Nightly CI run (attempt 1/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
     {
       "date": "2026-04-29T05:26:15Z",
@@ -359,6 +359,15 @@
       "score": 13.0,
       "static": "pass",
       "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T21:05:22Z",
+      "overall_pass": true,
+      "score": 13.0,
+      "static": "pass",
+      "runtime": "pass",
       "semantic": true,
       "skipped": false
     }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Generate a GELU kernel composing asc2.erf, multiplication, and addition: 0.5*x*(1+erf(x/sqrt(2))). Use float16, shapes [1,128], [4,2048], [32,4096]. Use asc2.load/store and asc2.range for tiling. For host-side verification use: import math; _verf = np.vectorize(math.erf). Do NOT use np.erf or scipy.special.erf. Use atol=5e-2, rtol=5e-2.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-05-06T18:48:43Z",
+  "date": "2026-05-07T07:09:02Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -35,7 +35,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -92,8 +92,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -107,44 +107,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
-    {
-      "date": "2026-04-22T04:16:58Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:17:04Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:17:11Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:17:18Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T06:43:17Z",
       "overall_pass": false,
@@ -372,6 +336,42 @@
     },
     {
       "date": "2026-05-06T18:38:45Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T18:48:43Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T06:39:54Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T06:51:11Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T06:56:59Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",

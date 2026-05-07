@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-05-06T20:34:31Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float16/kernel.py",
+  "date": "2026-05-07T08:55:15Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -36,7 +36,7 @@
     ]
   },
   "score": {
-    "value": 13.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -73,8 +73,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -93,8 +93,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x4, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -108,7 +108,7 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
     {
       "date": "2026-04-29T05:21:47Z",
@@ -321,6 +321,15 @@
       "date": "2026-05-06T05:57:08Z",
       "overall_pass": true,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T20:34:31Z",
+      "overall_pass": true,
+      "score": 13.0,
       "static": "pass",
       "runtime": "pass",
       "semantic": true,

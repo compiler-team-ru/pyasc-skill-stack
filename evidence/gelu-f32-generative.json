@@ -4,8 +4,8 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Generate a GELU kernel for float32 using the tanh/Pad\u00e9 approximation (PyTorch gelu(approximate='tanh')): out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf (simulator erf has up to 4.7 absolute error on float32 and is excluded from this prompt). Use TILE_SIZE=64 (a conservative single-lane width that is the safe default for goldens on C310; wider tiles can hit lowering bugs that only write the first 64 elements). Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x * (1.0 + np.tanh(k * (x + 0.044715 * x**3))). Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32_tanh/kernel.py",
-  "date": "2026-05-06T19:29:51Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float32/kernel.py",
+  "date": "2026-05-07T07:48:13Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -23,7 +23,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 300s",
+    "detail": "Exit code 1: AttributeError: 'Tile' object has no attribute '__rmul__'\nasc.codegen.errors.CodegenError: at <source>:11:21:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])\n        x_cubed = x * x * x\n                     ^\n        inner = (x + GELU_C * x_cubed) * GELU_K\n        out = x * (asc2.tanh(inner) + 1.0) * 0.5\n        asc2.store(out, out_gm, offsets=[tile_offset])\nAttributeError: 'Tile' object has no attribute '__rmul__'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -36,7 +36,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -93,8 +93,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x2, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -108,44 +108,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
-    {
-      "date": "2026-04-28T09:45:22Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-29T05:01:02Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-30T05:01:14Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-30T05:07:18Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-30T05:11:08Z",
       "overall_pass": false,
@@ -375,6 +339,42 @@
       "date": "2026-05-06T19:19:19Z",
       "overall_pass": false,
       "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T19:29:51Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T07:20:23Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T07:30:56Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T07:43:00Z",
+      "overall_pass": false,
+      "score": 15.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,

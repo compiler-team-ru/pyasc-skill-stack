@@ -4,8 +4,8 @@
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Generate a leaky_relu kernel for float16 with alpha=0.01. Use asc2.where(x >= 0, x, x * alpha) for the kernel op. Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/kernel.py",
-  "date": "2026-05-06T20:12:19Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
+  "date": "2026-05-07T08:31:42Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -106,44 +106,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
-    {
-      "date": "2026-04-22T04:17:53Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:18:00Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:18:07Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T04:18:15Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T06:43:36Z",
       "overall_pass": false,
@@ -371,6 +335,42 @@
     },
     {
       "date": "2026-05-06T20:01:31Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T20:12:19Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T07:58:41Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T08:08:30Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T08:20:30Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",

@@ -4,8 +4,8 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Generate an add (element-wise addition) kernel for float16. Two input tensors x and y, output x+y. Use asc2.load/store and asc2.range for tiling. Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_float16/kernel.py",
-  "date": "2026-05-06T18:03:59Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
+  "date": "2026-05-07T06:17:33Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -107,44 +107,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25445944784",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
   "history": [
-    {
-      "date": "2026-04-18T04:23:19Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-19T04:30:18Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-20T04:28:00Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-20T15:50:32Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-20T18:36:51Z",
       "overall_pass": true,
@@ -374,6 +338,42 @@
       "date": "2026-05-06T17:55:01Z",
       "overall_pass": false,
       "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-06T18:03:59Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T05:44:38Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T05:55:04Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T06:06:06Z",
+      "overall_pass": false,
+      "score": 16.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,
