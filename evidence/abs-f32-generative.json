@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Generate an abs kernel using asc2.abs() with tiling via asc2.range. Use float32, shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float32/kernel.py",
-  "date": "2026-05-07T05:32:50Z",
+  "date": "2026-05-07T11:41:02Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -23,7 +23,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "timeout",
+    "detail": "Timeout after 300s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -106,44 +106,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25488681314",
   "history": [
-    {
-      "date": "2026-04-22T06:42:38Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T06:42:40Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T06:42:43Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-22T06:42:45Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T12:04:03Z",
       "overall_pass": true,
@@ -371,6 +335,42 @@
     },
     {
       "date": "2026-05-07T05:22:21Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T05:32:50Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T11:08:14Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T11:19:45Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T11:30:24Z",
       "overall_pass": false,
       "score": 15.0,
       "static": "pass",

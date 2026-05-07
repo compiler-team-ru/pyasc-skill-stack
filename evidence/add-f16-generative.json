@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Generate an add (element-wise addition) kernel for float16. Two input tensors x and y, output x+y. Use asc2.load/store and asc2.range for tiling. Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.",
+  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-05-07T06:17:33Z",
+  "date": "2026-05-07T11:48:25Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,8 +22,8 @@
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "timeout",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -35,7 +35,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -92,8 +92,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -106,18 +106,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
+  "notes": "Nightly CI run (attempt 1/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25488681314",
   "history": [
-    {
-      "date": "2026-04-20T18:36:51Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-21T04:38:19Z",
       "overall_pass": true,
@@ -372,6 +363,15 @@
     },
     {
       "date": "2026-05-07T06:06:06Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T06:17:33Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",

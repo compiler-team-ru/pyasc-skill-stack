@@ -4,18 +4,17 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float16/kernel.py",
-  "date": "2026-05-07T08:55:15Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
+  "date": "2026-05-07T14:20:38Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "verification": {
@@ -36,7 +35,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -73,8 +72,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -94,7 +93,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x4, shape loop=no"
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -107,8 +106,8 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25475895458",
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25488681314",
   "history": [
     {
       "date": "2026-04-29T05:21:47Z",
@@ -332,6 +331,24 @@
       "score": 13.0,
       "static": "pass",
       "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T08:55:15Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T14:11:05Z",
+      "overall_pass": false,
+      "score": 13.0,
+      "static": "pass",
+      "runtime": "fail",
       "semantic": true,
       "skipped": false
     }
