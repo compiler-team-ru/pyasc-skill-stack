@@ -99,7 +99,7 @@ it. Our golden (`golden/kernels/gelu_f32.py:54-55`) does it correctly:
 
 ## Verification plan
 
-1. Apply both fixes (timeout bump + prompt hardening).
+1. Apply the timeout bump + prompt hardening.
 2. Trigger nightly via `gh workflow run CI -f tier=nightly` so the next
    run is not 24h away.
 3. Expect `>=11/12` to pass. If `gelu/float32` still fails, the prompt
@@ -108,6 +108,44 @@ it. Our golden (`golden/kernels/gelu_f32.py:54-55`) does it correctly:
 4. Update `capabilities.yaml` `generative_status` for the 5 cells back
    to `confirmed` is automatic via `sync_capabilities.py` once their
    evidence files report `runtime: pass`.
+
+## Update — second nightly (run 25488681314, 2026-05-07 10:15–14:41 UTC)
+
+Result: 8/12 passed. Net improvement vs. the first post-migration nightly
+was small (`add/f16` and `gelu/f16` recovered) and `abs/f16` regressed
+(was passing, now failing). Three of the original five (`abs/f32`,
+`gelu/f32`, `leaky_relu/f16`) still failed.
+
+Reading the evidence files revealed the actual issue: every failure said
+`detail: "Timeout after 300s"`. The CI bump to `DOCKER_TO=1500` only
+sized the **outer `docker run` subprocess** wait. The **inner
+`run_and_verify.py --timeout`** still defaulted to `300 s`, so the
+simulator subprocess inside the container was killed at 300 s and
+returned the timeout string before Docker noticed.
+
+Confirming the agent-side: the `gelu/float32` kernel from this run was
+**correctly written** with tile-on-left throughout — the prompt
+hardening worked. It still failed only because of the inner timeout.
+
+**Second fix.** `tests/tools/collect_generative_evidence.py` now forwards
+the docker timeout to `run_and_verify.py --timeout` (with a 30 s
+headroom: inner `1470 s`, outer `1500 s`), so the inner simulator
+subprocess gets the budget the CI script intended. Comment in the
+function docstring documents the requirement so a future caller doesn't
+re-introduce the same drift.
+
+```diff
+         "python3.11", "/repo/tests/tools/run_and_verify.py",
+         str(rel_kernel), "--mode", "simulator", "--json",
+         "--platform", platform,
++        "--timeout", str(max(60, timeout - 30)),
+     ]
+```
+
+Lesson: when a CI script and an internal tool both expose a `--timeout`
+flag, it's an integration smell to assume the wrapper bound covers the
+inner one. A single named timeout that propagates through the stack
+would have prevented this entire iteration.
 
 ## Why this didn't catch in the migration's pre-flight
 

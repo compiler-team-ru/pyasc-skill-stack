@@ -275,6 +275,12 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
     *platform* is forwarded to run_and_verify.py via ``--platform``. The
     default ``Ascend950PR_9599`` (C310) is the only platform the stack
     targets. Heavy CANN simulator runs need a high open-files ulimit.
+
+    *timeout* bounds both the outer ``docker run`` subprocess and the inner
+    simulator-kernel subprocess (forwarded as ``run_and_verify.py
+    --timeout``). They must agree, otherwise the inner default of 300 s
+    short-circuits the outer wait — see the 2026-05-07 nightly post-mortem
+    in docs/perf-methodology/.
     """
     rel_kernel = kernel_path.relative_to(project_dir)
     cmd = [
@@ -287,6 +293,7 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
         "python3.11", "/repo/tests/tools/run_and_verify.py",
         str(rel_kernel), "--mode", "simulator", "--json",
         "--platform", platform,
+        "--timeout", str(max(60, timeout - 30)),
     ]
     code, out, err = _run(cmd, timeout=timeout)
     result = {
