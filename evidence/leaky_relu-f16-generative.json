@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Generate a leaky_relu kernel for float16 with alpha=0.01. Use asc2.where(x >= 0, x, x * alpha) for the kernel op. Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
-  "date": "2026-05-07T13:39:36Z",
+  "date": "2026-05-07T18:17:14Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -23,7 +23,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 300s",
+    "detail": "Exit code 1: 0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\nax absolute difference: 0.981\nMax relative difference: 0.99\n x: array([[8.522e-03, 1.790e-03, 2.642e-04, 6.401e-03, 3.656e-03, 4.673e-03,\n        7.987e-04, 3.706e-03, 6.435e-03, 3.551e-03, 8.316e-03, 7.904e-03,\n        7.046e-03, 9.056e-03, 7.214e-03, 1.774e-03, 8.583e-03, 6.531e-03,...\n y: array([[0.852   , 0.179   , 0.02641 , 0.64    , 0.3655  , 0.4673  ,\n        0.07983 , 0.3706  , 0.6436  , 0.355   , 0.831   , 0.7905  ,\n        0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -106,44 +106,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25488681314",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25503334838",
   "history": [
-    {
-      "date": "2026-04-22T12:40:26Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-23T05:01:25Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-24T04:56:42Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-25T04:46:52Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-26T05:08:38Z",
       "overall_pass": true,
@@ -373,6 +337,42 @@
       "date": "2026-05-07T13:28:53Z",
       "overall_pass": false,
       "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T13:39:36Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T17:36:22Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T17:53:24Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T17:59:16Z",
+      "overall_pass": false,
+      "score": 15.0,
       "static": "pass",
       "runtime": "fail",
       "semantic": true,

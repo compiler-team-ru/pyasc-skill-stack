@@ -49,7 +49,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/abs_f16.py
     golden_evidence: evidence/abs-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/abs-f16-generative.json
   - dtype: float32
     platform: Ascend950PR_9599
@@ -67,7 +67,7 @@ operations:
     - - 32
       - 4096
     golden_status: untested
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/abs-f32-generative.json
 - name: add
   tier: elementwise
@@ -211,7 +211,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/gelu_f32.py
     golden_evidence: evidence/gelu-f32-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/gelu-f32-generative.json
 - name: leaky_relu
   tier: composed
