@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "rms_norm",
   "dtype": "float32",
-  "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension. Use float32 inputs.",
+  "prompt": "CRITICAL PLATFORM REQUIREMENT: this kernel runs on C310 (Ascend950PR_9599); all kernel inputs and outputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and will surface as `0., 0., 0.` tail bands in any downstream comparison. Build an asc2 RMSNorm capability for float32 on C310. Provide TWO @asc2.jit kernels mirroring CANN arch35: a full_row kernel (KernelRmsNormRegBase analogue) where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel (KernelRmsNormRegBaseSplitD analogue) where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding. Both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`. Use asc2.reduce_sum for sum_sq accumulation. Seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`. Provide a host-side dispatcher rms_norm_launch(x, gamma, eps) that picks full_row when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d. Verify both regimes in one run with atol=1e-4, rtol=1e-4 against a torch reference at shapes (8, 256) and (8, 1055).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-05-07T19:17:57Z",
+  "date": "2026-05-08T10:09:34Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -106,45 +106,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25503334838",
+  "notes": "Nightly CI run (guided fallback)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25536167723",
   "history": [
-    {
-      "date": "2026-04-30T05:44:11Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-30T12:13:43Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-30T12:18:09Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-04-30T12:25:16Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-30T12:32:25Z",
       "overall_pass": false,
@@ -372,6 +336,42 @@
     },
     {
       "date": "2026-05-07T19:07:00Z",
+      "overall_pass": false,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-07T19:17:57Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-08T08:58:11Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-08T09:28:59Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-08T10:00:34Z",
       "overall_pass": false,
       "score": 14.0,
       "static": "pass",
