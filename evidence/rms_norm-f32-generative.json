@@ -5,15 +5,17 @@
   "dtype": "float32",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension. Use float32 inputs.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-05-09T09:29:31Z",
+  "date": "2026-05-10T10:49:43Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "verification": {
@@ -92,7 +94,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -105,36 +107,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25591397988",
+  "notes": "Nightly CI run (attempt 3/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25619750073",
   "history": [
-    {
-      "date": "2026-05-01T06:33:01Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-05-01T06:39:14Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-05-01T06:45:49Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-02T05:55:06Z",
       "overall_pass": false,
@@ -371,6 +346,33 @@
     },
     {
       "date": "2026-05-09T09:20:20Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-09T09:29:31Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-10T10:12:12Z",
+      "overall_pass": false,
+      "score": 13.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-10T10:41:44Z",
       "overall_pass": false,
       "score": 15.0,
       "static": "pass",
