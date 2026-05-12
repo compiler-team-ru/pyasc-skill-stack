@@ -4,18 +4,24 @@ and write a generative evidence JSON file.
 
 Flow:
   1. Read prompt from --prompt or from capabilities.yaml for the given --op/--dtype
-  2. Create a clean test project directory
-  3. Run: opencode run "<prompt>" --dir <project>
-  4. Search the project for the generated kernel.py
-  5. Run score_kernel.py and verify_kernel.py (static, on host)
-  6. Optionally run simulator verification inside Docker (--runtime)
-  7. Write evidence/<op>-<dtype>-generative.json
-  8. Clean up
+  2. For each attempt:
+     a. Create a clean test project directory (layout depends on --skills-mode)
+     b. Run: opencode run "<prompt>" --dir <project> --format json
+     c. Parse the agent's JSON event stream for tokens and model
+     d. Search the project for the generated kernel.py
+     e. Run score_kernel.py and verify_kernel.py (static, on host)
+     f. Optionally run simulator verification inside Docker (--runtime)
+     g. Clean up
+  3. Write evidence/<op>-<dtype>-generative[-<profile>-<mode>].json
 
 Exit codes: 0 = pass, 1 = fail, 2 = skip (opencode unavailable)
 
 Usage:
-    python collect_generative_evidence.py --op abs --dtype float16 [--prompt "..."] [--runtime] [--timeout 300]
+    python collect_generative_evidence.py --op abs --dtype float16 \
+        [--prompt "..."] [--runtime] [--timeout 300] \
+        [--skills-mode on|off] [--model-profile cloud-default|local-...] \
+        [--opencode-config /path/to/config.json] \
+        [--max-attempts 3] [--fallback-variant guided]
 """
 
 from __future__ import annotations
@@ -24,12 +30,15 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from string import Template
 
 try:
     import yaml
@@ -48,6 +57,14 @@ PYTHON = "python3.10"
 DOCKER_IMAGE = os.environ.get(
     "PYASC_SIM_IMAGE", "ghcr.io/aloschilov/pyasc-sim:py3.11"
 )
+
+PROFILE_DIR = REPO_ROOT / "docker" / "opencode-profiles"
+KNOWN_PROFILES = {
+    "cloud-default",
+    "local-qwen-coder-7b",
+    "local-llama-3.1-8b",
+}
+SCHEMA_VERSION = "3"
 
 
 def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
@@ -126,27 +143,131 @@ def load_platform_from_capabilities(op: str, dtype: str,
     return cell.get("platform") or default
 
 
-def create_test_project(prefix: str) -> Path:
+_MINIMAL_OPENCODE_JSON: dict = {
+    "$schema": "https://opencode.ai/config.json",
+    "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "skill": "allow",
+        "task": "allow",
+    },
+}
+
+
+def resolve_opencode_config(
+    profile: str, override_path: str | None = None,
+) -> tuple[dict, Path | None]:
+    """Resolve an opencode config dict for a given profile.
+
+    Resolution order:
+      1. If ``override_path`` is given, load that JSON template directly.
+      2. Otherwise, look up the profile in ``docker/opencode-profiles/<profile>.json``.
+      3. If neither exists, fall back to ``_MINIMAL_OPENCODE_JSON``.
+
+    Template files may reference environment variables using ``${VAR}`` —
+    they are substituted from the current process environment (or replaced
+    with an empty string when unset). This lets us point local-model
+    profiles at a sidecar Ollama endpoint via ``OLLAMA_BASE_URL`` without
+    baking secrets into the repo.
+
+    Returns the merged dict and the path of the source template (or None
+    when the minimal fallback is used).
+    """
+    if override_path:
+        path = Path(override_path)
+    else:
+        path = PROFILE_DIR / f"{profile}.json"
+
+    if not path.exists():
+        return dict(_MINIMAL_OPENCODE_JSON), None
+
+    raw = path.read_text()
+    expanded = Template(raw).safe_substitute(os.environ)
+    try:
+        data = json.loads(expanded)
+    except json.JSONDecodeError as exc:
+        print(f"  WARN: profile template {path} not valid JSON after "
+              f"env substitution ({exc}); falling back to minimal config",
+              file=sys.stderr)
+        return dict(_MINIMAL_OPENCODE_JSON), None
+    return data, path
+
+
+def build_opencode_json(
+    profile: str, skills_mode: str, override_path: str | None = None,
+) -> dict:
+    """Build the per-project opencode.json for a (profile, mode) combination.
+
+    When ``skills_mode`` is ``"on"`` the resulting config enables skill
+    discovery from ``./skills``. When ``"off"`` the skills section is
+    removed entirely so the agent operates as raw opencode with no
+    skill-stack hints.
+    """
+    cfg, _ = resolve_opencode_config(profile, override_path)
+    if skills_mode == "on":
+        cfg["skills"] = {"paths": ["./skills"]}
+    else:
+        cfg.pop("skills", None)
+    return cfg
+
+
+def create_test_project(
+    prefix: str,
+    skills_mode: str = "on",
+    profile: str = "cloud-default",
+    opencode_config_override: str | None = None,
+) -> Path:
     """Create a fresh isolated project directory for one agent run.
 
-    Read-only assets (skills, golden) are symlinked; writable assets (teams)
-    are deep-copied so each run starts clean and cannot pollute other runs.
-    opencode.json is copied so skill discovery works.
+    Layout depends on ``skills_mode``:
+      * ``"on"`` — symlink ``skills/`` and ``golden/``; copy ``teams/``
+        (which contains ``AGENTS.md`` that activates the skill workflow).
+      * ``"off"`` — symlink only ``golden/`` (kept as reference data so
+        the input surface is comparable); do not copy ``teams/`` or link
+        ``skills/``. The resulting workspace has no ``AGENTS.md`` and no
+        ``SKILL.md`` files visible to the agent.
+
+    The on-disk ``opencode.json`` is generated from the chosen profile
+    template (resolved via ``resolve_opencode_config``) with the skill
+    section toggled to match ``skills_mode``.
     """
     tmp = Path(tempfile.mkdtemp(prefix=f"{prefix}."))
 
-    for subdir in ("skills", "golden"):
-        src = REPO_ROOT / subdir
+    if skills_mode == "on":
+        for subdir in ("skills", "golden"):
+            src = REPO_ROOT / subdir
+            if src.exists():
+                (tmp / subdir).symlink_to(src)
+        teams_src = REPO_ROOT / "teams"
+        if teams_src.exists():
+            # Copy team metadata (AGENTS.md, quickstart, …) but NOT the
+            # checked-in kernels/ workspace. Otherwise find_kernel() would
+            # pick up a stale kernel from a prior manual run as if the
+            # agent had just generated it, producing a false-positive pass
+            # (e.g. when the agent timed out or otherwise failed).
+            shutil.copytree(
+                teams_src, tmp / "teams", symlinks=True,
+                ignore=shutil.ignore_patterns("kernels"),
+            )
+            # Recreate the empty kernels/ workspace each agent expects.
+            for team_dir in teams_src.iterdir():
+                if team_dir.is_dir() and (team_dir / "kernels").is_dir():
+                    (tmp / "teams" / team_dir.name / "kernels").mkdir(
+                        parents=True, exist_ok=True,
+                    )
+    else:
+        # Skills-off baseline: keep `golden/` available so reference data is
+        # comparable, but no skills, no teams/AGENTS.md.
+        src = REPO_ROOT / "golden"
         if src.exists():
-            (tmp / subdir).symlink_to(src)
+            (tmp / "golden").symlink_to(src)
 
-    teams_src = REPO_ROOT / "teams"
-    if teams_src.exists():
-        shutil.copytree(teams_src, tmp / "teams", symlinks=True)
-
-    opencode_cfg = REPO_ROOT / "opencode.json"
-    if opencode_cfg.exists():
-        shutil.copy2(opencode_cfg, tmp / "opencode.json")
+    cfg = build_opencode_json(profile, skills_mode, opencode_config_override)
+    (tmp / "opencode.json").write_text(json.dumps(cfg, indent=2) + "\n")
 
     subprocess.run(
         ["git", "init", "--quiet"],
@@ -327,6 +448,288 @@ def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
     return result
 
 
+def _coerce_int(value) -> int:
+    """Return ``int(value)`` or 0 when the value isn't an int-like scalar."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def extract_tokens_and_model(agent_output_path: Path) -> dict:
+    """Best-effort extraction of token usage and model id from opencode output.
+
+    The opencode CLI is invoked with ``--format json``, which writes a
+    stream of JSON events to stdout. Each completion-style event carries a
+    ``usage`` object with ``input_tokens`` / ``output_tokens`` /
+    ``cache_read_input_tokens`` (mirroring the underlying provider's
+    accounting) and a ``model`` / ``modelID`` field.
+
+    We aggregate across events for two reasons:
+      * usage in JSON-mode is reported per assistant turn (multiple events
+        per session), so summing matches the natural "agent-run cost".
+      * during retries we want per-attempt totals to slot into the
+        ``attempts`` array; this function operates on one attempt's
+        stdout file at a time.
+
+    The function is tolerant of:
+      * malformed lines (skipped silently)
+      * non-JSON wrapper output emitted by ``script -qc`` (TTY framing)
+      * single-document JSON instead of JSONL (the ``analyze-token-usage``
+        path)
+
+    Returns ``{"input": int, "output": int, "cache_read": int,
+    "total": int, "model": str|None}``.
+    """
+    result = {"input": 0, "output": 0, "cache_read": 0, "total": 0, "model": None}
+    if not agent_output_path.exists():
+        return result
+
+    try:
+        data = agent_output_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return result
+
+    def _visit(entry) -> None:
+        if isinstance(entry, dict):
+            usage = entry.get("usage")
+            if isinstance(usage, dict):
+                result["input"] += _coerce_int(usage.get("input_tokens", 0))
+                result["output"] += _coerce_int(usage.get("output_tokens", 0))
+                result["cache_read"] += _coerce_int(
+                    usage.get("cache_read_input_tokens", 0)
+                )
+            for key in ("modelID", "model_id", "model"):
+                m = entry.get(key)
+                if isinstance(m, str) and m and result["model"] is None:
+                    result["model"] = m
+            for v in entry.values():
+                _visit(v)
+        elif isinstance(entry, list):
+            for v in entry:
+                _visit(v)
+
+    try:
+        doc = json.loads(data)
+        _visit(doc)
+    except json.JSONDecodeError:
+        for line in data.splitlines():
+            line = line.strip()
+            if not line or line[0] not in "{[":
+                continue
+            try:
+                _visit(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+
+    if result["model"] is None:
+        match = re.search(r'"(?:modelID|model_id|model)"\s*:\s*"([^"]+)"', data)
+        if match:
+            result["model"] = match.group(1)
+
+    result["total"] = result["input"] + result["output"]
+    return result
+
+
+def run_one_attempt(
+    *,
+    attempt_num: int,
+    prompt: str,
+    op: str,
+    dtype: str,
+    timeout: int,
+    runtime: bool,
+    docker_timeout: int,
+    skills_mode: str,
+    profile: str,
+    opencode_config_override: str | None,
+    archive_dir: str | None,
+    keep_project: bool,
+    agent_format: str = "json",
+) -> dict:
+    """Run a single agent attempt end-to-end and return a result dict.
+
+    The result is shaped to merge directly into the evidence document and
+    contains everything the aggregator (compare_skills_value.py) needs:
+    attempt metadata, tokens, model, verification outcomes, kernel path,
+    and the live project directory (so the caller can archive it).
+    """
+    project = create_test_project(
+        f"gen-{op}-{dtype}-a{attempt_num}",
+        skills_mode=skills_mode,
+        profile=profile,
+        opencode_config_override=opencode_config_override,
+    )
+    agent_output = project / "agent-output.txt"
+    agent_completed = False
+    exit_code = 1
+    elapsed = 0.0
+    try:
+        env = os.environ.copy()
+        env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+
+        fmt_flag = f" --format {agent_format}" if agent_format else ""
+        opencode_cmd = f'opencode run "{prompt}" --dir "{project}"{fmt_flag}'
+        cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
+
+        print(f"  [attempt {attempt_num}] running opencode "
+              f"(profile={profile}, skills_mode={skills_mode}, "
+              f"timeout={timeout}s)...")
+        t0 = time.monotonic()
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True,
+                timeout=timeout, env=env,
+            )
+            exit_code = result.returncode
+            agent_completed = True
+        except subprocess.TimeoutExpired as exc:
+            elapsed = time.monotonic() - t0
+            print(f"  [attempt {attempt_num}] timed out after {timeout}s")
+            partial_out = exc.stdout or b""
+            partial_err = exc.stderr or b""
+            if isinstance(partial_out, bytes):
+                partial_out = partial_out.decode("utf-8", errors="replace")
+            if isinstance(partial_err, bytes):
+                partial_err = partial_err.decode("utf-8", errors="replace")
+            agent_output.write_text(partial_out + partial_err)
+            return _finalize_attempt(
+                attempt_num=attempt_num, elapsed=elapsed, exit_code=124,
+                project=project, op=op, dtype=dtype,
+                runtime=runtime, docker_timeout=docker_timeout,
+                agent_output_path=agent_output, agent_completed=False,
+                keep_project=keep_project, archive_dir=archive_dir,
+                skills_mode=skills_mode, profile=profile,
+            )
+        elapsed = time.monotonic() - t0
+        agent_output.write_text((result.stdout or "") + (result.stderr or ""))
+        print(f"  [attempt {attempt_num}] agent exited (code={exit_code}, "
+              f"{elapsed:.1f}s)")
+        if elapsed < 10:
+            print(f"  [attempt {attempt_num}] WARNING: opencode exited "
+                  f"suspiciously fast — possible API/config issue")
+    except Exception as exc:
+        elapsed = time.monotonic() - t0 if "t0" in dir() else 0.0
+        print(f"  [attempt {attempt_num}] agent error: {exc}")
+
+    return _finalize_attempt(
+        attempt_num=attempt_num, elapsed=elapsed, exit_code=exit_code,
+        project=project, op=op, dtype=dtype,
+        runtime=runtime, docker_timeout=docker_timeout,
+        agent_output_path=agent_output, agent_completed=agent_completed,
+        keep_project=keep_project, archive_dir=archive_dir,
+        skills_mode=skills_mode, profile=profile,
+    )
+
+
+def _finalize_attempt(
+    *,
+    attempt_num: int,
+    elapsed: float,
+    exit_code: int,
+    project: Path,
+    op: str,
+    dtype: str,
+    runtime: bool,
+    docker_timeout: int,
+    agent_output_path: Path,
+    agent_completed: bool,
+    keep_project: bool,
+    archive_dir: str | None,
+    skills_mode: str,
+    profile: str,
+) -> dict:
+    """Score, verify, and clean up after one attempt.
+
+    Split out from run_one_attempt so the timeout path and the normal
+    path share identical post-processing logic.
+    """
+    kernel = find_kernel(project, op)
+    artifacts = find_artifacts(project)
+    print(f"  [attempt {attempt_num}] kernel={kernel}, artifacts={artifacts}")
+
+    score_data = None
+    static_result = "fail"
+    semantic_check: dict = {"passed": False, "detail": "no kernel found",
+                            "markers_found": []}
+    verification: dict = {
+        "mode": "static_only", "status": "fail", "shapes_verified": [],
+    }
+
+    if kernel and kernel.is_file():
+        score_data = run_score(kernel, op=op, dtype=dtype)
+        static_result = run_static_verify(kernel)
+        semantic_check = check_op_semantics(kernel, op)
+        print(f"  [attempt {attempt_num}] static={static_result}, "
+              f"semantic={'pass' if semantic_check['passed'] else 'fail'}, "
+              f"score={score_data.get('score', '?') if score_data else '?'}")
+        verification = {
+            "mode": "static_only", "status": static_result, "shapes_verified": [],
+        }
+        if runtime:
+            platform = load_platform_from_capabilities(op, dtype)
+            print(f"  [attempt {attempt_num}] running simulator "
+                  f"(platform={platform})...")
+            verification = run_docker_verify(
+                kernel, project, timeout=docker_timeout, platform=platform,
+            )
+            print(f"  [attempt {attempt_num}] runtime={verification['status']}")
+    else:
+        print(f"  [attempt {attempt_num}] no kernel found — generation failed")
+
+    try:
+        kernel_rel = str(kernel.relative_to(project)) if kernel else ""
+    except ValueError:
+        kernel_rel = str(kernel) if kernel else ""
+
+    accepted = bool(score_data.get("accepted", False)) if score_data else False
+    runtime_ok = (
+        verification.get("status") == "pass"
+        if runtime
+        else True
+    )
+    overall_pass = (
+        static_result == "pass"
+        and accepted
+        and semantic_check["passed"]
+        and kernel is not None
+        and runtime_ok
+    )
+
+    tokens = extract_tokens_and_model(agent_output_path)
+
+    if archive_dir and kernel and kernel.is_file() and overall_pass:
+        dtype_short = dtype.replace("float", "f")
+        archive_dest = (
+            Path(archive_dir)
+            / f"{op}-{dtype_short}-{profile}-{skills_mode}-a{attempt_num}"
+        )
+        archive_dest.mkdir(parents=True, exist_ok=True)
+        for item in kernel.parent.iterdir():
+            if item.is_file():
+                shutil.copy2(item, archive_dest / item.name)
+        print(f"  [attempt {attempt_num}] archived kernel to: {archive_dest}")
+
+    record = {
+        "n": attempt_num,
+        "elapsed_s": round(elapsed, 2),
+        "exit": exit_code,
+        "outcome": "pass" if overall_pass else "fail",
+        "tokens": {k: v for k, v in tokens.items() if k != "model"},
+        "model": tokens.get("model"),
+        "agent_completed": agent_completed,
+        "kernel_path": kernel_rel,
+        "artifacts_found": artifacts,
+        "static_verify": static_result,
+        "semantic_check": semantic_check,
+        "verification": verification,
+        "score_data": score_data or {},
+        "_project": project,
+        "_keep_project": keep_project,
+    }
+    return record
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Collect generative evidence via opencode run.",
@@ -354,115 +757,132 @@ def main() -> None:
                         help="Named variant from prompt_variants in capabilities.yaml")
     parser.add_argument("--output-suffix", default=None,
                         help="Suffix appended to evidence filename (e.g. 'minimal' -> abs-f16-generative-minimal.json)")
+    parser.add_argument("--skills-mode", choices=["on", "off"], default="on",
+                        help="Whether to install skills/AGENTS.md into the "
+                             "test project (default: on)")
+    parser.add_argument("--model-profile", default="cloud-default",
+                        help="Named opencode profile (default: cloud-default). "
+                             "Templates live in docker/opencode-profiles/")
+    parser.add_argument("--opencode-config", default=None,
+                        help="Override the profile template with a JSON file at "
+                             "this path (env vars are substituted)")
+    parser.add_argument("--max-attempts", type=int, default=1,
+                        help="Number of primary-prompt attempts before giving "
+                             "up or falling back (default: 1)")
+    parser.add_argument("--fallback-variant", default=None,
+                        help="Prompt-variant to retry with after the primary "
+                             "prompt exhausts --max-attempts (e.g. 'guided')")
+    parser.add_argument("--agent-format", choices=["default", "json"],
+                        default="json",
+                        help="opencode --format mode (default: json so tokens "
+                             "can be extracted)")
     args = parser.parse_args()
 
-    prompt = args.prompt
-    if not prompt:
-        prompt = load_prompt_from_capabilities(args.op, args.dtype,
-                                               variant=args.prompt_variant)
-    if not prompt:
+    primary_prompt = args.prompt
+    if not primary_prompt:
+        primary_prompt = load_prompt_from_capabilities(
+            args.op, args.dtype, variant=args.prompt_variant,
+        )
+    if not primary_prompt:
         print(f"ERROR: No prompt provided and none found in capabilities.yaml "
               f"for {args.op}/{args.dtype}", file=sys.stderr)
         sys.exit(1)
+
+    fallback_prompt = None
+    if args.fallback_variant:
+        fallback_prompt = load_prompt_from_capabilities(
+            args.op, args.dtype, variant=args.fallback_variant,
+        )
+        if fallback_prompt is None:
+            print(f"  WARN: fallback variant '{args.fallback_variant}' not "
+                  f"defined in capabilities.yaml; ignoring", file=sys.stderr)
 
     if shutil.which("opencode") is None:
         print("SKIP: opencode CLI not found on PATH", file=sys.stderr)
         sys.exit(2)
 
     print(f"  Generative evidence for {args.op}/{args.dtype}")
-    print(f"  Prompt: {prompt[:80]}...")
+    print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
+    print(f"  Prompt: {primary_prompt[:80]}...")
+    if fallback_prompt:
+        print(f"  Fallback ({args.fallback_variant}): {fallback_prompt[:60]}...")
     print()
 
-    project = create_test_project(f"gen-{args.op}-{args.dtype}")
-    print(f"  Project: {project}")
+    attempts: list[dict] = []
+    winning: dict | None = None
 
-    output_file = project / "agent-output.txt"
-    agent_completed = False
-    try:
-        env = os.environ.copy()
-        env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+    plan: list[tuple[str, str]] = [
+        (primary_prompt, args.prompt_variant or "primary")
+    ] * args.max_attempts
+    if fallback_prompt:
+        plan.append((fallback_prompt, args.fallback_variant or "fallback"))
 
-        opencode_cmd = f'opencode run "{prompt}" --dir "{project}"'
-        cmd = ["script", "-qc", opencode_cmd, "/dev/null"]
-
-        import time as _time
-        print(f"  Running opencode (timeout={args.timeout}s)...")
-        t0 = _time.monotonic()
-        result = subprocess.run(
-            cmd, capture_output=True, text=True,
-            timeout=args.timeout, env=env,
+    for idx, (this_prompt, label) in enumerate(plan, start=1):
+        print(f"  --- attempt {idx}/{len(plan)} ({label}) ---")
+        rec = run_one_attempt(
+            attempt_num=idx,
+            prompt=this_prompt,
+            op=args.op,
+            dtype=args.dtype,
+            timeout=args.timeout,
+            runtime=args.runtime,
+            docker_timeout=args.docker_timeout,
+            skills_mode=args.skills_mode,
+            profile=args.model_profile,
+            opencode_config_override=args.opencode_config,
+            archive_dir=args.archive_dir,
+            keep_project=args.keep_project,
+            agent_format=args.agent_format,
         )
-        elapsed = _time.monotonic() - t0
-        with open(output_file, "w") as f:
-            f.write(result.stdout)
-            f.write(result.stderr)
-        agent_completed = True
-        print(f"  Agent completed (exit={result.returncode}, {elapsed:.1f}s).")
-        if elapsed < 10:
-            print("  WARNING: opencode exited suspiciously fast — possible API/config issue")
-            stderr_lines = (result.stderr or "").strip().splitlines()
-            stdout_lines = (result.stdout or "").strip().splitlines()
-            if stderr_lines:
-                print(f"  stderr (last 5 lines):")
-                for line in stderr_lines[-5:]:
-                    print(f"    {line}")
-            if not stderr_lines and stdout_lines:
-                print(f"  stdout (last 5 lines):")
-                for line in stdout_lines[-5:]:
-                    print(f"    {line}")
-    except subprocess.TimeoutExpired:
-        print(f"  Agent timed out after {args.timeout}s")
-    except Exception as exc:
-        print(f"  Agent error: {exc}")
+        rec["prompt_label"] = label
+        attempts.append(rec)
+        if rec["outcome"] == "pass":
+            winning = rec
+            break
 
-    kernel = find_kernel(project, args.op)
-    artifacts = find_artifacts(project)
-    print(f"  Kernel: {kernel}")
-    print(f"  Artifacts: {artifacts}")
+    best = winning or attempts[-1]
+    project = best.get("_project")
+    keep_project = best.get("_keep_project", False)
 
-    score_data = None
-    static_result = "fail"
-    verification: dict = {
-        "mode": "static_only", "status": "fail", "shapes_verified": [],
-    }
+    static_result = best["static_verify"]
+    verification = best["verification"]
+    semantic_check = best["semantic_check"]
+    score_data = best.get("score_data") or {}
+    kernel_rel = best["kernel_path"]
+    artifacts = best["artifacts_found"]
+    agent_completed = best["agent_completed"]
 
-    semantic_check: dict = {"passed": False, "detail": "no kernel found",
-                            "markers_found": []}
+    sum_tokens = {"input": 0, "output": 0, "cache_read": 0, "total": 0}
+    elapsed_total = 0.0
+    resolved_model: str | None = None
+    for rec in attempts:
+        for k in sum_tokens:
+            sum_tokens[k] += int(rec.get("tokens", {}).get(k, 0) or 0)
+        elapsed_total += float(rec.get("elapsed_s", 0.0) or 0.0)
+        if rec.get("model") and resolved_model is None:
+            resolved_model = rec["model"]
 
-    if kernel and kernel.is_file():
-        score_data = run_score(kernel, op=args.op, dtype=args.dtype)
-        static_result = run_static_verify(kernel)
-        semantic_check = check_op_semantics(kernel, args.op)
-        print(f"  Static verify: {static_result}")
-        print(f"  Semantic check: {'pass' if semantic_check['passed'] else 'FAIL'}"
-              f" — {semantic_check['detail']}")
-        if score_data:
-            print(f"  Score: {score_data.get('score', '?')}/10")
-        verification = {
-            "mode": "static_only", "status": static_result, "shapes_verified": [],
-        }
-
-        if args.runtime:
-            platform = load_platform_from_capabilities(args.op, args.dtype)
-            print(f"  Running simulator in Docker (platform={platform})...")
-            rt = run_docker_verify(kernel, project, timeout=args.docker_timeout,
-                                    platform=platform)
-            verification = rt
-            print(f"  Runtime: {rt['status']}")
-    else:
-        print("  No kernel found — generation failed")
-
-    try:
-        kernel_rel = str(kernel.relative_to(project)) if kernel else ""
-    except ValueError:
-        kernel_rel = str(kernel) if kernel else ""
+    attempts_serializable = []
+    for rec in attempts:
+        attempts_serializable.append({
+            "n": rec["n"],
+            "prompt_label": rec.get("prompt_label", "primary"),
+            "elapsed_s": rec["elapsed_s"],
+            "exit": rec["exit"],
+            "outcome": rec["outcome"],
+            "tokens": rec["tokens"],
+            "model": rec.get("model"),
+            "kernel_found": bool(rec.get("kernel_path")),
+            "static_verify": rec.get("static_verify", "fail"),
+            "runtime_status": rec.get("verification", {}).get("status", ""),
+        })
 
     evidence: dict = {
-        "schema_version": "2",
+        "schema_version": SCHEMA_VERSION,
         "kind": "generative",
         "operation": args.op,
         "dtype": args.dtype,
-        "prompt": prompt,
+        "prompt": primary_prompt,
         "kernel_path": kernel_rel,
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "agent": {
@@ -471,6 +891,12 @@ def main() -> None:
             "completed": agent_completed,
             "artifacts_found": artifacts,
         },
+        "skills_mode": args.skills_mode,
+        "model_profile": args.model_profile,
+        "model": resolved_model,
+        "tokens": sum_tokens,
+        "elapsed_total_s": round(elapsed_total, 2),
+        "attempts": attempts_serializable,
         "verification": verification,
         "semantic_check": semantic_check,
         "score": {
@@ -487,7 +913,15 @@ def main() -> None:
 
     dtype_short = args.dtype.replace("float", "f")
     suffix = f"-{args.output_suffix}" if args.output_suffix else ""
-    out_name = f"{args.op}-{dtype_short}-generative{suffix}.json"
+    # Legacy filename preserved for the (cloud-default, on) cell so the
+    # dashboard and history continue to read from the same file.
+    if args.model_profile == "cloud-default" and args.skills_mode == "on":
+        out_name = f"{args.op}-{dtype_short}-generative{suffix}.json"
+    else:
+        out_name = (
+            f"{args.op}-{dtype_short}-generative"
+            f"-{args.model_profile}-{args.skills_mode}{suffix}.json"
+        )
     out_path = EVIDENCE_DIR / out_name
 
     history: list[dict] = []
@@ -511,6 +945,8 @@ def main() -> None:
                 "runtime": prev.get("verification", {}).get("status", ""),
                 "semantic": prev.get("semantic_check", {}).get("passed", False),
                 "skipped": prev.get("verification", {}).get("status") == "skip",
+                "tokens_total": prev.get("tokens", {}).get("total", 0),
+                "elapsed_s": prev.get("elapsed_total_s", 0),
             })
             if len(history) > 30:
                 history = history[-30:]
@@ -529,30 +965,30 @@ def main() -> None:
             f.write("\n")
         print(f"  Written: {out_path.relative_to(REPO_ROOT)}")
 
-    if args.archive_dir and kernel and kernel.is_file():
-        archive_dest = Path(args.archive_dir) / f"{args.op}-{dtype_short}"
-        archive_dest.mkdir(parents=True, exist_ok=True)
-        kernel_dir = kernel.parent
-        for item in kernel_dir.iterdir():
-            if item.is_file():
-                shutil.copy2(item, archive_dest / item.name)
-        print(f"  Archived kernel to: {archive_dest}")
-
-    if not args.keep_project:
-        shutil.rmtree(project, ignore_errors=True)
-        print("  Cleaned up project directory")
-    else:
-        print(f"  Project kept at: {project}")
+    # Clean up every attempt's project directory (best already covered).
+    for rec in attempts:
+        rec_project = rec.get("_project")
+        rec_keep = rec.get("_keep_project", False)
+        if rec_project is None:
+            continue
+        if rec_keep:
+            print(f"  Project kept at: {rec_project}")
+        else:
+            shutil.rmtree(rec_project, ignore_errors=True)
 
     runtime_ok = verification.get("status") == "pass" if args.runtime else True
     overall_pass = (
         static_result == "pass"
         and evidence["score"]["accepted"]
         and semantic_check["passed"]
-        and kernel is not None
+        and bool(kernel_rel)
         and runtime_ok
     )
-    print(f"  Overall: {'pass' if overall_pass else 'fail'}")
+    print(f"  Overall: {'pass' if overall_pass else 'fail'}  "
+          f"(attempts={len(attempts)}, "
+          f"tokens={sum_tokens['total']}, "
+          f"elapsed={elapsed_total:.1f}s, "
+          f"profile={args.model_profile}, skills={args.skills_mode})")
     sys.exit(0 if overall_pass else 1)
 
 

@@ -26,6 +26,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
 EVIDENCE_DIR = REPO_ROOT / "evidence"
+SKILLS_VALUE_FILE = EVIDENCE_DIR / "skills-value-summary.json"
 
 
 def _load_yaml(path: Path) -> dict:
@@ -200,6 +201,8 @@ def build_data(cap: dict) -> dict:
         else:
             rt_static += 1
 
+    skills_value = _load_evidence(SKILLS_VALUE_FILE)
+
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "tiers": tier_progress,
@@ -213,6 +216,7 @@ def build_data(cap: dict) -> dict:
             "no_evidence": rt_none,
             "total": len(rows),
         },
+        "skills_value": skills_value,
     }
 
 
@@ -303,6 +307,61 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .rb-dot-static { background: var(--golden-only); }
 .rb-dot-skip { background: var(--pending); }
 .rb-dot-none { background: var(--untested); }
+.skills-value-banner {
+  display: none;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.skills-value-banner.has-data { display: block; }
+.svb-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: var(--fg);
+}
+.svb-subtitle {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-bottom: 10px;
+}
+.svb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.svb-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.svb-card h4 {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+.svb-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin: 3px 0;
+  color: var(--fg-muted);
+}
+.svb-stat .svb-val { color: var(--fg); font-weight: 500; }
+.svb-delta-good { color: var(--confirmed); font-weight: 600; }
+.svb-delta-bad { color: var(--blocked); font-weight: 600; }
+.svb-delta-neutral { color: var(--fg-muted); }
+.svb-model {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin-bottom: 4px;
+}
 .tier-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -602,6 +661,8 @@ footer a { color: var(--fg-muted); }
 
 <div class="runtime-banner" id="runtime-banner"></div>
 
+<div class="skills-value-banner" id="skills-value-banner"></div>
+
 <div class="tier-cards" id="tier-cards"></div>
 
 <div class="controls">
@@ -665,12 +726,83 @@ const TIER_ORDER = Object.entries(DATA.tiers)
 function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
   renderRuntimeBanner();
+  renderSkillsValueBanner();
   renderTierCards();
   populateTierFilter();
   renderTable();
   document.getElementById("filter-tier").addEventListener("change", renderTable);
   document.getElementById("filter-status").addEventListener("change", renderTable);
   document.getElementById("filter-dimension").addEventListener("change", renderTable);
+}
+
+function fmtPct(v) {
+  if (v == null) return "\u2014";
+  return Math.round(v * 100) + "%";
+}
+
+function fmtDelta(v, unit) {
+  if (v == null) return "\u2014";
+  unit = unit || "";
+  var sign = v > 0 ? "+" : "";
+  if (Math.abs(v) >= 10000) {
+    return sign + (v / 1000).toFixed(1) + "k" + unit;
+  }
+  if (Math.abs(v) >= 1) {
+    return sign + v.toFixed(1) + unit;
+  }
+  return sign + v.toFixed(2) + unit;
+}
+
+function deltaClass(v) {
+  // Convention: skills-on minus skills-off; negative = fewer tokens / less
+  // time / lower attempts with skills, which is good.
+  if (v == null || v === 0) return "svb-delta-neutral";
+  return v < 0 ? "svb-delta-good" : "svb-delta-bad";
+}
+
+function renderSkillsValueBanner() {
+  var sv = DATA.skills_value;
+  var el = document.getElementById("skills-value-banner");
+  if (!sv || !sv.by_profile) return;
+  var profiles = Object.entries(sv.by_profile)
+    .filter(function (e) { return (e[1].cells_compared || 0) > 0; });
+  if (!profiles.length) return;
+  el.classList.add("has-data");
+
+  var html = '<div class="svb-title">Skills-stack value '
+    + '(skills-on minus skills-off, latest nightly)</div>'
+    + '<div class="svb-subtitle">Negative deltas mean the skills stack '
+    + 'reduced cost; positive deltas mean it added cost. Pass-rate and '
+    + 'viability-unlocked are the stability axis.</div>'
+    + '<div class="svb-grid">';
+
+  profiles.sort(function (a, b) { return a[0].localeCompare(b[0]); });
+  for (var i = 0; i < profiles.length; i++) {
+    var name = profiles[i][0];
+    var a = profiles[i][1];
+    var modelLine = a.model ? '<div class="svb-model">' + a.model + '</div>' : '';
+    html += '<div class="svb-card">'
+      + '<h4>' + name + '</h4>'
+      + modelLine
+      + '<div class="svb-stat"><span>Pass rate</span>'
+      + '<span class="svb-val">' + fmtPct(a.pass_rate_on) + ' on \u00b7 '
+      + fmtPct(a.pass_rate_off) + ' off</span></div>'
+      + '<div class="svb-stat"><span>Tokens \u0394 (avg)</span>'
+      + '<span class="' + deltaClass(a.tokens_delta_avg) + '">'
+      + fmtDelta(a.tokens_delta_avg) + '</span></div>'
+      + '<div class="svb-stat"><span>Wall-time \u0394 (avg)</span>'
+      + '<span class="' + deltaClass(a.elapsed_delta_avg_s) + '">'
+      + fmtDelta(a.elapsed_delta_avg_s, "s") + '</span></div>'
+      + '<div class="svb-stat"><span>Viability unlocked</span>'
+      + '<span class="svb-val">' + (a.viability_unlocked_count || 0)
+      + '/' + (a.cells_compared || 0) + '</span></div>'
+      + '<div class="svb-stat"><span>Cells compared</span>'
+      + '<span class="svb-val">' + (a.cells_compared || 0)
+      + '/' + (a.cells_total || 0) + '</span></div>'
+      + '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function renderRuntimeBanner() {
