@@ -3,13 +3,13 @@
   "kind": "generative",
   "operation": "leaky_relu",
   "dtype": "float16",
-  "prompt": "Generate a leaky_relu kernel for float16 with alpha=0.01. Use asc2.where(x >= 0, x, x * alpha) for the kernel op. Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-05-11T07:19:40Z",
+  "prompt": "Help me develop a leaky_relu operator that supports float16 data type with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/kernel.py",
+  "date": "2026-05-12T07:24:29Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -22,8 +22,8 @@
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\nements: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n       3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n       6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n       0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n       0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -34,7 +34,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -91,8 +91,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -105,27 +105,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (guided fallback)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25650398341",
+  "notes": "Nightly CI run (attempt 2/3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25713140591",
   "history": [
-    {
-      "date": "2026-05-05T09:27:22Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
-    {
-      "date": "2026-05-06T05:37:11Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-06T19:39:05Z",
       "overall_pass": false,
@@ -371,6 +353,24 @@
     },
     {
       "date": "2026-05-11T07:03:56Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-11T07:19:40Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false
+    },
+    {
+      "date": "2026-05-12T07:14:49Z",
       "overall_pass": false,
       "score": 16.0,
       "static": "pass",
