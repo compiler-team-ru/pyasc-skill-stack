@@ -1,11 +1,11 @@
 {
-  "schema_version": "2",
+  "schema_version": "3",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-05-12T06:01:32Z",
+  "date": "2026-05-12T12:12:35Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -18,6 +18,35 @@
       "verification.md"
     ]
   },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": null,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 257.97,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 257.97,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
@@ -106,18 +135,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25713140591",
+  "notes": "Nightly CI run (skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
   "history": [
-    {
-      "date": "2026-04-22T06:42:59Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T06:43:01Z",
       "overall_pass": false,
@@ -378,6 +398,17 @@
       "runtime": "pass",
       "semantic": true,
       "skipped": false
+    },
+    {
+      "date": "2026-05-12T06:01:32Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 0
     }
   ]
 }

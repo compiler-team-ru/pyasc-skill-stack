@@ -1,0 +1,115 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "softmax",
+  "dtype": "float16",
+  "prompt": "Help me develop a softmax operator that supports float16 data type. Test with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2, rtol=5e-2 for verification.",
+  "kernel_path": "",
+  "date": "2026-05-12T12:02:24Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "glm-5",
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 891.01,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 143.99,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 420.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": "glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 229.74,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 4,
+      "prompt_label": "guided",
+      "elapsed_s": 97.27,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "history": []
+}

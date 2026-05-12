@@ -1,0 +1,115 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "gelu",
+  "dtype": "float32",
+  "prompt": "Help me develop a GELU activation operator (tanh / Pad\u00e9 approximation form) that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile MUST be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`). The asc2 Tile class does not implement __rmul__, so scalar-on-left raises AttributeError at codegen time. Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
+  "kernel_path": "",
+  "date": "2026-05-12T11:42:28Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": null,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 513.87,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 111.12,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 101.57,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 220.41,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 4,
+      "prompt_label": "guided",
+      "elapsed_s": 80.77,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "history": []
+}

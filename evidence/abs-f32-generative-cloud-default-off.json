@@ -1,0 +1,115 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "abs",
+  "dtype": "float32",
+  "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "kernel_path": "",
+  "date": "2026-05-12T11:09:51Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": null,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 367.61,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 93.03,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 112.17,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 115.28,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 4,
+      "prompt_label": "guided",
+      "elapsed_s": 47.13,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "history": []
+}

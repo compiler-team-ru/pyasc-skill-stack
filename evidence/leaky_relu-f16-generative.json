@@ -1,15 +1,15 @@
 {
-  "schema_version": "2",
+  "schema_version": "3",
   "kind": "generative",
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator that supports float16 data type with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/kernel.py",
-  "date": "2026-05-12T07:24:29Z",
+  "date": "2026-05-12T14:20:18Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -18,12 +18,92 @@
       "verification.md"
     ]
   },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": null,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 1104.64,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 337.83,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 233.95,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 259.61,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 4,
+      "prompt_label": "guided",
+      "elapsed_s": 273.25,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([[8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n        3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n        6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([[0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n        0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n        0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -34,7 +114,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -91,8 +171,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -105,18 +185,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 2/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25713140591",
+  "notes": "Nightly CI run (skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
   "history": [
-    {
-      "date": "2026-05-06T19:39:05Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-06T19:50:45Z",
       "overall_pass": false,
@@ -377,6 +448,17 @@
       "runtime": "fail",
       "semantic": true,
       "skipped": false
+    },
+    {
+      "date": "2026-05-12T07:24:29Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 0
     }
   ]
 }

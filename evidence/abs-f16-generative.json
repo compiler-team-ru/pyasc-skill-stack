@@ -1,15 +1,15 @@
 {
-  "schema_version": "2",
+  "schema_version": "3",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-12T05:08:11Z",
+  "date": "2026-05-12T11:19:07Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -18,6 +18,35 @@
       "verification.md"
     ]
   },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": null,
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 420.0,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 420.0,
+      "exit": 124,
+      "outcome": "pass",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
@@ -105,18 +134,9 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (attempt 1/3)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25713140591",
+  "notes": "Nightly CI run (skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
   "history": [
-    {
-      "date": "2026-04-24T04:21:49Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-25T04:14:32Z",
       "overall_pass": true,
@@ -377,6 +397,17 @@
       "runtime": "pass",
       "semantic": true,
       "skipped": false
+    },
+    {
+      "date": "2026-05-12T05:08:11Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 0
     }
   ]
 }

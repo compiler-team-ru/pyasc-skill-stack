@@ -1,0 +1,115 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Help me develop a tiled matrix multiplication operator (asc2 API) for float16 inputs producing float32 output. Use small fixed shapes such as M=K=N=16 or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT numpy) for host-side data and torch.testing.assert_close for verification. Load A to asc2.TileLocation.L0A and B to asc2.TileLocation.L0B, then use `a @ b` (or asc2.matmul) and asc2.store the float32 result. Target the Ascend950PR_9599 simulator (pass -v Ascend950PR_9599). Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).",
+  "kernel_path": "",
+  "date": "2026-05-12T12:11:31Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 420,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "glm-5",
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "cache_read": 0,
+    "total": 0
+  },
+  "elapsed_total_s": 547.39,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 248.62,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": "glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 107.81,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 86.01,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 4,
+      "prompt_label": "guided",
+      "elapsed_s": 104.95,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0,
+        "total": 0
+      },
+      "model": null,
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Nightly CI run (skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "history": []
+}
