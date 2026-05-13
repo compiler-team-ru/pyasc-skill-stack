@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Create an RMSNorm kernel capable of handling dynamic string lengths. It must utilize all available AI Cores by processing the data along the first or last dimension.",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float16/kernel.py",
-  "date": "2026-05-12T15:15:03Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
+  "date": "2026-05-13T11:54:33Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -20,28 +20,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
-  "model": null,
+  "model": "dashscope/glm-5",
   "tokens": {
-    "input": 0,
-    "output": 0,
-    "cache_read": 0,
-    "total": 0
+    "input": 107018,
+    "output": 11269,
+    "cache_read": 768342,
+    "total": 118287
   },
-  "elapsed_total_s": 318.98,
+  "elapsed_total_s": 392.5,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 318.98,
+      "elapsed_s": 392.5,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 107018,
+        "output": 11269,
+        "cache_read": 768342,
+        "total": 118287,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -65,7 +66,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -122,8 +123,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x4, shape loop=no"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -137,17 +138,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
   "history": [
-    {
-      "date": "2026-05-01T06:05:20Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-01T06:11:13Z",
       "overall_pass": false,
@@ -410,6 +402,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 0
+    },
+    {
+      "date": "2026-05-12T15:15:03Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 318.98
     }
   ]
 }

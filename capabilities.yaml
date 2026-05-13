@@ -237,7 +237,7 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/leaky_relu_f16.py
     golden_evidence: evidence/leaky_relu-f16-golden.json
-    generative_status: pending
+    generative_status: confirmed
     generative_evidence: evidence/leaky_relu-f16-generative.json
 - name: softmax
   tier: advanced

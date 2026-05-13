@@ -4,8 +4,8 @@
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate error).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum-float16-a1/kernel.py",
-  "date": "2026-05-12T12:18:03Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float16/kernel.py",
+  "date": "2026-05-13T09:49:11Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -20,28 +20,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
-  "model": null,
+  "model": "dashscope/glm-5",
   "tokens": {
-    "input": 0,
-    "output": 0,
-    "cache_read": 0,
-    "total": 0
+    "input": 91584,
+    "output": 8592,
+    "cache_read": 673899,
+    "total": 100176
   },
-  "elapsed_total_s": 293.75,
+  "elapsed_total_s": 310.06,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 293.75,
+      "elapsed_s": 310.06,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 91584,
+        "output": 8592,
+        "cache_read": 673899,
+        "total": 100176,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -136,17 +137,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
   "history": [
-    {
-      "date": "2026-04-22T06:43:12Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T06:43:14Z",
       "overall_pass": false,
@@ -409,6 +401,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 0
+    },
+    {
+      "date": "2026-05-12T12:18:03Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 293.75
     }
   ]
 }

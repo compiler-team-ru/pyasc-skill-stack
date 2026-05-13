@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-05-12T12:07:37Z",
+  "date": "2026-05-13T09:37:25Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -20,28 +20,65 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
-  "model": null,
+  "model": "dashscope/glm-5",
   "tokens": {
-    "input": 0,
-    "output": 0,
-    "cache_read": 0,
-    "total": 0
+    "input": 357690,
+    "output": 21314,
+    "cache_read": 1708575,
+    "total": 379004
   },
-  "elapsed_total_s": 279.43,
+  "elapsed_total_s": 883.09,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 279.43,
+      "elapsed_s": 281.88,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 102128,
+        "output": 7138,
+        "cache_read": 464910,
+        "total": 109266,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 278.96,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 129284,
+        "output": 6822,
+        "cache_read": 378028,
+        "total": 136106,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "primary",
+      "elapsed_s": 322.25,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 126278,
+        "output": 7354,
+        "cache_read": 865637,
+        "total": 133632,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "pass"
@@ -136,17 +173,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
   "history": [
-    {
-      "date": "2026-04-28T09:23:42Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-29T04:43:37Z",
       "overall_pass": true,
@@ -409,6 +437,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 0
+    },
+    {
+      "date": "2026-05-12T12:07:37Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 279.43
     }
   ]
 }

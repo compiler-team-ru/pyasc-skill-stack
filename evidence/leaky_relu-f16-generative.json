@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator that supports float16 data type with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/kernel.py",
-  "date": "2026-05-12T14:20:18Z",
+  "date": "2026-05-13T11:32:43Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -20,28 +20,29 @@
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
-  "model": null,
+  "model": "dashscope/glm-5",
   "tokens": {
-    "input": 0,
-    "output": 0,
-    "cache_read": 0,
-    "total": 0
+    "input": 331034,
+    "output": 24911,
+    "cache_read": 1481746,
+    "total": 355945
   },
-  "elapsed_total_s": 1104.64,
+  "elapsed_total_s": 848.29,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 337.83,
+      "elapsed_s": 196.86,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 96768,
+        "output": 6066,
+        "cache_read": 321525,
+        "total": 102834,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
@@ -49,16 +50,17 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 233.95,
+      "elapsed_s": 326.39,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 108721,
+        "output": 9613,
+        "cache_read": 436752,
+        "total": 118334,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
@@ -66,44 +68,28 @@
     {
       "n": 3,
       "prompt_label": "primary",
-      "elapsed_s": 259.61,
+      "elapsed_s": 325.04,
       "exit": 0,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
+        "input": 125545,
+        "output": 9232,
+        "cache_read": 723469,
+        "total": 134777,
+        "cost_usd": 0.0
       },
-      "model": null,
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 4,
-      "prompt_label": "guided",
-      "elapsed_s": 273.25,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 0,
-        "output": 0,
-        "cache_read": 0,
-        "total": 0
-      },
-      "model": null,
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([[8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n        3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n        6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([[0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n        0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n        0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -186,17 +172,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25728444472",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
   "history": [
-    {
-      "date": "2026-05-06T19:50:45Z",
-      "overall_pass": false,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-06T20:01:31Z",
       "overall_pass": false,
@@ -459,6 +436,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 0
+    },
+    {
+      "date": "2026-05-12T14:20:18Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 0,
+      "elapsed_s": 1104.64
     }
   ]
 }
