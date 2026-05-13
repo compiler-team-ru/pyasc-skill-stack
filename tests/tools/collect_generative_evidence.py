@@ -459,29 +459,37 @@ def _coerce_int(value) -> int:
 def extract_tokens_and_model(agent_output_path: Path) -> dict:
     """Best-effort extraction of token usage and model id from opencode output.
 
-    The opencode CLI is invoked with ``--format json``, which writes a
-    stream of JSON events to stdout. Each completion-style event carries a
-    ``usage`` object with ``input_tokens`` / ``output_tokens`` /
-    ``cache_read_input_tokens`` (mirroring the underlying provider's
-    accounting) and a ``model`` / ``modelID`` field.
+    The opencode CLI is invoked with ``--format json`` (1.4.x), which writes
+    a stream of JSON events on stdout. Each ``step_finish`` event carries a
+    ``part.tokens`` object with the shape::
 
-    We aggregate across events for two reasons:
-      * usage in JSON-mode is reported per assistant turn (multiple events
-        per session), so summing matches the natural "agent-run cost".
-      * during retries we want per-attempt totals to slot into the
-        ``attempts`` array; this function operates on one attempt's
-        stdout file at a time.
+        {"total": int, "input": int, "output": int, "reasoning": int,
+         "cache": {"read": int, "write": int}}
+
+    and a ``part.cost`` float in USD. The event stream does *not* carry a
+    model id today; that is recorded separately (from the resolved
+    opencode.json) in the caller. We still scan for ``modelID`` / ``model``
+    keys defensively so future opencode releases that surface the model in
+    the stream "just work".
+
+    We aggregate token counts across events because usage is reported per
+    assistant turn (i.e. per ``step_finish``); one ``opencode run`` can
+    contain many turns.
 
     The function is tolerant of:
       * malformed lines (skipped silently)
-      * non-JSON wrapper output emitted by ``script -qc`` (TTY framing)
-      * single-document JSON instead of JSONL (the ``analyze-token-usage``
-        path)
+      * the ``script -qc`` TTY wrapper (header + footer lines)
+      * single-document JSON instead of JSONL
+      * the legacy ``usage.input_tokens`` shape used by older session
+        exports — kept as a fallback so external session JSON still works.
 
     Returns ``{"input": int, "output": int, "cache_read": int,
-    "total": int, "model": str|None}``.
+    "total": int, "cost_usd": float, "model": str | None}``.
     """
-    result = {"input": 0, "output": 0, "cache_read": 0, "total": 0, "model": None}
+    result: dict = {
+        "input": 0, "output": 0, "cache_read": 0, "total": 0,
+        "cost_usd": 0.0, "model": None,
+    }
     if not agent_output_path.exists():
         return result
 
@@ -492,8 +500,21 @@ def extract_tokens_and_model(agent_output_path: Path) -> dict:
 
     def _visit(entry) -> None:
         if isinstance(entry, dict):
+            tokens = entry.get("tokens")
+            if isinstance(tokens, dict):
+                # opencode --format json schema (per step_finish event).
+                result["input"] += _coerce_int(tokens.get("input", 0))
+                result["output"] += _coerce_int(tokens.get("output", 0))
+                cache = tokens.get("cache")
+                if isinstance(cache, dict):
+                    result["cache_read"] += _coerce_int(cache.get("read", 0))
+            cost = entry.get("cost")
+            if isinstance(cost, (int, float)):
+                result["cost_usd"] += float(cost)
             usage = entry.get("usage")
             if isinstance(usage, dict):
+                # Legacy shape (older opencode session exports, kept for
+                # backward compatibility with analyze-token-usage outputs).
                 result["input"] += _coerce_int(usage.get("input_tokens", 0))
                 result["output"] += _coerce_int(usage.get("output_tokens", 0))
                 result["cache_read"] += _coerce_int(
@@ -528,7 +549,63 @@ def extract_tokens_and_model(agent_output_path: Path) -> dict:
             result["model"] = match.group(1)
 
     result["total"] = result["input"] + result["output"]
+    result["cost_usd"] = round(result["cost_usd"], 6)
     return result
+
+
+def _first_provider_model(cfg: dict) -> str | None:
+    providers = cfg.get("provider")
+    if not isinstance(providers, dict):
+        return None
+    for provider_id, pcfg in providers.items():
+        if not isinstance(pcfg, dict):
+            continue
+        models = pcfg.get("models")
+        if isinstance(models, dict) and models:
+            model_id = next(iter(models.keys()), None)
+            if model_id:
+                return f"{provider_id}/{model_id}"
+    return None
+
+
+def resolve_configured_model(project_dir: Path) -> str | None:
+    """Resolve the LLM model id used by opencode for this attempt.
+
+    opencode's ``--format json`` event stream does not surface the model
+    id, so we fall back to reading the resolved ``opencode.json`` that
+    actually drove the run. We look at, in order:
+
+      1. The project-local ``<project>/opencode.json`` (which is what we
+         wrote via ``build_opencode_json``). Local profiles pin a model
+         here explicitly.
+      2. The global ``~/.config/opencode/opencode.json``. The cloud
+         profile inherits its provider/model from there via the CI's
+         ``OPENCODE_CONFIG`` secret, so this is where we discover the
+         model id for cloud-default runs.
+
+    For each candidate we take the first
+    ``provider.<provider_id>.models.<model_id>`` entry — each profile
+    pins exactly one model, so the first match is deterministic. The
+    returned id is namespaced as ``<provider_id>/<model_id>`` to match
+    the format the user passes to ``opencode run --model``.
+
+    Returns ``None`` only if neither config declares a model.
+    """
+    candidates = [
+        project_dir / "opencode.json",
+        Path.home() / ".config" / "opencode" / "opencode.json",
+    ]
+    for cfg_path in candidates:
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        model = _first_provider_model(cfg)
+        if model:
+            return model
+    return None
 
 
 def run_one_attempt(
@@ -697,6 +774,10 @@ def _finalize_attempt(
     )
 
     tokens = extract_tokens_and_model(agent_output_path)
+    if tokens.get("model") is None:
+        # opencode --format json does not emit the model id; fall back to
+        # the model that the project's resolved opencode.json declares.
+        tokens["model"] = resolve_configured_model(project)
 
     if archive_dir and kernel and kernel.is_file() and overall_pass:
         dtype_short = dtype.replace("float", "f")

@@ -98,12 +98,14 @@ def _is_overall_pass(ev: dict) -> bool:
 
 def _extract_metrics(ev: dict) -> dict:
     """Pull the fields we care about out of an evidence document."""
+    tokens = ev.get("tokens", {}) or {}
     return {
         "pass": _is_overall_pass(ev),
-        "tokens_total": int(ev.get("tokens", {}).get("total", 0) or 0),
-        "tokens_input": int(ev.get("tokens", {}).get("input", 0) or 0),
-        "tokens_output": int(ev.get("tokens", {}).get("output", 0) or 0),
-        "tokens_cache_read": int(ev.get("tokens", {}).get("cache_read", 0) or 0),
+        "tokens_total": int(tokens.get("total", 0) or 0),
+        "tokens_input": int(tokens.get("input", 0) or 0),
+        "tokens_output": int(tokens.get("output", 0) or 0),
+        "tokens_cache_read": int(tokens.get("cache_read", 0) or 0),
+        "cost_usd": float(tokens.get("cost_usd", 0.0) or 0.0),
         "elapsed_s": float(ev.get("elapsed_total_s", 0) or 0),
         "attempts": len(ev.get("attempts", []) or []) or 1,
         "model": ev.get("model"),
@@ -158,12 +160,14 @@ def compute_cell_deltas(
         if on and off:
             row["quality_delta"] = int(bool(on["pass"])) - int(bool(off["pass"]))
             row["tokens_delta"] = on["tokens_total"] - off["tokens_total"]
+            row["cost_delta_usd"] = round(on["cost_usd"] - off["cost_usd"], 6)
             row["elapsed_delta_s"] = round(on["elapsed_s"] - off["elapsed_s"], 2)
             row["attempts_delta"] = on["attempts"] - off["attempts"]
             row["viability_unlocked"] = bool(on["pass"] and not off["pass"])
         else:
             row["quality_delta"] = None
             row["tokens_delta"] = None
+            row["cost_delta_usd"] = None
             row["elapsed_delta_s"] = None
             row["attempts_delta"] = None
             row["viability_unlocked"] = False
@@ -183,6 +187,8 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             "pass_off": 0,
             "tokens_on_sum": 0,
             "tokens_off_sum": 0,
+            "cost_on_sum": 0.0,
+            "cost_off_sum": 0.0,
             "elapsed_on_sum": 0.0,
             "elapsed_off_sum": 0.0,
             "viability_unlocked_count": 0,
@@ -195,6 +201,8 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             agg["pass_off"] += int(bool(row["off"]["pass"]))
             agg["tokens_on_sum"] += row["on"]["tokens_total"]
             agg["tokens_off_sum"] += row["off"]["tokens_total"]
+            agg["cost_on_sum"] += row["on"]["cost_usd"]
+            agg["cost_off_sum"] += row["off"]["cost_usd"]
             agg["elapsed_on_sum"] += row["on"]["elapsed_s"]
             agg["elapsed_off_sum"] += row["off"]["elapsed_s"]
             if row["viability_unlocked"]:
@@ -209,10 +217,16 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             (agg["tokens_on_sum"] - agg["tokens_off_sum"]) / n
             if agg["cells_compared"] else None
         )
+        agg["cost_delta_avg_usd"] = (
+            round((agg["cost_on_sum"] - agg["cost_off_sum"]) / n, 6)
+            if agg["cells_compared"] else None
+        )
         agg["elapsed_delta_avg_s"] = (
             round((agg["elapsed_on_sum"] - agg["elapsed_off_sum"]) / n, 2)
             if agg["cells_compared"] else None
         )
+        agg["cost_on_sum"] = round(agg["cost_on_sum"], 6)
+        agg["cost_off_sum"] = round(agg["cost_off_sum"], 6)
         agg["elapsed_on_sum"] = round(agg["elapsed_on_sum"], 2)
         agg["elapsed_off_sum"] = round(agg["elapsed_off_sum"], 2)
     return by_profile
@@ -253,15 +267,17 @@ def render_markdown(rows: list[dict], by_profile: dict[str, dict]) -> str:
     lines.append("")
     lines.append(
         "| Profile | Cells compared | Pass-rate on | Pass-rate off | "
-        "Tokens Δ (avg) | Elapsed Δ (avg) | Viability unlocked |"
+        "Tokens Δ (avg) | Cost Δ (avg, USD) | Elapsed Δ (avg) | "
+        "Viability unlocked |"
     )
-    lines.append("|---|---|---|---|---|---|---|")
+    lines.append("|---|---|---|---|---|---|---|---|")
     for prof in sorted(by_profile):
         a = by_profile[prof]
         lines.append(
             f"| `{prof}` | {a['cells_compared']}/{a['cells_total']} | "
             f"{_fmt_pct(a['pass_rate_on'])} | {_fmt_pct(a['pass_rate_off'])} | "
             f"{_fmt_delta(a['tokens_delta_avg'])} | "
+            f"{_fmt_delta(a['cost_delta_avg_usd'])} | "
             f"{_fmt_delta(a['elapsed_delta_avg_s'], 's')} | "
             f"{a['viability_unlocked_count']}/{a['cells_compared']} |"
         )
