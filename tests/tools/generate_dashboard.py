@@ -309,7 +309,7 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .rb-dot-none { background: var(--untested); }
 .skills-value-banner {
   display: none;
-  padding: 14px 18px;
+  padding: 16px 18px;
   margin-bottom: 20px;
   background: var(--bg-alt);
   border: 1px solid var(--border);
@@ -325,42 +325,170 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .svb-subtitle {
   font-size: 12px;
   color: var(--fg-muted);
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+  max-width: 820px;
 }
+.svb-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+}
+.svb-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.svb-legend-swatch.good { background: var(--confirmed); }
+.svb-legend-swatch.bad { background: var(--blocked); }
+.svb-legend-swatch.neutral { background: var(--fg-muted); }
 .svb-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
 }
 .svb-card {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.svb-card h4 {
+.svb-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.svb-card-profile {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
   color: var(--accent);
-  margin-bottom: 6px;
-  word-break: break-all;
+  font-weight: 600;
+}
+.svb-card-model {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+.svb-verdict {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.svb-verdict-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+.svb-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
 }
 .svb-stat {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font-size: 12px;
   margin: 3px 0;
   color: var(--fg-muted);
+  gap: 8px;
 }
-.svb-stat .svb-val { color: var(--fg); font-weight: 500; }
-.svb-delta-good { color: var(--confirmed); font-weight: 600; }
-.svb-delta-bad { color: var(--blocked); font-weight: 600; }
-.svb-delta-neutral { color: var(--fg-muted); }
-.svb-model {
+.svb-stat .svb-val {
+  color: var(--fg);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.svb-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.svb-delta-good { color: var(--confirmed); font-weight: 600; font-variant-numeric: tabular-nums; }
+.svb-delta-bad { color: var(--blocked); font-weight: 600; font-variant-numeric: tabular-nums; }
+.svb-delta-neutral { color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.svb-pass-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 6px;
+  align-items: center;
   font-size: 11px;
+  margin: 3px 0;
   color: var(--fg-muted);
-  font-style: italic;
-  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.svb-pass-side { font-weight: 600; color: var(--fg-muted); }
+.svb-pass-bar {
+  height: 8px;
+  background: var(--bar-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.svb-pass-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.svb-pass-fill.on { background: var(--confirmed); }
+.svb-pass-fill.off { background: var(--blocked); }
+.svb-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: help;
+  position: relative;
+  user-select: none;
+}
+.svb-help::before { content: "i"; line-height: 1; font-family: Georgia, "Times New Roman", serif; font-style: italic; }
+.svb-help:hover { color: var(--fg); border-color: var(--fg-muted); }
+.svb-help:hover .svb-tip,
+.svb-help:focus-visible .svb-tip { display: block; }
+.svb-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -8px;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  width: 260px;
+  max-width: calc(100vw - 32px);
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+  white-space: normal;
+  pointer-events: none;
+}
+.svb-tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 12px;
+  border: 5px solid transparent;
+  border-top-color: var(--fg);
 }
 .tier-cards {
   display: grid;
@@ -740,25 +868,85 @@ function fmtPct(v) {
   return Math.round(v * 100) + "%";
 }
 
-function fmtDelta(v, unit) {
+function fmtDelta(v, unit, opts) {
   if (v == null) return "\u2014";
   unit = unit || "";
-  var sign = v > 0 ? "+" : "";
-  if (Math.abs(v) >= 10000) {
-    return sign + (v / 1000).toFixed(1) + "k" + unit;
+  opts = opts || {};
+  if (v === 0) return "0" + unit;
+  var sign = v > 0 ? "+" : (v < 0 ? "\u2212" : "");
+  var abs = Math.abs(v);
+  var body;
+  if (opts.usd) {
+    if (abs >= 1) body = "$" + abs.toFixed(2);
+    else if (abs >= 0.01) body = "$" + abs.toFixed(3);
+    else body = "<$0.01";
+  } else if (abs >= 1000000) {
+    body = (abs / 1000000).toFixed(2) + "M";
+  } else if (abs >= 10000) {
+    body = (abs / 1000).toFixed(1) + "k";
+  } else if (abs >= 1) {
+    body = abs.toFixed(1);
+  } else {
+    body = abs.toFixed(2);
   }
-  if (Math.abs(v) >= 1) {
-    return sign + v.toFixed(1) + unit;
-  }
-  return sign + v.toFixed(2) + unit;
+  return sign + body + unit;
 }
 
-function deltaClass(v) {
-  // Convention: skills-on minus skills-off; negative = fewer tokens / less
-  // time / lower attempts with skills, which is good.
+// Convention: for cost-like metrics (tokens, cost, time), skills-on minus
+// skills-off; negative = skills used less and is GOOD.
+function deltaClassLowerBetter(v) {
   if (v == null || v === 0) return "svb-delta-neutral";
   return v < 0 ? "svb-delta-good" : "svb-delta-bad";
 }
+
+function passDeltaPp(on, off) {
+  if (on == null || off == null) return null;
+  return Math.round((on - off) * 100);
+}
+
+function svbHelp(text) {
+  var esc = text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  return '<span class="svb-help" tabindex="0" aria-label="' + esc
+    + '"><span class="svb-tip">' + esc + '</span></span>';
+}
+
+var SVB_TIPS = {
+  profile: "An opencode model profile defined under "
+    + "docker/opencode-profiles/. Each profile maps to one LLM (cloud or "
+    + "local) and is run with the skills stack enabled (on) and disabled "
+    + "(off) for every capability cell.",
+  verdict: "Headline pass-rate movement when the skills stack is enabled "
+    + "for this model on this run. Percentage points (pp) = pass_rate_on "
+    + "minus pass_rate_off, expressed as an absolute change \u2014 not "
+    + "relative.",
+  passRate: "Fraction of capability cells where the agent produced a "
+    + "kernel that passed static + semantic + simulator verification. "
+    + "'on' runs the agent with the skills stack mounted; 'off' invokes "
+    + "opencode directly against a minimal project layout using the same "
+    + "prompts.",
+  viability: "Cells where skills-on passed and skills-off did not. This is "
+    + "the strict 'unlock' count: how many capability cells the skills "
+    + "stack newly made viable on this model vs. raw opencode.",
+  cellsCompared: "Cells that have paired on/off evidence in this nightly. "
+    + "Cells missing one side (e.g., when a job timed out) are excluded "
+    + "from all deltas above.",
+  tokens: "Average per-cell change in total LLM tokens (input + output + "
+    + "cache-read) when skills are on vs off. Skills typically consume "
+    + "more tokens because they add context and retry until verification "
+    + "passes; failed off-runs exit early, which inflates the gap.",
+  cost: "Average per-cell change in billed cost as reported by the LLM "
+    + "provider. Cache pricing can make a large positive token delta "
+    + "register near $0 in dollars. $0 means parity (or both runs were "
+    + "cached); negative means skills cost less.",
+  walltime: "Average per-cell change in agent wall-clock time. Negative "
+    + "means skills finished faster on average despite using more "
+    + "tokens, because they reach a passing kernel in fewer attempts.",
+  totals: "Cumulative totals across all compared cells for this profile. "
+    + "Useful for budgeting: shows how much the on/off mode actually "
+    + "consumed in absolute terms.",
+};
 
 function renderSkillsValueBanner() {
   var sv = DATA.skills_value;
@@ -770,38 +958,125 @@ function renderSkillsValueBanner() {
   el.classList.add("has-data");
 
   var html = '<div class="svb-title">Skills-stack value '
-    + '(skills-on minus skills-off, latest nightly)</div>'
-    + '<div class="svb-subtitle">Negative deltas mean the skills stack '
-    + 'reduced cost; positive deltas mean it added cost. Pass-rate and '
-    + 'viability-unlocked are the stability axis.</div>'
+    + '<span style="font-weight:400;color:var(--fg-muted);">'
+    + '(skills-on minus skills-off, latest nightly)</span></div>'
+    + '<div class="svb-subtitle">'
+    + 'Each card compares one model with the skills stack enabled vs. '
+    + 'raw opencode on the same prompts. Hover the small '
+    + '<em style="font-family:Georgia,serif;font-style:italic;">i</em> '
+    + 'icons for each metric\u2019s definition. '
+    + '<span class="svb-legend"><span class="svb-legend-swatch good">'
+    + '</span> better with skills</span>'
+    + '<span class="svb-legend"><span class="svb-legend-swatch bad">'
+    + '</span> worse with skills</span>'
+    + '<span class="svb-legend"><span class="svb-legend-swatch neutral">'
+    + '</span> no change</span>'
+    + '</div>'
     + '<div class="svb-grid">';
 
   profiles.sort(function (a, b) { return a[0].localeCompare(b[0]); });
   for (var i = 0; i < profiles.length; i++) {
     var name = profiles[i][0];
-    var a = profiles[i][1];
-    var modelLine = a.model ? '<div class="svb-model">' + a.model + '</div>' : '';
+    var p = profiles[i][1];
+    var compared = p.cells_compared || 0;
+    var passOn = p.pass_on || 0;
+    var passOff = p.pass_off || 0;
+    var passOnPct = compared ? Math.round(100 * passOn / compared) : 0;
+    var passOffPct = compared ? Math.round(100 * passOff / compared) : 0;
+    var pp = passDeltaPp(p.pass_rate_on, p.pass_rate_off);
+    var ppLabel = pp == null
+      ? ""
+      : (pp > 0 ? "+" + pp : (pp < 0 ? "\u2212" + Math.abs(pp) : "0")) + " pp";
+    var verdictClass = (pp == null || pp === 0)
+      ? "svb-delta-neutral"
+      : (pp > 0 ? "svb-delta-good" : "svb-delta-bad");
+    var verdictArrow = (pp == null || pp === 0)
+      ? "\u2192"
+      : (pp > 0 ? "\u2191" : "\u2193");
+    var modelLine = p.model
+      ? '<div class="svb-card-model">' + p.model + '</div>'
+      : '';
+
+    var tokensTotal = (p.tokens_on_sum != null && p.tokens_off_sum != null)
+      ? (p.tokens_on_sum - p.tokens_off_sum)
+      : null;
+    var costTotal = (p.cost_on_sum != null && p.cost_off_sum != null)
+      ? (p.cost_on_sum - p.cost_off_sum)
+      : null;
+    var elapsedTotal = (p.elapsed_on_sum != null && p.elapsed_off_sum != null)
+      ? (p.elapsed_on_sum - p.elapsed_off_sum)
+      : null;
+
     html += '<div class="svb-card">'
-      + '<h4>' + name + '</h4>'
+      + '<div class="svb-card-head">'
+      + '<div class="svb-card-profile">'
+      + name + ' ' + svbHelp(SVB_TIPS.profile) + '</div>'
       + modelLine
-      + '<div class="svb-stat"><span>Pass rate</span>'
-      + '<span class="svb-val">' + fmtPct(a.pass_rate_on) + ' on \u00b7 '
-      + fmtPct(a.pass_rate_off) + ' off</span></div>'
-      + '<div class="svb-stat"><span>Tokens \u0394 (avg)</span>'
-      + '<span class="' + deltaClass(a.tokens_delta_avg) + '">'
-      + fmtDelta(a.tokens_delta_avg) + '</span></div>'
-      + '<div class="svb-stat"><span>Cost \u0394 (avg, USD)</span>'
-      + '<span class="' + deltaClass(a.cost_delta_avg_usd) + '">'
-      + fmtDelta(a.cost_delta_avg_usd, " $") + '</span></div>'
-      + '<div class="svb-stat"><span>Wall-time \u0394 (avg)</span>'
-      + '<span class="' + deltaClass(a.elapsed_delta_avg_s) + '">'
-      + fmtDelta(a.elapsed_delta_avg_s, "s") + '</span></div>'
-      + '<div class="svb-stat"><span>Viability unlocked</span>'
-      + '<span class="svb-val">' + (a.viability_unlocked_count || 0)
-      + '/' + (a.cells_compared || 0) + '</span></div>'
-      + '<div class="svb-stat"><span>Cells compared</span>'
-      + '<span class="svb-val">' + (a.cells_compared || 0)
-      + '/' + (a.cells_total || 0) + '</span></div>'
+      + '<div class="svb-verdict ' + verdictClass + '">'
+      + '<span class="svb-verdict-arrow">' + verdictArrow + '</span>'
+      + fmtPct(p.pass_rate_off) + ' \u2192 ' + fmtPct(p.pass_rate_on)
+      + ' pass-rate (' + ppLabel + ') '
+      + svbHelp(SVB_TIPS.verdict)
+      + '</div></div>'
+
+      + '<div>'
+      + '<div class="svb-section-label">Stability '
+      + svbHelp(SVB_TIPS.passRate) + '</div>'
+      + '<div class="svb-pass-row">'
+      + '<span class="svb-pass-side">on</span>'
+      + '<div class="svb-pass-bar"><div class="svb-pass-fill on" '
+      + 'style="width:' + passOnPct + '%"></div></div>'
+      + '<span>' + passOn + '/' + compared + ' (' + passOnPct + '%)</span>'
+      + '</div>'
+      + '<div class="svb-pass-row">'
+      + '<span class="svb-pass-side">off</span>'
+      + '<div class="svb-pass-bar"><div class="svb-pass-fill off" '
+      + 'style="width:' + passOffPct + '%"></div></div>'
+      + '<span>' + passOff + '/' + compared + ' (' + passOffPct + '%)</span>'
+      + '</div>'
+      + '<div class="svb-stat" style="margin-top:6px;">'
+      + '<span class="svb-stat-label">Viability unlocked '
+      + svbHelp(SVB_TIPS.viability) + '</span>'
+      + '<span class="svb-val">'
+      + (p.viability_unlocked_count || 0) + '/' + compared
+      + '</span></div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Cells compared '
+      + svbHelp(SVB_TIPS.cellsCompared) + '</span>'
+      + '<span class="svb-val">' + compared
+      + '/' + (p.cells_total || compared) + '</span></div>'
+      + '</div>'
+
+      + '<div>'
+      + '<div class="svb-section-label">Resources per cell (avg) '
+      + svbHelp(SVB_TIPS.totals) + '</div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Tokens '
+      + svbHelp(SVB_TIPS.tokens) + '</span>'
+      + '<span class="' + deltaClassLowerBetter(p.tokens_delta_avg) + '">'
+      + fmtDelta(p.tokens_delta_avg) + '</span></div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Cost '
+      + svbHelp(SVB_TIPS.cost) + '</span>'
+      + '<span class="' + deltaClassLowerBetter(p.cost_delta_avg_usd) + '">'
+      + fmtDelta(p.cost_delta_avg_usd, "", {usd: true}) + '</span></div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Wall-time '
+      + svbHelp(SVB_TIPS.walltime) + '</span>'
+      + '<span class="' + deltaClassLowerBetter(p.elapsed_delta_avg_s) + '">'
+      + fmtDelta(p.elapsed_delta_avg_s, "s") + '</span></div>'
+      + '<div class="svb-stat" style="border-top:1px dashed var(--border);'
+      + 'margin-top:4px;padding-top:4px;">'
+      + '<span class="svb-stat-label" style="color:var(--fg-muted);'
+      + 'font-size:11px;">Totals (\u0394)</span>'
+      + '<span style="font-size:11px;color:var(--fg-muted);'
+      + 'font-variant-numeric:tabular-nums;">'
+      + fmtDelta(tokensTotal) + ' tok \u00b7 '
+      + fmtDelta(costTotal, "", {usd: true}) + ' \u00b7 '
+      + fmtDelta(elapsedTotal, "s")
+      + '</span></div>'
+      + '</div>'
+
       + '</div>';
   }
   html += '</div>';
