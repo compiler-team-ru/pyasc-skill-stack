@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f16/kernel.py",
-  "date": "2026-05-13T10:13:21Z",
+  "date": "2026-05-15T07:16:56Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,24 +22,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 129150,
-    "output": 11161,
-    "cache_read": 678907,
-    "total": 140311
+    "input": 119376,
+    "output": 9131,
+    "cache_read": 392098,
+    "total": 128507
   },
-  "elapsed_total_s": 349.09,
+  "elapsed_total_s": 333.8,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 349.09,
+      "elapsed_s": 333.8,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 129150,
-        "output": 11161,
-        "cache_read": 678907,
-        "total": 140311,
+        "input": 119376,
+        "output": 9131,
+        "cache_read": 392098,
+        "total": 128507,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -65,7 +65,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -122,8 +122,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -137,17 +137,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-27T04:53:46Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-28T04:55:22Z",
       "overall_pass": true,
@@ -412,6 +403,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 291.32
+    },
+    {
+      "date": "2026-05-13T10:13:21Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 140311,
+      "elapsed_s": 349.09
     }
   ]
 }

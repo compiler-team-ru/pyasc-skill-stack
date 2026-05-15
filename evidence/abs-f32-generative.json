@@ -5,40 +5,59 @@
   "dtype": "float32",
   "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-05-13T08:10:40Z",
+  "date": "2026-05-15T05:43:20Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 62599,
-    "output": 10702,
-    "cache_read": 590552,
-    "total": 73301
+    "input": 111994,
+    "output": 5323,
+    "cache_read": 532194,
+    "total": 117317
   },
-  "elapsed_total_s": 420.0,
+  "elapsed_total_s": 631.28,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.0,
+      "elapsed_s": 420.1,
       "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 7624,
+        "output": 16,
+        "cache_read": 4391,
+        "total": 7640,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 211.18,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 62599,
-        "output": 10702,
-        "cache_read": 590552,
-        "total": 73301,
+        "input": 104370,
+        "output": 5307,
+        "cache_read": 527803,
+        "total": 109677,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -135,17 +154,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-29T04:39:08Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-30T04:38:29Z",
       "overall_pass": true,
@@ -410,6 +420,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 272.04
+    },
+    {
+      "date": "2026-05-13T08:10:40Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 73301,
+      "elapsed_s": 420.0
     }
   ]
 }

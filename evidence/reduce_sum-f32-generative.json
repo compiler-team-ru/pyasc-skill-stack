@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-05-13T09:43:21Z",
+  "date": "2026-05-15T06:47:30Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,24 +22,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 101044,
-    "output": 5375,
-    "cache_read": 339451,
-    "total": 106419
+    "input": 126294,
+    "output": 9164,
+    "cache_read": 411967,
+    "total": 135458
   },
-  "elapsed_total_s": 261.75,
+  "elapsed_total_s": 380.96,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 261.75,
+      "elapsed_s": 380.96,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 101044,
-        "output": 5375,
-        "cache_read": 339451,
-        "total": 106419,
+        "input": 126294,
+        "output": 9164,
+        "cache_read": 411967,
+        "total": 135458,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -65,7 +65,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -122,8 +122,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -137,17 +137,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-22T06:43:05Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T12:12:31Z",
       "overall_pass": true,
@@ -412,6 +403,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 257.97
+    },
+    {
+      "date": "2026-05-13T09:43:21Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 106419,
+      "elapsed_s": 261.75
     }
   ]
 }

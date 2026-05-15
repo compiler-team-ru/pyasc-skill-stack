@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-05-13T13:22:07Z",
+  "generated_at": "2026-05-15T10:52:51Z",
   "cells": [
     {
       "op": "abs",
@@ -8,16 +8,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 87413,
-        "tokens_input": 81009,
-        "tokens_output": 6404,
-        "tokens_cache_read": 398408,
+        "tokens_total": 106312,
+        "tokens_input": 97875,
+        "tokens_output": 8437,
+        "tokens_cache_read": 1015225,
         "cost_usd": 0.0,
-        "elapsed_s": 279.25,
+        "elapsed_s": 420.01,
         "attempts": 1,
         "model": "dashscope/glm-5",
         "score": 15.0,
-        "date": "2026-05-13T07:44:04Z"
+        "date": "2026-05-15T05:14:11Z"
       },
       "off": {
         "pass": false,
@@ -33,9 +33,9 @@
         "date": "2026-05-12T11:03:43Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 87413,
+      "tokens_delta": 106312,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -215.11,
+      "elapsed_delta_s": -74.35,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -45,16 +45,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 73301,
-        "tokens_input": 62599,
-        "tokens_output": 10702,
-        "tokens_cache_read": 590552,
+        "tokens_total": 117317,
+        "tokens_input": 111994,
+        "tokens_output": 5323,
+        "tokens_cache_read": 532194,
         "cost_usd": 0.0,
-        "elapsed_s": 420.0,
-        "attempts": 1,
+        "elapsed_s": 631.28,
+        "attempts": 2,
         "model": "dashscope/glm-5",
         "score": 15.0,
-        "date": "2026-05-13T08:10:40Z"
+        "date": "2026-05-15T05:43:20Z"
       },
       "off": {
         "pass": false,
@@ -70,10 +70,10 @@
         "date": "2026-05-12T11:09:51Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 73301,
+      "tokens_delta": 117317,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 52.39,
-      "attempts_delta": -3,
+      "elapsed_delta_s": 263.67,
+      "attempts_delta": -2,
       "viability_unlocked": true
     },
     {
@@ -82,16 +82,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 379004,
-        "tokens_input": 357690,
-        "tokens_output": 21314,
-        "tokens_cache_read": 1708575,
+        "tokens_total": 265443,
+        "tokens_input": 251817,
+        "tokens_output": 13626,
+        "tokens_cache_read": 749985,
         "cost_usd": 0.0,
-        "elapsed_s": 883.09,
-        "attempts": 3,
+        "elapsed_s": 542.23,
+        "attempts": 2,
         "model": "dashscope/glm-5",
         "score": 16.0,
-        "date": "2026-05-13T09:37:25Z"
+        "date": "2026-05-15T06:39:59Z"
       },
       "off": {
         "pass": false,
@@ -107,10 +107,10 @@
         "date": "2026-05-12T11:19:13Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 379004,
+      "tokens_delta": 265443,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 321.48,
-      "attempts_delta": -1,
+      "elapsed_delta_s": -19.38,
+      "attempts_delta": -2,
       "viability_unlocked": true
     },
     {
@@ -119,16 +119,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 140311,
-        "tokens_input": 129150,
-        "tokens_output": 11161,
-        "tokens_cache_read": 678907,
+        "tokens_total": 128507,
+        "tokens_input": 119376,
+        "tokens_output": 9131,
+        "tokens_cache_read": 392098,
         "cost_usd": 0.0,
-        "elapsed_s": 349.09,
+        "elapsed_s": 333.8,
         "attempts": 1,
         "model": "dashscope/glm-5",
-        "score": 16.0,
-        "date": "2026-05-13T10:13:21Z"
+        "score": 15.0,
+        "date": "2026-05-15T07:16:56Z"
       },
       "off": {
         "pass": false,
@@ -144,9 +144,9 @@
         "date": "2026-05-12T11:33:54Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 140311,
+      "tokens_delta": 128507,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 70.09,
+      "elapsed_delta_s": 54.8,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -156,16 +156,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 155291,
-        "tokens_input": 142629,
-        "tokens_output": 12662,
-        "tokens_cache_read": 505279,
+        "tokens_total": 131424,
+        "tokens_input": 123974,
+        "tokens_output": 7450,
+        "tokens_cache_read": 501167,
         "cost_usd": 0.0,
-        "elapsed_s": 420.0,
+        "elapsed_s": 291.99,
         "attempts": 1,
         "model": "dashscope/glm-5",
         "score": 16.0,
-        "date": "2026-05-13T10:39:57Z"
+        "date": "2026-05-15T07:45:47Z"
       },
       "off": {
         "pass": false,
@@ -181,9 +181,9 @@
         "date": "2026-05-12T11:42:28Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 155291,
+      "tokens_delta": 131424,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -93.87,
+      "elapsed_delta_s": -221.88,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -192,17 +192,17 @@
       "dtype": "float16",
       "profile": "cloud-default",
       "on": {
-        "pass": true,
-        "tokens_total": 355945,
-        "tokens_input": 331034,
-        "tokens_output": 24911,
-        "tokens_cache_read": 1481746,
+        "pass": false,
+        "tokens_total": 523187,
+        "tokens_input": 492655,
+        "tokens_output": 30532,
+        "tokens_cache_read": 1904054,
         "cost_usd": 0.0,
-        "elapsed_s": 848.29,
-        "attempts": 3,
+        "elapsed_s": 1163.71,
+        "attempts": 4,
         "model": "dashscope/glm-5",
         "score": 16.0,
-        "date": "2026-05-13T11:32:43Z"
+        "date": "2026-05-15T09:22:28Z"
       },
       "off": {
         "pass": false,
@@ -217,12 +217,12 @@
         "score": 0.0,
         "date": "2026-05-12T11:47:32Z"
       },
-      "quality_delta": 1,
-      "tokens_delta": 355945,
+      "quality_delta": 0,
+      "tokens_delta": 523187,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 544.14,
-      "attempts_delta": -1,
-      "viability_unlocked": true
+      "elapsed_delta_s": 859.56,
+      "attempts_delta": 0,
+      "viability_unlocked": false
     },
     {
       "op": "matmul",
@@ -230,16 +230,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 127623,
-        "tokens_input": 117408,
-        "tokens_output": 10215,
-        "tokens_cache_read": 712436,
+        "tokens_total": 99875,
+        "tokens_input": 88253,
+        "tokens_output": 11622,
+        "tokens_cache_read": 525894,
         "cost_usd": 0.0,
-        "elapsed_s": 380.48,
+        "elapsed_s": 420.0,
         "attempts": 1,
         "model": "dashscope/glm-5",
-        "score": 15.0,
-        "date": "2026-05-13T11:43:54Z"
+        "score": 14.0,
+        "date": "2026-05-15T09:37:20Z"
       },
       "off": {
         "pass": false,
@@ -255,9 +255,9 @@
         "date": "2026-05-12T12:11:31Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 127623,
+      "tokens_delta": 99875,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -166.91,
+      "elapsed_delta_s": -127.39,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -267,16 +267,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 100176,
-        "tokens_input": 91584,
-        "tokens_output": 8592,
-        "tokens_cache_read": 673899,
+        "tokens_total": 131378,
+        "tokens_input": 124505,
+        "tokens_output": 6873,
+        "tokens_cache_read": 367096,
         "cost_usd": 0.0,
-        "elapsed_s": 310.06,
+        "elapsed_s": 270.86,
         "attempts": 1,
         "model": "dashscope/glm-5",
         "score": 15.0,
-        "date": "2026-05-13T09:49:11Z"
+        "date": "2026-05-15T06:52:44Z"
       },
       "off": {
         "pass": false,
@@ -292,9 +292,9 @@
         "date": "2026-05-12T11:29:15Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 100176,
+      "tokens_delta": 131378,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -71.44,
+      "elapsed_delta_s": -110.64,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -304,16 +304,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 106419,
-        "tokens_input": 101044,
-        "tokens_output": 5375,
-        "tokens_cache_read": 339451,
+        "tokens_total": 135458,
+        "tokens_input": 126294,
+        "tokens_output": 9164,
+        "tokens_cache_read": 411967,
         "cost_usd": 0.0,
-        "elapsed_s": 261.75,
+        "elapsed_s": 380.96,
         "attempts": 1,
         "model": "dashscope/glm-5",
-        "score": 16.0,
-        "date": "2026-05-13T09:43:21Z"
+        "score": 15.0,
+        "date": "2026-05-15T06:47:30Z"
       },
       "off": {
         "pass": false,
@@ -329,9 +329,9 @@
         "date": "2026-05-12T11:22:53Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 106419,
+      "tokens_delta": 135458,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 41.7,
+      "elapsed_delta_s": 160.91,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -341,16 +341,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 118287,
-        "tokens_input": 107018,
-        "tokens_output": 11269,
-        "tokens_cache_read": 768342,
+        "tokens_total": 132405,
+        "tokens_input": 121773,
+        "tokens_output": 10632,
+        "tokens_cache_read": 642402,
         "cost_usd": 0.0,
-        "elapsed_s": 392.5,
+        "elapsed_s": 420.01,
         "attempts": 1,
         "model": "dashscope/glm-5",
         "score": 14.0,
-        "date": "2026-05-13T11:54:33Z"
+        "date": "2026-05-15T09:50:11Z"
       },
       "off": {
         "pass": false,
@@ -366,9 +366,9 @@
         "date": "2026-05-12T12:32:07Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 118287,
+      "tokens_delta": 132405,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -843.52,
+      "elapsed_delta_s": -816.01,
       "attempts_delta": -3,
       "viability_unlocked": true
     },
@@ -378,16 +378,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 210461,
-        "tokens_input": 192813,
-        "tokens_output": 17648,
-        "tokens_cache_read": 1302501,
+        "tokens_total": 124403,
+        "tokens_input": 113946,
+        "tokens_output": 10457,
+        "tokens_cache_read": 591096,
         "cost_usd": 0.0,
-        "elapsed_s": 654.67,
-        "attempts": 2,
+        "elapsed_s": 328.32,
+        "attempts": 1,
         "model": "dashscope/glm-5",
-        "score": 14.0,
-        "date": "2026-05-13T12:33:45Z"
+        "score": 15.0,
+        "date": "2026-05-15T09:58:38Z"
       },
       "off": {
         "pass": false,
@@ -403,10 +403,10 @@
         "date": "2026-05-12T12:51:06Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 210461,
+      "tokens_delta": 124403,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -483.42,
-      "attempts_delta": -2,
+      "elapsed_delta_s": -809.77,
+      "attempts_delta": -3,
       "viability_unlocked": true
     },
     {
@@ -415,16 +415,16 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
-        "tokens_total": 75450,
-        "tokens_input": 70088,
-        "tokens_output": 5362,
-        "tokens_cache_read": 344563,
+        "tokens_total": 146188,
+        "tokens_input": 138567,
+        "tokens_output": 7621,
+        "tokens_cache_read": 1392019,
         "cost_usd": 0.0,
-        "elapsed_s": 193.89,
+        "elapsed_s": 383.59,
         "attempts": 1,
         "model": "dashscope/glm-5",
         "score": 14.0,
-        "date": "2026-05-13T11:36:46Z"
+        "date": "2026-05-15T09:29:45Z"
       },
       "off": {
         "pass": false,
@@ -440,9 +440,9 @@
         "date": "2026-05-12T12:02:24Z"
       },
       "quality_delta": 1,
-      "tokens_delta": 75450,
+      "tokens_delta": 146188,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -697.12,
+      "elapsed_delta_s": -507.42,
       "attempts_delta": -3,
       "viability_unlocked": true
     }
@@ -451,21 +451,21 @@
     "cloud-default": {
       "cells_total": 12,
       "cells_compared": 12,
-      "pass_on": 12,
+      "pass_on": 11,
       "pass_off": 0,
-      "tokens_on_sum": 1929681,
+      "tokens_on_sum": 2041897,
       "tokens_off_sum": 0,
       "cost_on_sum": 0.0,
       "cost_off_sum": 0.0,
-      "elapsed_on_sum": 5393.07,
+      "elapsed_on_sum": 5586.76,
       "elapsed_off_sum": 6934.66,
-      "viability_unlocked_count": 12,
+      "viability_unlocked_count": 11,
       "model": "dashscope/glm-5",
-      "pass_rate_on": 1.0,
+      "pass_rate_on": 0.917,
       "pass_rate_off": 0.0,
-      "tokens_delta_avg": 160806.75,
+      "tokens_delta_avg": 170158.08333333334,
       "cost_delta_avg_usd": 0.0,
-      "elapsed_delta_avg_s": -128.47
+      "elapsed_delta_avg_s": -112.32
     }
   }
 }

@@ -5,11 +5,11 @@
   "dtype": "float16",
   "prompt": "Help me develop a tiled matrix multiplication operator (asc2 API) for float16 inputs producing float32 output. Use small fixed shapes such as M=K=N=16 or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT numpy) for host-side data and torch.testing.assert_close for verification. Load A to asc2.TileLocation.L0A and B to asc2.TileLocation.L0B, then use `a @ b` (or asc2.matmul) and asc2.store the float32 result. Target the Ascend950PR_9599 simulator (pass -v Ascend950PR_9599). Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
-  "date": "2026-05-13T11:43:54Z",
+  "date": "2026-05-15T09:37:20Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -22,24 +22,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 117408,
-    "output": 10215,
-    "cache_read": 712436,
-    "total": 127623
+    "input": 88253,
+    "output": 11622,
+    "cache_read": 525894,
+    "total": 99875
   },
-  "elapsed_total_s": 380.48,
+  "elapsed_total_s": 420.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 380.48,
-      "exit": 0,
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 117408,
-        "output": 10215,
-        "cache_read": 712436,
-        "total": 127623,
+        "input": 88253,
+        "output": 11622,
+        "cache_read": 525894,
+        "total": 99875,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -64,7 +64,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -101,8 +101,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -110,7 +110,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=3 params, found 3"
+        "detail": "expected>=3 params, found 10"
       },
       "output_dtype": {
         "passed": true,
@@ -136,17 +136,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-16T08:07:31Z",
-      "overall_pass": false,
-      "score": 14.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-16T10:22:36Z",
       "overall_pass": false,
@@ -411,6 +402,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 252.32
+    },
+    {
+      "date": "2026-05-13T11:43:54Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 127623,
+      "elapsed_s": 380.48
     }
   ]
 }

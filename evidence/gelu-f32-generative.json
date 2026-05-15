@@ -5,11 +5,11 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator (tanh / Pad\u00e9 approximation form) that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile MUST be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`). The asc2 Tile class does not implement __rmul__, so scalar-on-left raises AttributeError at codegen time. Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float32/kernel.py",
-  "date": "2026-05-13T10:39:57Z",
+  "date": "2026-05-15T07:45:47Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -22,24 +22,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 142629,
-    "output": 12662,
-    "cache_read": 505279,
-    "total": 155291
+    "input": 123974,
+    "output": 7450,
+    "cache_read": 501167,
+    "total": 131424
   },
-  "elapsed_total_s": 420.0,
+  "elapsed_total_s": 291.99,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 420.0,
-      "exit": 124,
+      "elapsed_s": 291.99,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 142629,
-        "output": 12662,
-        "cache_read": 505279,
-        "total": 155291,
+        "input": 123974,
+        "output": 7450,
+        "cache_read": 501167,
+        "total": 131424,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -138,17 +138,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-05-02T05:06:01Z",
-      "overall_pass": false,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "fail",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-05-02T05:10:16Z",
       "overall_pass": false,
@@ -413,6 +404,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 257.39
+    },
+    {
+      "date": "2026-05-13T10:39:57Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 155291,
+      "elapsed_s": 420.0
     }
   ]
 }
