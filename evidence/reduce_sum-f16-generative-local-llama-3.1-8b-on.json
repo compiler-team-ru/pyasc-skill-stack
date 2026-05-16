@@ -1,0 +1,101 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float16",
+  "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate error).",
+  "kernel_path": "",
+  "date": "2026-05-16T08:26:31Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "on",
+  "model_profile": "local-llama-3.1-8b",
+  "model": "ollama/llama3.1:8b",
+  "tokens": {
+    "input": 12288,
+    "output": 2313,
+    "cache_read": 0,
+    "total": 14601
+  },
+  "elapsed_total_s": 2898.93,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 901.75,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 542,
+        "cache_read": 0,
+        "total": 4638,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 1042.59,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 1042,
+        "cache_read": 0,
+        "total": 5138,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 954.59,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 729,
+        "cache_read": 0,
+        "total": 4825,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-llama-3.1-8b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
+  "history": []
+}
