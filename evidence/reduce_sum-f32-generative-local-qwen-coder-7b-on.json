@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
   "kernel_path": "",
-  "date": "2026-05-16T07:07:32Z",
+  "date": "2026-05-17T07:32:27Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 628,
+    "output": 401,
     "cache_read": 0,
-    "total": 12916
+    "total": 12689
   },
-  "elapsed_total_s": 2147.23,
+  "elapsed_total_s": 2142.92,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 710.2,
+      "elapsed_s": 696.31,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 197,
+        "output": 58,
         "cache_read": 0,
-        "total": 4293,
+        "total": 4154,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 699.6,
+      "elapsed_s": 708.17,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 149,
+        "output": 122,
         "cache_read": 0,
-        "total": 4245,
+        "total": 4218,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 737.43,
+      "elapsed_s": 738.44,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 282,
+        "output": 221,
         "cache_read": 0,
-        "total": 4378,
+        "total": 4317,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,6 +96,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25981335803",
+  "history": [
+    {
+      "date": "2026-05-16T07:07:32Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12916,
+      "elapsed_s": 2147.23
+    }
+  ]
 }

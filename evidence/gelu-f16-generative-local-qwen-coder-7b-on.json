@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).",
   "kernel_path": "",
-  "date": "2026-05-16T08:20:45Z",
+  "date": "2026-05-17T08:44:22Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 684,
+    "output": 583,
     "cache_read": 0,
-    "total": 12972
+    "total": 12871
   },
-  "elapsed_total_s": 2165.23,
+  "elapsed_total_s": 2190.61,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 707.68,
+      "elapsed_s": 734.0,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 166,
+        "output": 220,
         "cache_read": 0,
-        "total": 4262,
+        "total": 4316,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 726.47,
+      "elapsed_s": 729.47,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 249,
+        "output": 191,
         "cache_read": 0,
-        "total": 4345,
+        "total": 4287,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 731.08,
+      "elapsed_s": 727.14,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 269,
+        "output": 172,
         "cache_read": 0,
-        "total": 4365,
+        "total": 4268,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,6 +96,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25981335803",
+  "history": [
+    {
+      "date": "2026-05-16T08:20:45Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12972,
+      "elapsed_s": 2165.23
+    }
+  ]
 }

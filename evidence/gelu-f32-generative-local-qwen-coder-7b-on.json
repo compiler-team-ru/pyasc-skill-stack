@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop a GELU activation operator (tanh / Pad\u00e9 approximation form) that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile MUST be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`). The asc2 Tile class does not implement __rmul__, so scalar-on-left raises AttributeError at codegen time. Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
   "kernel_path": "",
-  "date": "2026-05-16T08:57:07Z",
+  "date": "2026-05-17T09:22:45Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 474,
+    "output": 789,
     "cache_read": 0,
-    "total": 12762
+    "total": 13077
   },
-  "elapsed_total_s": 2182.07,
+  "elapsed_total_s": 2302.5,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 693.49,
+      "elapsed_s": 763.2,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 30,
+        "output": 264,
         "cache_read": 0,
-        "total": 4126,
+        "total": 4360,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 716.56,
+      "elapsed_s": 733.93,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 128,
+        "output": 138,
         "cache_read": 0,
-        "total": 4224,
+        "total": 4234,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 772.02,
+      "elapsed_s": 805.37,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 316,
+        "output": 387,
         "cache_read": 0,
-        "total": 4412,
+        "total": 4483,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,6 +96,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25981335803",
+  "history": [
+    {
+      "date": "2026-05-16T08:57:07Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12762,
+      "elapsed_s": 2182.07
+    }
+  ]
 }

@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a softmax operator that supports float16 data type. Test with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2, rtol=5e-2 for verification.",
   "kernel_path": "",
-  "date": "2026-05-16T10:07:51Z",
+  "date": "2026-05-17T10:34:13Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 631,
+    "output": 367,
     "cache_read": 0,
-    "total": 12919
+    "total": 12655
   },
-  "elapsed_total_s": 2150.39,
+  "elapsed_total_s": 2151.67,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 696.92,
+      "elapsed_s": 709.73,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 168,
+        "output": 103,
         "cache_read": 0,
-        "total": 4264,
+        "total": 4199,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 702.7,
+      "elapsed_s": 724.4,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 147,
+        "output": 163,
         "cache_read": 0,
-        "total": 4243,
+        "total": 4259,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 750.77,
+      "elapsed_s": 717.54,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 316,
+        "output": 101,
         "cache_read": 0,
-        "total": 4412,
+        "total": 4197,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,6 +96,18 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25981335803",
+  "history": [
+    {
+      "date": "2026-05-16T10:07:51Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12919,
+      "elapsed_s": 2150.39
+    }
+  ]
 }
