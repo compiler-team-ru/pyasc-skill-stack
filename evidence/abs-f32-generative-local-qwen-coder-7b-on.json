@@ -5,7 +5,7 @@
   "dtype": "float32",
   "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-05-17T06:15:39Z",
+  "date": "2026-05-18T06:08:38Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 388,
+    "output": 148,
     "cache_read": 0,
-    "total": 12676
+    "total": 12436
   },
-  "elapsed_total_s": 2138.47,
+  "elapsed_total_s": 2035.79,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 705.51,
+      "elapsed_s": 689.21,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 87,
+        "output": 94,
         "cache_read": 0,
-        "total": 4183,
+        "total": 4190,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 710.95,
+      "elapsed_s": 671.81,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 142,
+        "output": 20,
         "cache_read": 0,
-        "total": 4238,
+        "total": 4116,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 722.01,
+      "elapsed_s": 674.77,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 159,
+        "output": 34,
         "cache_read": 0,
-        "total": 4255,
+        "total": 4130,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,7 +96,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25981335803",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26013721037",
   "history": [
     {
       "date": "2026-05-16T05:57:14Z",
@@ -108,6 +108,17 @@
       "skipped": false,
       "tokens_total": 12675,
       "elapsed_s": 2088.65
+    },
+    {
+      "date": "2026-05-17T06:15:39Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12676,
+      "elapsed_s": 2138.47
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-05-17T11:00:46Z",
+  "generated_at": "2026-05-18T10:57:17Z",
   "cells": [
     {
       "op": "abs",
@@ -82,16 +82,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12868,
+        "tokens_total": 12466,
         "tokens_input": 12288,
-        "tokens_output": 580,
+        "tokens_output": 178,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2210.92,
+        "elapsed_s": 2058.0,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T05:40:01Z"
+        "date": "2026-05-18T05:34:42Z"
       },
       "off": {
         "pass": false,
@@ -107,9 +107,9 @@
         "date": "2026-05-16T05:21:56Z"
       },
       "quality_delta": 0,
-      "tokens_delta": 325,
+      "tokens_delta": -77,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 122.33,
+      "elapsed_delta_s": -30.59,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -193,16 +193,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12676,
+        "tokens_total": 12436,
         "tokens_input": 12288,
-        "tokens_output": 388,
+        "tokens_output": 148,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2138.47,
+        "elapsed_s": 2035.79,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T06:15:39Z"
+        "date": "2026-05-18T06:08:38Z"
       },
       "off": {
         "pass": false,
@@ -218,9 +218,9 @@
         "date": "2026-05-16T05:56:58Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -2,
+      "tokens_delta": -242,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 36.37,
+      "elapsed_delta_s": -66.31,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -304,16 +304,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 14052,
+        "tokens_total": 12535,
         "tokens_input": 12288,
-        "tokens_output": 1764,
+        "tokens_output": 247,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2464.86,
+        "elapsed_s": 2056.66,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T06:56:44Z"
+        "date": "2026-05-18T06:42:55Z"
       },
       "off": {
         "pass": false,
@@ -329,9 +329,9 @@
         "date": "2026-05-16T06:32:31Z"
       },
       "quality_delta": 0,
-      "tokens_delta": 1231,
+      "tokens_delta": -286,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 332.21,
+      "elapsed_delta_s": -75.99,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -415,16 +415,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12871,
+        "tokens_total": 13003,
         "tokens_input": 12288,
-        "tokens_output": 583,
+        "tokens_output": 715,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2190.61,
+        "elapsed_s": 2177.23,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T08:44:22Z"
+        "date": "2026-05-18T08:30:28Z"
       },
       "off": {
         "pass": false,
@@ -440,9 +440,9 @@
         "date": "2026-05-16T08:22:04Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -406,
+      "tokens_delta": -274,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -47.99,
+      "elapsed_delta_s": -61.37,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -526,16 +526,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 13077,
+        "tokens_total": 12969,
         "tokens_input": 12288,
-        "tokens_output": 789,
+        "tokens_output": 681,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2302.5,
+        "elapsed_s": 2226.55,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T09:22:45Z"
+        "date": "2026-05-18T09:07:35Z"
       },
       "off": {
         "pass": false,
@@ -551,9 +551,9 @@
         "date": "2026-05-16T09:01:06Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -337,
+      "tokens_delta": -445,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -39.7,
+      "elapsed_delta_s": -115.65,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -637,16 +637,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12672,
+        "tokens_total": 12691,
         "tokens_input": 12288,
-        "tokens_output": 384,
+        "tokens_output": 403,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2136.3,
+        "elapsed_s": 2099.52,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T09:58:21Z"
+        "date": "2026-05-18T09:42:34Z"
       },
       "off": {
         "pass": false,
@@ -662,9 +662,9 @@
         "date": "2026-05-16T09:37:27Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -376,
+      "tokens_delta": -357,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -43.7,
+      "elapsed_delta_s": -80.48,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -704,6 +704,31 @@
       "elapsed_delta_s": -127.39,
       "attempts_delta": -3,
       "viability_unlocked": true
+    },
+    {
+      "op": "matmul",
+      "dtype": "float16",
+      "profile": "local-qwen-coder-7b",
+      "on": {
+        "pass": false,
+        "tokens_total": 12633,
+        "tokens_input": 12288,
+        "tokens_output": 345,
+        "tokens_cache_read": 0,
+        "cost_usd": 0.0,
+        "elapsed_s": 2136.69,
+        "attempts": 3,
+        "model": "ollama/qwen2.5-coder:7b",
+        "score": 0.0,
+        "date": "2026-05-18T10:54:07Z"
+      },
+      "off": null,
+      "quality_delta": null,
+      "tokens_delta": null,
+      "cost_delta_usd": null,
+      "elapsed_delta_s": null,
+      "attempts_delta": null,
+      "viability_unlocked": false
     },
     {
       "op": "reduce_sum",
@@ -785,16 +810,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12547,
+        "tokens_total": 13004,
         "tokens_input": 12288,
-        "tokens_output": 259,
+        "tokens_output": 716,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2123.54,
+        "elapsed_s": 2177.81,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T08:07:51Z"
+        "date": "2026-05-18T07:54:11Z"
       },
       "off": {
         "pass": false,
@@ -810,9 +835,9 @@
         "date": "2026-05-16T07:44:45Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -481,
+      "tokens_delta": -24,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -64.37,
+      "elapsed_delta_s": -10.1,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -896,16 +921,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12689,
+        "tokens_total": 12707,
         "tokens_input": 12288,
-        "tokens_output": 401,
+        "tokens_output": 419,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2142.92,
+        "elapsed_s": 2097.19,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T07:32:27Z"
+        "date": "2026-05-18T07:17:53Z"
       },
       "off": {
         "pass": false,
@@ -921,9 +946,9 @@
         "date": "2026-05-16T07:08:17Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -207,
+      "tokens_delta": -189,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -2.8,
+      "elapsed_delta_s": -48.53,
       "attempts_delta": 0,
       "viability_unlocked": false
     },
@@ -1044,16 +1069,16 @@
       "profile": "local-qwen-coder-7b",
       "on": {
         "pass": false,
-        "tokens_total": 12655,
+        "tokens_total": 12913,
         "tokens_input": 12288,
-        "tokens_output": 367,
+        "tokens_output": 625,
         "tokens_cache_read": 0,
         "cost_usd": 0.0,
-        "elapsed_s": 2151.67,
+        "elapsed_s": 2155.53,
         "attempts": 3,
         "model": "ollama/qwen2.5-coder:7b",
         "score": 0.0,
-        "date": "2026-05-17T10:34:13Z"
+        "date": "2026-05-18T10:18:30Z"
       },
       "off": {
         "pass": false,
@@ -1069,9 +1094,9 @@
         "date": "2026-05-16T10:14:04Z"
       },
       "quality_delta": 0,
-      "tokens_delta": -360,
+      "tokens_delta": -102,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": -45.26,
+      "elapsed_delta_s": -41.4,
       "attempts_delta": 0,
       "viability_unlocked": false
     }
@@ -1116,23 +1141,23 @@
       "elapsed_delta_avg_s": 97.04
     },
     "local-qwen-coder-7b": {
-      "cells_total": 9,
+      "cells_total": 10,
       "cells_compared": 9,
       "pass_on": 0,
       "pass_off": 0,
-      "tokens_on_sum": 116107,
+      "tokens_on_sum": 114724,
       "tokens_off_sum": 116720,
       "cost_on_sum": 0.0,
       "cost_off_sum": 0.0,
-      "elapsed_on_sum": 19861.79,
+      "elapsed_on_sum": 19084.28,
       "elapsed_off_sum": 19614.7,
       "viability_unlocked_count": 0,
       "model": "ollama/qwen2.5-coder:7b",
       "pass_rate_on": 0.0,
       "pass_rate_off": 0.0,
-      "tokens_delta_avg": -68.11111111111111,
+      "tokens_delta_avg": -221.77777777777777,
       "cost_delta_avg_usd": 0.0,
-      "elapsed_delta_avg_s": 27.45
+      "elapsed_delta_avg_s": -58.94
     }
   }
 }
