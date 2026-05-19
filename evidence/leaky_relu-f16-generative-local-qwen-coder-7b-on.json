@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a leaky_relu operator that supports float16 data type with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-05-18T09:42:34Z",
+  "date": "2026-05-19T19:49:18Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -17,23 +17,23 @@
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
     "input": 12288,
-    "output": 403,
+    "output": 431,
     "cache_read": 0,
-    "total": 12691
+    "total": 12719
   },
-  "elapsed_total_s": 2099.52,
+  "elapsed_total_s": 2096.9,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 701.17,
+      "elapsed_s": 682.85,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 162,
+        "output": 77,
         "cache_read": 0,
-        "total": 4258,
+        "total": 4173,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +44,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 684.01,
+      "elapsed_s": 693.49,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 73,
+        "output": 127,
         "cache_read": 0,
-        "total": 4169,
+        "total": 4223,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +62,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 714.34,
+      "elapsed_s": 720.56,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
         "input": 4096,
-        "output": 168,
+        "output": 227,
         "cache_read": 0,
-        "total": 4264,
+        "total": 4323,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -96,7 +96,7 @@
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26013721037",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26104187949",
   "history": [
     {
       "date": "2026-05-16T09:32:00Z",
@@ -119,6 +119,17 @@
       "skipped": false,
       "tokens_total": 12672,
       "elapsed_s": 2136.3
+    },
+    {
+      "date": "2026-05-18T09:42:34Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12691,
+      "elapsed_s": 2099.52
     }
   ]
 }
