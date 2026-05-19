@@ -1,15 +1,37 @@
 #!/usr/bin/env python3
-"""Aggregate generative evidence across (profile, skills_mode) pairs.
+"""Aggregate generative evidence into an OpenCode skills-intervention report.
 
-Reads every ``evidence/<op>-<dtype>-generative*.json`` and groups runs by
-``(operation, dtype, model_profile)``. For each group it computes the
-three deltas the skills-stack value report needs:
+The CI matrix runs each (operation, dtype, model_profile) cell twice:
+once with the pyasc skills mounted into the OpenCode project and once
+without. Both legs use the same OpenCode harness, the same resolved
+model/profile, the same prompt, the same timeout, the same max
+attempts, and the same evaluator. This script reads every
+``evidence/<op>-<dtype>-generative*.json``, groups them by
+``(operation, dtype, model_profile)``, and reports the OpenCode
+skills-on vs skills-off comparison.
 
-    quality_delta    = pass(on) - pass(off)        (-1, 0, or +1)
-    tokens_delta     = tokens_total(on) - tokens_total(off)
-    elapsed_delta_s  = elapsed_total_s(on) - elapsed_total_s(off)
-    attempts_delta   = len(attempts(on)) - len(attempts(off))
-    viability_unlocked = bool(not pass(off) and pass(on))
+For each group it computes the per-cell deltas:
+
+    quality_delta      = pass(on) - pass(off)        (-1, 0, or +1)
+    tokens_delta       = tokens_total(on) - tokens_total(off)
+    elapsed_delta_s    = elapsed_total_s(on) - elapsed_total_s(off)
+    attempts_delta     = len(attempts(on)) - len(attempts(off))
+    viability_unlocked = bool(on.pass and not off.pass)
+
+It also runs a per-evidence validity classifier
+(``_classify_validity``) so off-legs that are instrumentation /
+configuration failures (no resolved model, zero tokens, no artifact)
+are not silently counted as a clean OpenCode-without-skills baseline.
+The classifier feeds three validity-aware aggregates per profile:
+
+    pass_rate_off_clean         = pass_off_clean / cells_off_ok
+                                  (None when cells_off_ok == 0)
+    viability_unlocked_clean    = pairs where on.pass AND
+                                  off.validity == "ok" AND not off.pass
+    unresolved_due_to_off_infra = pairs where on.pass AND
+                                  off.validity == "infra_fail"
+
+See ``docs/evaluation-methodology.md`` for the full contract.
 
 The legacy ``<op>-<dtype>-generative.json`` file is treated as the
 (cloud-default, on) cell for that op/dtype, matching the filename
@@ -17,7 +39,7 @@ convention used by collect_generative_evidence.py.
 
 Outputs:
   * ``evidence/skills-value-summary.json`` — structured summary
-  * Markdown table on stdout — consumed by ``$GITHUB_STEP_SUMMARY``
+  * Markdown report on stdout — consumed by ``$GITHUB_STEP_SUMMARY``
 
 Exit codes: 0 always (this is a reporting tool, not a gate).
 
@@ -96,11 +118,59 @@ def _is_overall_pass(ev: dict) -> bool:
     )
 
 
+def _classify_validity(ev: dict) -> str:
+    """Classify a single evidence file's comparability for the intervention.
+
+    The intended skills-on/off comparison requires that each leg's
+    evidence reflects an actual OpenCode harness invocation. This
+    classifier looks at four independent signals already present in
+    schema v3:
+
+      * a resolved LLM model id (``model``)
+      * non-zero LLM token usage (``tokens.total``)
+      * at least one artifact path captured (``agent.artifacts_found``)
+      * a recorded kernel path (``kernel_path``)
+
+    Returns one of:
+
+      * ``ok`` — strong evidence the harness executed (a resolved
+        model **and** measurable tokens). Suitable to compare against
+        the other leg.
+      * ``infra_fail`` — strong instrumentation/configuration-failure
+        signature: none of the four signals fired. Not a comparable
+        OpenCode-without-skills baseline; excluded from headline
+        pass-rate.
+      * ``incomplete`` — partial or contradictory evidence. Reported
+        separately; not folded into the clean baseline.
+
+    See ``docs/evaluation-methodology.md`` for the rationale and the
+    headline rendering rule.
+    """
+    model = ev.get("model") or ""
+    if isinstance(model, str):
+        has_model = bool(model.strip())
+    else:
+        has_model = bool(model)
+    tokens = ev.get("tokens") or {}
+    has_tokens = int(tokens.get("total", 0) or 0) > 0
+    artifacts = (ev.get("agent") or {}).get("artifacts_found") or []
+    has_artifacts = bool(artifacts)
+    kernel_path = ev.get("kernel_path") or ""
+    has_kernel = bool(kernel_path.strip()) if isinstance(kernel_path, str) else bool(kernel_path)
+
+    if not (has_model or has_tokens or has_artifacts or has_kernel):
+        return "infra_fail"
+    if has_model and has_tokens:
+        return "ok"
+    return "incomplete"
+
+
 def _extract_metrics(ev: dict) -> dict:
     """Pull the fields we care about out of an evidence document."""
     tokens = ev.get("tokens", {}) or {}
     return {
         "pass": _is_overall_pass(ev),
+        "validity": _classify_validity(ev),
         "tokens_total": int(tokens.get("total", 0) or 0),
         "tokens_input": int(tokens.get("input", 0) or 0),
         "tokens_output": int(tokens.get("output", 0) or 0),
@@ -164,6 +234,14 @@ def compute_cell_deltas(
             row["elapsed_delta_s"] = round(on["elapsed_s"] - off["elapsed_s"], 2)
             row["attempts_delta"] = on["attempts"] - off["attempts"]
             row["viability_unlocked"] = bool(on["pass"] and not off["pass"])
+            row["viability_unlocked_clean"] = bool(
+                on["pass"]
+                and off.get("validity") == "ok"
+                and not off["pass"]
+            )
+            row["unresolved_due_to_off_infra"] = bool(
+                on["pass"] and off.get("validity") == "infra_fail"
+            )
         else:
             row["quality_delta"] = None
             row["tokens_delta"] = None
@@ -171,12 +249,24 @@ def compute_cell_deltas(
             row["elapsed_delta_s"] = None
             row["attempts_delta"] = None
             row["viability_unlocked"] = False
+            row["viability_unlocked_clean"] = False
+            row["unresolved_due_to_off_infra"] = False
         rows.append(row)
     return rows
 
 
 def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
-    """Per-profile aggregate of the three skills-stack-value axes."""
+    """Per-profile aggregate of the OpenCode skills-intervention metrics.
+
+    Adds validity-aware aggregates alongside the existing raw fields so
+    consumers can choose between the raw delta view (``pass_rate_off``,
+    ``viability_unlocked_count``) and the comparability-filtered view
+    (``pass_rate_off_clean``, ``viability_unlocked_clean``,
+    ``unresolved_due_to_off_infra``). The clean view follows the
+    headline rendering rule documented in
+    ``docs/evaluation-methodology.md``: ``pass_rate_off_clean`` is
+    ``None`` (not ``0/0``) when no clean off-runs exist.
+    """
     by_profile: dict[str, dict] = {}
     for row in rows:
         prof = row["profile"]
@@ -185,6 +275,10 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             "cells_compared": 0,
             "pass_on": 0,
             "pass_off": 0,
+            "pass_off_clean": 0,
+            "cells_off_ok": 0,
+            "cells_off_infra_fail": 0,
+            "cells_off_incomplete": 0,
             "tokens_on_sum": 0,
             "tokens_off_sum": 0,
             "cost_on_sum": 0.0,
@@ -192,6 +286,8 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             "elapsed_on_sum": 0.0,
             "elapsed_off_sum": 0.0,
             "viability_unlocked_count": 0,
+            "viability_unlocked_clean": 0,
+            "unresolved_due_to_off_infra": 0,
             "model": None,
         })
         agg["cells_total"] += 1
@@ -207,12 +303,33 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             agg["elapsed_off_sum"] += row["off"]["elapsed_s"]
             if row["viability_unlocked"]:
                 agg["viability_unlocked_count"] += 1
+            if row.get("viability_unlocked_clean"):
+                agg["viability_unlocked_clean"] += 1
+            if row.get("unresolved_due_to_off_infra"):
+                agg["unresolved_due_to_off_infra"] += 1
+            off_validity = row["off"].get("validity", "incomplete")
+            if off_validity == "ok":
+                agg["cells_off_ok"] += 1
+                agg["pass_off_clean"] += int(bool(row["off"]["pass"]))
+            elif off_validity == "infra_fail":
+                agg["cells_off_infra_fail"] += 1
+            else:
+                agg["cells_off_incomplete"] += 1
             if agg["model"] is None and row["on"].get("model"):
                 agg["model"] = row["on"]["model"]
     for prof, agg in by_profile.items():
         n = agg["cells_compared"] or 1
         agg["pass_rate_on"] = round(agg["pass_on"] / n, 3) if agg["cells_compared"] else None
         agg["pass_rate_off"] = round(agg["pass_off"] / n, 3) if agg["cells_compared"] else None
+        # Clean off pass-rate: only meaningful when at least one off-run
+        # was classified ``ok``. No max(1, ...) fallback — see the
+        # methodology doc's "headline rendering rule".
+        if agg["cells_off_ok"] > 0:
+            agg["pass_rate_off_clean"] = round(
+                agg["pass_off_clean"] / agg["cells_off_ok"], 3
+            )
+        else:
+            agg["pass_rate_off_clean"] = None
         agg["tokens_delta_avg"] = (
             (agg["tokens_on_sum"] - agg["tokens_off_sum"]) / n
             if agg["cells_compared"] else None
@@ -253,52 +370,125 @@ def _fmt_pct(v) -> str:
     return f"{int(round(v * 100))}%"
 
 
+def _off_validity_cell(a: dict) -> str:
+    """Render a compact 'ok / infra / inc' breakdown for the off-leg column."""
+    parts = []
+    parts.append(f"{a['cells_off_ok']} ok")
+    if a["cells_off_infra_fail"]:
+        parts.append(f"{a['cells_off_infra_fail']} infra")
+    if a["cells_off_incomplete"]:
+        parts.append(f"{a['cells_off_incomplete']} inc")
+    return " / ".join(parts)
+
+
 def render_markdown(rows: list[dict], by_profile: dict[str, dict]) -> str:
-    """Markdown report (per-profile summary + per-cell detail table)."""
+    """Markdown report — per-profile summary + per-cell detail table.
+
+    Headline behavior follows ``docs/evaluation-methodology.md``: when a
+    profile has no clean off-runs (``pass_rate_off_clean is None``),
+    the per-profile table omits its Δ columns and a separate
+    "Clean skills-off baseline unavailable" note is emitted instead.
+    The raw ``pass_rate_off`` and per-cell raw deltas remain available
+    for diagnostic context.
+    """
     lines: list[str] = []
-    lines.append("# Skills-stack value report")
+    lines.append("# OpenCode skills intervention (skills-on vs skills-off)")
     lines.append("")
     lines.append(
         f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')} "
-        f"from {len(rows)} comparison cell(s)."
+        f"from {len(rows)} comparison cell(s). The CI matrix is an "
+        f"intended paired OpenCode skills-on/off intervention (same "
+        f"harness, model, prompt, budget, evaluator); a per-pair "
+        f"validity classifier determines whether each off-leg is a "
+        f"comparable baseline. See "
+        f"`docs/evaluation-methodology.md` for the contract."
     )
     lines.append("")
-    lines.append("## Per-profile summary")
-    lines.append("")
-    lines.append(
-        "| Profile | Cells compared | Pass-rate on | Pass-rate off | "
-        "Tokens Δ (avg) | Cost Δ (avg, USD) | Elapsed Δ (avg) | "
-        "Viability unlocked |"
-    )
-    lines.append("|---|---|---|---|---|---|---|---|")
-    for prof in sorted(by_profile):
-        a = by_profile[prof]
+
+    profiles_clean = [
+        p for p in sorted(by_profile)
+        if by_profile[p].get("pass_rate_off_clean") is not None
+    ]
+    profiles_unresolved = [
+        p for p in sorted(by_profile)
+        if by_profile[p].get("pass_rate_off_clean") is None
+        and by_profile[p].get("cells_compared", 0) > 0
+    ]
+
+    if profiles_clean:
+        lines.append("## Per-profile summary (clean baseline available)")
+        lines.append("")
         lines.append(
-            f"| `{prof}` | {a['cells_compared']}/{a['cells_total']} | "
-            f"{_fmt_pct(a['pass_rate_on'])} | {_fmt_pct(a['pass_rate_off'])} | "
-            f"{_fmt_delta(a['tokens_delta_avg'])} | "
-            f"{_fmt_delta(a['cost_delta_avg_usd'])} | "
-            f"{_fmt_delta(a['elapsed_delta_avg_s'], 's')} | "
-            f"{a['viability_unlocked_count']}/{a['cells_compared']} |"
+            "| Profile | Cells compared | Pass-rate on | "
+            "Pass-rate off (clean) | Off-leg validity | "
+            "Tokens Δ (avg) | Cost Δ (avg, USD) | Elapsed Δ (avg) | "
+            "Viability unlocked (clean) | Unresolved (off infra-failed) |"
         )
-    lines.append("")
+        lines.append("|---|---|---|---|---|---|---|---|---|---|")
+        for prof in profiles_clean:
+            a = by_profile[prof]
+            lines.append(
+                f"| `{prof}` | {a['cells_compared']}/{a['cells_total']} | "
+                f"{_fmt_pct(a['pass_rate_on'])} | "
+                f"{_fmt_pct(a['pass_rate_off_clean'])} | "
+                f"{_off_validity_cell(a)} | "
+                f"{_fmt_delta(a['tokens_delta_avg'])} | "
+                f"{_fmt_delta(a['cost_delta_avg_usd'])} | "
+                f"{_fmt_delta(a['elapsed_delta_avg_s'], 's')} | "
+                f"{a['viability_unlocked_clean']}/{a['cells_off_ok']} | "
+                f"{a['unresolved_due_to_off_infra']}/"
+                f"{a['cells_off_infra_fail']} |"
+            )
+        lines.append("")
+
+    if profiles_unresolved:
+        lines.append("## Per-profile summary (no clean skills-off baseline)")
+        lines.append("")
+        for prof in profiles_unresolved:
+            a = by_profile[prof]
+            non_ok = a["cells_off_infra_fail"] + a["cells_off_incomplete"]
+            lines.append(
+                f"- `{prof}` — skills-on pass rate "
+                f"{_fmt_pct(a['pass_rate_on'])} "
+                f"({a['pass_on']}/{a['cells_compared']}). "
+                f"Clean skills-off baseline unavailable: "
+                f"{a['cells_off_infra_fail']} off-run(s) classified as "
+                f"infra/config failures, "
+                f"{a['cells_off_incomplete']} as incomplete "
+                f"(total non-comparable: {non_ok}/{a['cells_compared']}). "
+                f"Raw skills-off pass rate "
+                f"{_fmt_pct(a['pass_rate_off'])} is reported as "
+                f"diagnostic context only."
+            )
+        lines.append("")
+
     lines.append("## Per-cell deltas (skills-on minus skills-off)")
     lines.append("")
     lines.append(
-        "| Op | dtype | Profile | Quality Δ | Tokens Δ | Elapsed Δ | "
-        "Attempts Δ | Viability unlocked |"
+        "| Op | dtype | Profile | Off validity | Quality Δ | "
+        "Tokens Δ | Elapsed Δ | Attempts Δ | Viability unlocked (clean) |"
     )
-    lines.append("|---|---|---|---|---|---|---|---|")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         if not (row["on"] and row["off"]):
             continue
+        off_validity = row["off"].get("validity", "incomplete")
+        if row.get("viability_unlocked_clean"):
+            unlocked = "yes"
+        elif row.get("unresolved_due_to_off_infra"):
+            unlocked = "unresolved (off infra-failed)"
+        elif row["on"]["pass"] and off_validity == "incomplete":
+            unlocked = "unresolved (off incomplete)"
+        else:
+            unlocked = "no"
         lines.append(
             f"| {row['op']} | {row['dtype']} | `{row['profile']}` | "
+            f"{off_validity} | "
             f"{_fmt_delta(row['quality_delta'])} | "
             f"{_fmt_delta(row['tokens_delta'])} | "
             f"{_fmt_delta(row['elapsed_delta_s'], 's')} | "
             f"{_fmt_delta(row['attempts_delta'])} | "
-            f"{'yes' if row['viability_unlocked'] else 'no'} |"
+            f"{unlocked} |"
         )
     incomplete = [
         r for r in rows if not (r["on"] and r["off"])
@@ -322,7 +512,11 @@ def render_markdown(rows: list[dict], by_profile: dict[str, dict]) -> str:
 
 def build_summary(rows: list[dict], by_profile: dict[str, dict]) -> dict:
     return {
-        "schema_version": "1",
+        # schema_version "2" adds the validity-aware aggregates and
+        # per-cell ``viability_unlocked_clean`` /
+        # ``unresolved_due_to_off_infra`` flags. All schema_version "1"
+        # fields are preserved alongside the new ones.
+        "schema_version": "2",
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "cells": rows,
         "by_profile": by_profile,

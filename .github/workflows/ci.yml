@@ -99,14 +99,22 @@ jobs:
           echo "All golden kernels passed."
 
   # ==========================================================================
-  # Nightly gate: generative evidence collection via opencode, cloud profile,
-  # with a `skills_mode` matrix (on vs off) so we can later quantify the
-  # added value of the skills stack against raw opencode.
+  # Nightly gate: OpenCode skills intervention on the cloud profile.
+  #
+  # Runs each capability cell twice with the same OpenCode harness,
+  # same resolved model, same prompt, same timeout, same max attempts,
+  # and same evaluator. The only difference between the two matrix legs
+  # is whether the pyasc skills are mounted into the project
+  # (`skills_mode: on`) or not (`skills_mode: off`). The aggregator in
+  # `skills-value-report` classifies each pair's comparability before
+  # reporting a headline delta — pairs with infra/config failures on
+  # the off-leg are not counted as clean OpenCode-without-skills
+  # baselines (see docs/evaluation-methodology.md).
   #
   # The job no longer commits evidence or syncs capabilities — that runs
   # once in `skills-value-report` after every matrix leg + the local
-  # stability matrix have finished. This avoids commit races and lets the
-  # aggregator see a consistent evidence directory.
+  # stability matrix have finished. This avoids commit races and lets
+  # the aggregator see a consistent evidence directory.
   # ==========================================================================
   nightly-gate:
     runs-on: ubuntu-latest
@@ -149,7 +157,7 @@ jobs:
           mkdir -p ~/.config/opencode
           echo '${{ secrets.OPENCODE_CONFIG }}' > ~/.config/opencode/opencode.json
 
-      - name: Run generative evidence collection (skills_mode=${{ matrix.skills_mode }})
+      - name: Run OpenCode skills-intervention leg (skills_mode=${{ matrix.skills_mode }})
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
@@ -202,10 +210,11 @@ jobs:
             echo ""
           done
           echo ""
-          echo "=== Generative evidence summary (skills=$SKILLS_MODE): $PASS/$TOTAL passed ==="
+          echo "=== OpenCode skills-intervention leg summary (skills=$SKILLS_MODE): $PASS/$TOTAL passed ==="
           # The "off" matrix leg is allowed to underperform — it is the
-          # baseline we are trying to compare against. Only the "on" leg
-          # enforces the >=50% pass threshold.
+          # OpenCode-without-skills baseline we are trying to compare
+          # against. Only the "on" leg enforces the >=50% pass
+          # threshold.
           if [ "$SKILLS_MODE" = "on" ]; then
             MIN_PASS=$(( (TOTAL + 1) / 2 ))
             if [ "$PASS" -lt "$MIN_PASS" ]; then
@@ -264,16 +273,24 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Local-stability gate: run the same 12 cells against small local models
-  # served from a sidecar Ollama instance, with the same skills_mode matrix.
-  # This is the "Stability" axis of the skills-value evaluation: can a
-  # smaller model produce viable kernels with skills that it cannot produce
-  # without?
+  # Local-stability gate: the same OpenCode skills intervention as the
+  # nightly cloud leg, but against small local models served from a
+  # sidecar Ollama instance.
+  #
+  # This measures the "stability" axis of the OpenCode skills
+  # intervention: does mounting the pyasc skills let smaller models
+  # produce viable kernels they cannot produce under raw OpenCode? Both
+  # legs hold OpenCode harness, prompt, timeout, max attempts, and
+  # evaluator constant — only the skill modules differ. Failing on both
+  # legs is a model/harness capability boundary on this hardware, not
+  # evidence the skills are useless (see
+  # docs/evaluation-methodology.md "Local-model interpretation").
   #
   # Local inference on GitHub-hosted runners is markedly slower than the
-  # cloud profile, so this job is marked continue-on-error and is not part
-  # of the merge-blocking gate. The companion `skills-value-report` job
-  # ingests whatever evidence this job produces.
+  # cloud profile, so this job is marked continue-on-error and is not
+  # part of the merge-blocking gate. The companion
+  # `skills-value-report` job ingests whatever evidence this job
+  # produces.
   # ==========================================================================
   local-stability-gate:
     runs-on: ubuntu-latest
@@ -338,7 +355,7 @@ jobs:
             *) echo "::error::unknown profile $PROFILE"; exit 1 ;;
           esac
 
-      - name: Run generative evidence collection (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
+      - name: Run OpenCode skills-intervention leg (profile=${{ matrix.profile }}, skills_mode=${{ matrix.skills_mode }})
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
           PYASC_SIM_IMAGE: ${{ env.PYASC_SIM_IMAGE }}
@@ -407,12 +424,16 @@ jobs:
           if-no-files-found: ignore
 
   # ==========================================================================
-  # Skills-value report: merge evidence from every matrix leg, run the
-  # comparison aggregator, sync capabilities, and commit.
+  # OpenCode skills-intervention report: merge evidence from every
+  # matrix leg, run the comparison aggregator (which classifies each
+  # off-leg's comparability and computes the validity-aware clean
+  # aggregates documented in docs/evaluation-methodology.md), sync
+  # capabilities, and commit.
   #
-  # This is the single writer to capabilities.yaml + the evidence/ directory
-  # on `main`. It runs `if: always()` so that a single failing matrix leg in
-  # nightly-gate or local-stability-gate doesn't suppress the report.
+  # This is the single writer to capabilities.yaml + the evidence/
+  # directory on `main`. It runs `if: always()` so that a single failing
+  # matrix leg in nightly-gate or local-stability-gate doesn't suppress
+  # the report.
   # ==========================================================================
   skills-value-report:
     runs-on: ubuntu-latest
@@ -459,13 +480,13 @@ jobs:
           ls -1 evidence/ | wc -l
           ls -1 evidence/
 
-      - name: Run skills-value aggregator
+      - name: Run OpenCode skills-intervention aggregator
         run: |
           python3.10 tests/tools/compare_skills_value.py \
             --output evidence/skills-value-summary.json \
             --markdown skills-value-report.md
           {
-            echo "## Skills-stack value report"
+            echo "## OpenCode skills intervention report"
             echo ""
             cat skills-value-report.md
           } >> "$GITHUB_STEP_SUMMARY"
@@ -482,7 +503,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No new evidence to commit."
           else
-            git commit -m "chore: update generative evidence and skills-value report from nightly run
+            git commit -m "chore: update generative evidence and OpenCode skills-intervention report from nightly run
 
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             git push
@@ -496,7 +517,7 @@ jobs:
           path: evidence/
           if-no-files-found: ignore
 
-      - name: Upload skills-value markdown
+      - name: Upload OpenCode skills-intervention markdown
         if: always()
         uses: actions/upload-artifact@v4
         with:

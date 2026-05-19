@@ -428,6 +428,41 @@ h1 { font-size: 24px; margin-bottom: 4px; }
   font-variant-numeric: tabular-nums;
 }
 .svb-pass-side { font-weight: 600; color: var(--fg-muted); }
+.svb-validity-pills {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.svb-validity-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  position: relative;
+}
+.svb-validity-pill.infra { color: var(--blocked); border-color: var(--blocked); }
+.svb-validity-pill.incomplete { color: var(--pending); border-color: var(--pending); }
+.svb-validity-pill .svb-tip { display: none; }
+.svb-validity-pill:hover .svb-tip,
+.svb-validity-pill:focus-visible .svb-tip { display: block; }
+.svb-baseline-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+  background: var(--bg-alt);
+  border-left: 3px solid var(--pending);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+.svb-baseline-note strong { color: var(--fg); font-weight: 600; }
 .svb-pass-bar {
   height: 8px;
   background: var(--bar-bg);
@@ -913,38 +948,63 @@ function svbHelp(text) {
 }
 
 var SVB_TIPS = {
-  profile: "An opencode model profile defined under "
-    + "docker/opencode-profiles/. Each profile maps to one LLM (cloud or "
-    + "local) and is run with the skills stack enabled (on) and disabled "
-    + "(off) for every capability cell.",
-  verdict: "Headline pass-rate movement when the skills stack is enabled "
-    + "for this model on this run. Percentage points (pp) = pass_rate_on "
-    + "minus pass_rate_off, expressed as an absolute change \u2014 not "
-    + "relative.",
-  passRate: "Fraction of capability cells where the agent produced a "
-    + "kernel that passed static + semantic + simulator verification. "
-    + "'on' runs the agent with the skills stack mounted; 'off' invokes "
-    + "opencode directly against a minimal project layout using the same "
-    + "prompts.",
-  viability: "Cells where skills-on passed and skills-off did not. This is "
-    + "the strict 'unlock' count: how many capability cells the skills "
-    + "stack newly made viable on this model vs. raw opencode.",
-  cellsCompared: "Cells that have paired on/off evidence in this nightly. "
-    + "Cells missing one side (e.g., when a job timed out) are excluded "
-    + "from all deltas above.",
-  tokens: "Average per-cell change in total LLM tokens (input + output + "
-    + "cache-read) when skills are on vs off. Skills typically consume "
-    + "more tokens because they add context and retry until verification "
-    + "passes; failed off-runs exit early, which inflates the gap.",
-  cost: "Average per-cell change in billed cost as reported by the LLM "
-    + "provider. Cache pricing can make a large positive token delta "
-    + "register near $0 in dollars. $0 means parity (or both runs were "
-    + "cached); negative means skills cost less.",
-  walltime: "Average per-cell change in agent wall-clock time. Negative "
-    + "means skills finished faster on average despite using more "
-    + "tokens, because they reach a passing kernel in fewer attempts.",
-  totals: "Cumulative totals across all compared cells for this profile. "
-    + "Useful for budgeting: shows how much the on/off mode actually "
+  profile: "An OpenCode model profile defined under "
+    + "docker/opencode-profiles/. The profile pins one LLM (cloud or "
+    + "local) and identical OpenCode settings (timeout, max attempts, "
+    + "tools). For each capability cell, the same profile is run twice: "
+    + "once with the pyasc skills mounted (skills-on) and once without "
+    + "(skills-off). Everything else is held constant; the only "
+    + "intervention is the skill modules.",
+  verdict: "Headline pass-rate movement attributable to mounting the "
+    + "pyasc skills into the OpenCode project. Percentage points (pp) = "
+    + "clean off pass-rate minus on pass-rate, expressed as an absolute "
+    + "change \u2014 not relative. Only the clean off-baseline is used "
+    + "(off-legs classified as infra/config failures are excluded). "
+    + "When no clean off-runs exist for a profile, only the skills-on "
+    + "pass-rate is reported.",
+  passRate: "Fraction of capability cells where the OpenCode harness "
+    + "produced a kernel that passed static + semantic + simulator "
+    + "verification. Both legs use the same OpenCode harness, model, "
+    + "prompt, timeout, max attempts, and evaluator; only the skills "
+    + "mount differs. Raw bars include all paired cells, including ones "
+    + "later excluded as not-comparable.",
+  offValidity: "Per-pair comparability classification of each skills-off "
+    + "evidence file. 'ok' = harness clearly executed (resolved model + "
+    + "measurable LLM tokens). 'infra-fail' = nothing landed (no model, "
+    + "zero tokens, no artifact, no kernel path) \u2014 likely an "
+    + "instrumentation/configuration failure rather than a real "
+    + "OpenCode-without-skills baseline. 'incomplete' = partial or "
+    + "contradictory evidence (e.g. model resolved but no tokens "
+    + "captured). Only 'ok' off-runs feed the headline delta.",
+  unresolved: "Pairs where skills-on passed but the skills-off leg was "
+    + "classified as infra/config failure. These are NOT counted as "
+    + "unlocked capability \u2014 the no-skills counterfactual was "
+    + "never measured for them. Reported as a separate axis so the "
+    + "unlocked count is not silently inflated.",
+  viability: "Strict unlock count: pairs where skills-on passed AND the "
+    + "skills-off leg was a valid comparable baseline (off.validity = "
+    + "'ok') AND skills-off did not pass. Denominator is the number of "
+    + "cells with a clean off-baseline (cells_off_ok), not the total "
+    + "compared count.",
+  cellsCompared: "Cells with paired on/off evidence in this nightly. "
+    + "Cells missing one side (e.g., job timed out) are excluded from "
+    + "all deltas above.",
+  tokens: "Average per-cell change in total LLM tokens (input + output "
+    + "+ cache-read) when skills are on vs off, on the same OpenCode "
+    + "harness and model. Skills typically consume more tokens because "
+    + "they add context and retry until verification passes; off-legs "
+    + "with no measurable tokens are not a clean baseline and inflate "
+    + "the gap \u2014 the value is shown for budgeting only.",
+  cost: "Average per-cell change in billed cost as reported by the "
+    + "LLM provider. Cache pricing can make a large positive token "
+    + "delta register near $0 in dollars. $0 means parity (or both "
+    + "runs cached); negative means skills cost less.",
+  walltime: "Average per-cell change in OpenCode wall-clock time. "
+    + "Negative means skills finished faster on average despite using "
+    + "more tokens, because they reach a passing kernel in fewer "
+    + "attempts.",
+  totals: "Cumulative totals across all paired cells for this profile. "
+    + "Useful for budgeting: shows how much the on/off legs actually "
     + "consumed in absolute terms.",
 };
 
@@ -957,12 +1017,23 @@ function renderSkillsValueBanner() {
   if (!profiles.length) return;
   el.classList.add("has-data");
 
-  var html = '<div class="svb-title">Skills-stack value '
+  var html = '<div class="svb-title">OpenCode skills intervention '
     + '<span style="font-weight:400;color:var(--fg-muted);">'
-    + '(skills-on minus skills-off, latest nightly)</span></div>'
+    + '(OpenCode skills-on vs skills-off, latest nightly)</span></div>'
     + '<div class="svb-subtitle">'
-    + 'Each card compares one model with the skills stack enabled vs. '
-    + 'raw opencode on the same prompts. Hover the small '
+    + 'Each card shows one OpenCode profile run twice on every '
+    + 'capability cell \u2014 once with the pyasc skills mounted, once '
+    + 'without. Same OpenCode harness, same resolved model, same '
+    + 'prompt, same timeout, same max attempts, same evaluator; the '
+    + 'only intervention is the skill modules. A per-pair validity '
+    + 'classifier excludes off-legs that are instrumentation/'
+    + 'configuration failures rather than real OpenCode-without-skills '
+    + 'baselines (details in '
+    + '<a href="https://github.com/aloschilov/pyasc-skill-stack/blob/'
+    + 'main/docs/evaluation-methodology.md" target="_blank" '
+    + 'rel="noopener" style="color:inherit;text-decoration:underline;'
+    + 'text-decoration-style:dotted;">docs/evaluation-methodology.md'
+    + '</a>). Hover the small '
     + '<em style="font-family:Georgia,serif;font-style:italic;">i</em> '
     + 'icons for each metric\u2019s definition. '
     + '<span class="svb-legend"><span class="svb-legend-swatch good">'
@@ -983,7 +1054,24 @@ function renderSkillsValueBanner() {
     var passOff = p.pass_off || 0;
     var passOnPct = compared ? Math.round(100 * passOn / compared) : 0;
     var passOffPct = compared ? Math.round(100 * passOff / compared) : 0;
-    var pp = passDeltaPp(p.pass_rate_on, p.pass_rate_off);
+
+    // Validity-aware counters with safe defaults so older summary
+    // files (schema_version "1") render without errors.
+    var cellsOffOk = p.cells_off_ok != null ? p.cells_off_ok : compared;
+    var cellsOffInfra = p.cells_off_infra_fail || 0;
+    var cellsOffIncomplete = p.cells_off_incomplete || 0;
+    var passRateOffClean = (p.pass_rate_off_clean !== undefined)
+      ? p.pass_rate_off_clean
+      : p.pass_rate_off;
+    var viabilityClean = (p.viability_unlocked_clean !== undefined)
+      ? p.viability_unlocked_clean
+      : (p.viability_unlocked_count || 0);
+    var unresolvedOffInfra = p.unresolved_due_to_off_infra || 0;
+    var hasCleanBaseline = passRateOffClean != null && cellsOffOk > 0;
+
+    var pp = hasCleanBaseline
+      ? passDeltaPp(p.pass_rate_on, passRateOffClean)
+      : null;
     var ppLabel = pp == null
       ? ""
       : (pp > 0 ? "+" + pp : (pp < 0 ? "\u2212" + Math.abs(pp) : "0")) + " pp";
@@ -996,6 +1084,81 @@ function renderSkillsValueBanner() {
     var modelLine = p.model
       ? '<div class="svb-card-model">' + p.model + '</div>'
       : '';
+
+    var verdictHtml;
+    if (hasCleanBaseline) {
+      verdictHtml = '<div class="svb-verdict ' + verdictClass + '">'
+        + '<span class="svb-verdict-arrow">' + verdictArrow + '</span>'
+        + fmtPct(passRateOffClean) + ' \u2192 ' + fmtPct(p.pass_rate_on)
+        + ' pass-rate (' + ppLabel + ', clean baseline) '
+        + svbHelp(SVB_TIPS.verdict)
+        + '</div>';
+      var nonOk = cellsOffInfra + cellsOffIncomplete;
+      if (nonOk > 0) {
+        verdictHtml += '<div style="font-size:11px;color:var(--fg-muted);'
+          + 'margin-top:3px;">Excluding ' + nonOk + ' off-run'
+          + (nonOk === 1 ? '' : 's') + ' classified as '
+          + (cellsOffInfra ? cellsOffInfra + ' infra/config failure'
+              + (cellsOffInfra === 1 ? '' : 's') : '')
+          + (cellsOffInfra && cellsOffIncomplete ? ' and ' : '')
+          + (cellsOffIncomplete ? cellsOffIncomplete + ' incomplete' : '')
+          + '. Raw skills-off pass-rate = ' + fmtPct(p.pass_rate_off) + '.'
+          + '</div>';
+      }
+    } else {
+      verdictHtml = '<div class="svb-verdict svb-delta-neutral">'
+        + '<span class="svb-verdict-arrow">\u26A0</span>'
+        + 'Skills-on pass-rate: ' + fmtPct(p.pass_rate_on)
+        + '. Clean skills-off baseline unavailable '
+        + svbHelp(SVB_TIPS.verdict)
+        + '</div>'
+        + '<div class="svb-baseline-note">'
+        + '<strong>' + (cellsOffInfra + cellsOffIncomplete) + '/'
+        + compared + '</strong> skills-off run'
+        + (cellsOffInfra + cellsOffIncomplete === 1 ? '' : 's')
+        + ' were not a comparable baseline'
+        + ((cellsOffInfra || cellsOffIncomplete)
+            ? ' (' + (cellsOffInfra
+                ? cellsOffInfra + ' infra/config failure'
+                  + (cellsOffInfra === 1 ? '' : 's')
+                : '')
+              + (cellsOffInfra && cellsOffIncomplete ? ', ' : '')
+              + (cellsOffIncomplete ? cellsOffIncomplete + ' incomplete' : '')
+              + ')'
+            : '')
+        + '. No Δ pp is reported. Raw skills-off pass-rate '
+        + fmtPct(p.pass_rate_off) + ' is shown as diagnostic context '
+        + 'only.</div>';
+    }
+
+    // Validity pills next to the off bar, only if non-zero.
+    var validityPillsHtml = '';
+    if (cellsOffInfra > 0 || cellsOffIncomplete > 0) {
+      validityPillsHtml = '<span class="svb-validity-pills">';
+      if (cellsOffInfra > 0) {
+        validityPillsHtml += '<span class="svb-validity-pill infra" '
+          + 'tabindex="0" aria-label="' + cellsOffInfra
+          + ' off-run(s) classified as infra/config failures">'
+          + 'infra-fail ' + cellsOffInfra
+          + '<span class="svb-tip">' + cellsOffInfra
+          + ' off-run' + (cellsOffInfra === 1 ? '' : 's')
+          + ' missing model / tokens / artifact. Treated as '
+          + 'instrumentation or configuration failure, not a clean '
+          + 'OpenCode-without-skills baseline.</span></span>';
+      }
+      if (cellsOffIncomplete > 0) {
+        validityPillsHtml += '<span class="svb-validity-pill incomplete" '
+          + 'tabindex="0" aria-label="' + cellsOffIncomplete
+          + ' off-run(s) classified as incomplete">'
+          + 'incomplete ' + cellsOffIncomplete
+          + '<span class="svb-tip">' + cellsOffIncomplete
+          + ' off-run' + (cellsOffIncomplete === 1 ? '' : 's')
+          + ' with partial or contradictory evidence (e.g. model '
+          + 'resolved but no tokens captured). Not safe to count as a '
+          + 'clean baseline.</span></span>';
+      }
+      validityPillsHtml += '</span>';
+    }
 
     var tokensTotal = (p.tokens_on_sum != null && p.tokens_off_sum != null)
       ? (p.tokens_on_sum - p.tokens_off_sum)
@@ -1012,12 +1175,8 @@ function renderSkillsValueBanner() {
       + '<div class="svb-card-profile">'
       + name + ' ' + svbHelp(SVB_TIPS.profile) + '</div>'
       + modelLine
-      + '<div class="svb-verdict ' + verdictClass + '">'
-      + '<span class="svb-verdict-arrow">' + verdictArrow + '</span>'
-      + fmtPct(p.pass_rate_off) + ' \u2192 ' + fmtPct(p.pass_rate_on)
-      + ' pass-rate (' + ppLabel + ') '
-      + svbHelp(SVB_TIPS.verdict)
-      + '</div></div>'
+      + verdictHtml
+      + '</div>'
 
       + '<div>'
       + '<div class="svb-section-label">Stability '
@@ -1032,13 +1191,28 @@ function renderSkillsValueBanner() {
       + '<span class="svb-pass-side">off</span>'
       + '<div class="svb-pass-bar"><div class="svb-pass-fill off" '
       + 'style="width:' + passOffPct + '%"></div></div>'
-      + '<span>' + passOff + '/' + compared + ' (' + passOffPct + '%)</span>'
+      + '<span>' + passOff + '/' + compared + ' (' + passOffPct + '%)'
+      + validityPillsHtml + '</span>'
       + '</div>'
       + '<div class="svb-stat" style="margin-top:6px;">'
-      + '<span class="svb-stat-label">Viability unlocked '
+      + '<span class="svb-stat-label">Off-leg validity '
+      + svbHelp(SVB_TIPS.offValidity) + '</span>'
+      + '<span class="svb-val">'
+      + cellsOffOk + ' ok'
+      + (cellsOffInfra ? ' \u00b7 ' + cellsOffInfra + ' infra' : '')
+      + (cellsOffIncomplete ? ' \u00b7 ' + cellsOffIncomplete + ' inc' : '')
+      + '</span></div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Viability unlocked (clean) '
       + svbHelp(SVB_TIPS.viability) + '</span>'
       + '<span class="svb-val">'
-      + (p.viability_unlocked_count || 0) + '/' + compared
+      + viabilityClean + '/' + cellsOffOk
+      + '</span></div>'
+      + '<div class="svb-stat">'
+      + '<span class="svb-stat-label">Unresolved (off infra-failed) '
+      + svbHelp(SVB_TIPS.unresolved) + '</span>'
+      + '<span class="svb-val">'
+      + unresolvedOffInfra + '/' + (cellsOffInfra || 0)
       + '</span></div>'
       + '<div class="svb-stat">'
       + '<span class="svb-stat-label">Cells compared '

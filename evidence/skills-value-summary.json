@@ -1,6 +1,6 @@
 {
-  "schema_version": "1",
-  "generated_at": "2026-05-13T13:22:07Z",
+  "schema_version": "2",
+  "generated_at": "2026-05-19T09:36:28Z",
   "cells": [
     {
       "op": "abs",
@@ -8,6 +8,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 87413,
         "tokens_input": 81009,
         "tokens_output": 6404,
@@ -21,6 +22,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -37,7 +39,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -215.11,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "abs",
@@ -45,6 +49,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 73301,
         "tokens_input": 62599,
         "tokens_output": 10702,
@@ -58,6 +63,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -74,7 +80,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": 52.39,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "add",
@@ -82,6 +90,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 379004,
         "tokens_input": 357690,
         "tokens_output": 21314,
@@ -95,6 +104,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -111,7 +121,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": 321.48,
       "attempts_delta": -1,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     },
     {
       "op": "gelu",
@@ -119,6 +131,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 140311,
         "tokens_input": 129150,
         "tokens_output": 11161,
@@ -132,6 +145,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -148,7 +162,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": 70.09,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "gelu",
@@ -156,6 +172,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 155291,
         "tokens_input": 142629,
         "tokens_output": 12662,
@@ -169,6 +186,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -185,7 +203,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -93.87,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "leaky_relu",
@@ -193,6 +213,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 355945,
         "tokens_input": 331034,
         "tokens_output": 24911,
@@ -206,6 +227,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -222,7 +244,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": 544.14,
       "attempts_delta": -1,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "matmul",
@@ -230,6 +254,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 127623,
         "tokens_input": 117408,
         "tokens_output": 10215,
@@ -243,6 +268,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -259,7 +285,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -166.91,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     },
     {
       "op": "reduce_sum",
@@ -267,6 +295,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 100176,
         "tokens_input": 91584,
         "tokens_output": 8592,
@@ -280,6 +309,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -296,7 +326,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -71.44,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     },
     {
       "op": "reduce_sum",
@@ -304,6 +336,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 106419,
         "tokens_input": 101044,
         "tokens_output": 5375,
@@ -317,6 +350,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "infra_fail",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -333,7 +367,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": 41.7,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": true
     },
     {
       "op": "rms_norm",
@@ -341,6 +377,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 118287,
         "tokens_input": 107018,
         "tokens_output": 11269,
@@ -354,6 +391,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -370,7 +408,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -843.52,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     },
     {
       "op": "rms_norm",
@@ -378,6 +418,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 210461,
         "tokens_input": 192813,
         "tokens_output": 17648,
@@ -391,6 +432,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -407,7 +449,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -483.42,
       "attempts_delta": -2,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     },
     {
       "op": "softmax",
@@ -415,6 +459,7 @@
       "profile": "cloud-default",
       "on": {
         "pass": true,
+        "validity": "ok",
         "tokens_total": 75450,
         "tokens_input": 70088,
         "tokens_output": 5362,
@@ -428,6 +473,7 @@
       },
       "off": {
         "pass": false,
+        "validity": "incomplete",
         "tokens_total": 0,
         "tokens_input": 0,
         "tokens_output": 0,
@@ -444,7 +490,9 @@
       "cost_delta_usd": 0.0,
       "elapsed_delta_s": -697.12,
       "attempts_delta": -3,
-      "viability_unlocked": true
+      "viability_unlocked": true,
+      "viability_unlocked_clean": false,
+      "unresolved_due_to_off_infra": false
     }
   ],
   "by_profile": {
@@ -453,6 +501,10 @@
       "cells_compared": 12,
       "pass_on": 12,
       "pass_off": 0,
+      "pass_off_clean": 0,
+      "cells_off_ok": 0,
+      "cells_off_infra_fail": 6,
+      "cells_off_incomplete": 6,
       "tokens_on_sum": 1929681,
       "tokens_off_sum": 0,
       "cost_on_sum": 0.0,
@@ -460,9 +512,12 @@
       "elapsed_on_sum": 5393.07,
       "elapsed_off_sum": 6934.66,
       "viability_unlocked_count": 12,
+      "viability_unlocked_clean": 0,
+      "unresolved_due_to_off_infra": 6,
       "model": "dashscope/glm-5",
       "pass_rate_on": 1.0,
       "pass_rate_off": 0.0,
+      "pass_rate_off_clean": null,
       "tokens_delta_avg": 160806.75,
       "cost_delta_avg_usd": 0.0,
       "elapsed_delta_avg_s": -128.47

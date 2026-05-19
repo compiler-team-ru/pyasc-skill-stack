@@ -227,6 +227,14 @@ script -qc 'opencode run "Help me develop an abs operator that supports float16 
 
 The `script -qc` wrapper provides the pseudo-TTY that `opencode run` requires in headless environments.
 
+## How this matrix is evaluated
+
+The pyasc-skill-stack matrix is an evidence-backed **capability dashboard** and an **OpenCode skills-intervention experiment**. It compares OpenCode runs with pyasc skills enabled against OpenCode runs with pyasc skills disabled. The score belongs to the full generation protocol — task cell, prompt variant, OpenCode harness, model/profile, allowed context, skill mode, budget, and evaluator — not to a bare model.
+
+This is **not** a "model vs skills" comparison. The model is one held-constant variable inside the protocol, alongside the prompt variant, timeout, max attempts, evaluator, and allowed filesystem. The two legs of the comparison are `OpenCode + pyasc-skills` and `OpenCode without pyasc-skills`. Guided prompts, golden references, oracle workarounds, and human hints are separate interventions and are labeled separately rather than folded into the skills effect.
+
+The CI matrix in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) is *designed* as a paired skills-on/off intervention. A per-pair validity classifier in [`tests/tools/compare_skills_value.py`](tests/tools/compare_skills_value.py) checks whether each off-leg actually produced evidence comparable to its on-leg counterpart; off-legs flagged as instrumentation/configuration failures (no resolved model, zero tokens, no artifact) are excluded from the headline pass-rate so the dashboard does not imply a clean 0% no-skills baseline when none was measured. The full contract — protocol taxonomy (P0..P8), failure taxonomy (F1..F13), evidence schema v4 (proposed), and baseline-validity rules — lives in [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
+
 ## Capabilities dashboard
 
 A live view of the capabilities matrix is published automatically on every push to `main`:
