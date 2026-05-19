@@ -5,41 +5,40 @@
   "dtype": "float16",
   "prompt": "Help me develop an abs operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-13T07:44:04Z",
+  "date": "2026-05-15T05:14:11Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 81009,
-    "output": 6404,
-    "cache_read": 398408,
-    "total": 87413
+    "input": 97875,
+    "output": 8437,
+    "cache_read": 1015225,
+    "total": 106312
   },
-  "elapsed_total_s": 279.25,
+  "elapsed_total_s": 420.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 279.25,
-      "exit": 0,
+      "elapsed_s": 420.01,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 81009,
-        "output": 6404,
-        "cache_read": 398408,
-        "total": 87413,
+        "input": 97875,
+        "output": 8437,
+        "cache_read": 1015225,
+        "total": 106312,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -136,17 +135,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-26T04:26:54Z",
-      "overall_pass": true,
-      "score": 15.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-27T04:32:04Z",
       "overall_pass": true,
@@ -411,6 +401,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 420.0
+    },
+    {
+      "date": "2026-05-13T07:44:04Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 87413,
+      "elapsed_s": 279.25
     }
   ]
 }

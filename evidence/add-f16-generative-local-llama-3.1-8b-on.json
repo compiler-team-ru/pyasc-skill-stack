@@ -1,0 +1,101 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "add",
+  "dtype": "float16",
+  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "kernel_path": "",
+  "date": "2026-05-16T06:54:17Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "on",
+  "model_profile": "local-llama-3.1-8b",
+  "model": "ollama/llama3.1:8b",
+  "tokens": {
+    "input": 12288,
+    "output": 1296,
+    "cache_read": 0,
+    "total": 13584
+  },
+  "elapsed_total_s": 2614.81,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 844.53,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 336,
+        "cache_read": 0,
+        "total": 4432,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 861.5,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 412,
+        "cache_read": 0,
+        "total": 4508,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 908.78,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 548,
+        "cache_read": 0,
+        "total": 4644,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-llama-3.1-8b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
+  "history": []
+}

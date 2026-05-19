@@ -1,0 +1,101 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "abs",
+  "dtype": "float32",
+  "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "kernel_path": "",
+  "date": "2026-05-16T05:56:58Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen-coder-7b",
+  "model": "ollama/qwen2.5-coder:7b",
+  "tokens": {
+    "input": 12288,
+    "output": 390,
+    "cache_read": 0,
+    "total": 12678
+  },
+  "elapsed_total_s": 2102.1,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 698.8,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 100,
+        "cache_read": 0,
+        "total": 4196,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 711.43,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 176,
+        "cache_read": 0,
+        "total": 4272,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 691.87,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 114,
+        "cache_read": 0,
+        "total": 4210,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen-coder-7b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
+  "history": []
+}

@@ -1,0 +1,101 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float32",
+  "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
+  "kernel_path": "",
+  "date": "2026-05-16T07:08:17Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-qwen-coder-7b",
+  "model": "ollama/qwen2.5-coder:7b",
+  "tokens": {
+    "input": 12288,
+    "output": 608,
+    "cache_read": 0,
+    "total": 12896
+  },
+  "elapsed_total_s": 2145.72,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 722.83,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 233,
+        "cache_read": 0,
+        "total": 4329,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 699.41,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 143,
+        "cache_read": 0,
+        "total": 4239,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 723.48,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 232,
+        "cache_read": 0,
+        "total": 4328,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen-coder-7b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
+  "history": []
+}

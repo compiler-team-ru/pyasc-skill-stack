@@ -1,0 +1,101 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Help me develop a tiled matrix multiplication operator (asc2 API) for float16 inputs producing float32 output. Use small fixed shapes such as M=K=N=16 or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT numpy) for host-side data and torch.testing.assert_close for verification. Load A to asc2.TileLocation.L0A and B to asc2.TileLocation.L0B, then use `a @ b` (or asc2.matmul) and asc2.store the float32 result. Target the Ascend950PR_9599 simulator (pass -v Ascend950PR_9599). Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where c_ref = a.to(torch.float32) @ b.to(torch.float32).",
+  "kernel_path": "",
+  "date": "2026-05-18T10:54:07Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "on",
+  "model_profile": "local-qwen-coder-7b",
+  "model": "ollama/qwen2.5-coder:7b",
+  "tokens": {
+    "input": 12288,
+    "output": 345,
+    "cache_read": 0,
+    "total": 12633
+  },
+  "elapsed_total_s": 2136.69,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 686.94,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 17,
+        "cache_read": 0,
+        "total": 4113,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 690.52,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 23,
+        "cache_read": 0,
+        "total": 4119,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 759.23,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4096,
+        "output": 305,
+        "cache_read": 0,
+        "total": 4401,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/qwen2.5-coder:7b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26013721037",
+  "history": []
+}

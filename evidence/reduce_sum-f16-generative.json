@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Help me develop a reduce_sum operator that supports float16 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate error).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float16/kernel.py",
-  "date": "2026-05-13T09:49:11Z",
+  "date": "2026-05-15T06:52:44Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,24 +22,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 91584,
-    "output": 8592,
-    "cache_read": 673899,
-    "total": 100176
+    "input": 124505,
+    "output": 6873,
+    "cache_read": 367096,
+    "total": 131378
   },
-  "elapsed_total_s": 310.06,
+  "elapsed_total_s": 270.86,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 310.06,
+      "elapsed_s": 270.86,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 91584,
-        "output": 8592,
-        "cache_read": 673899,
-        "total": 100176,
+        "input": 124505,
+        "output": 6873,
+        "cache_read": 367096,
+        "total": 131378,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -137,17 +137,8 @@
   },
   "static_verify": "pass",
   "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25783495420",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
   "history": [
-    {
-      "date": "2026-04-22T06:43:14Z",
-      "overall_pass": false,
-      "score": 0.0,
-      "static": "fail",
-      "runtime": "fail",
-      "semantic": false,
-      "skipped": false
-    },
     {
       "date": "2026-04-22T12:16:17Z",
       "overall_pass": true,
@@ -412,6 +403,17 @@
       "skipped": false,
       "tokens_total": 0,
       "elapsed_s": 293.75
+    },
+    {
+      "date": "2026-05-13T09:49:11Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 100176,
+      "elapsed_s": 310.06
     }
   ]
 }
