@@ -364,6 +364,73 @@ them reliably; **do not invent numbers**) are:
 These graduate to first-class fields once the evaluator can measure
 them on a representative platform.
 
+## Summary-level additive fields (schema v2)
+
+The top-level [`evidence/skills-value-summary.json`](../evidence/skills-value-summary.json)
+document carries a few additive freshness/run-status fields that the
+dashboard reads to surface what the most recent nightly actually
+measured. They are emitted by
+[`tests/tools/compare_skills_value.py`](../tests/tools/compare_skills_value.py)
+and are explicitly part of the `schema_version: "2"` contract — older
+v1 summary readers continue to work because all fields default to
+`None` or `false`.
+
+```yaml
+schema_version: "2"
+generated_at: "2026-05-20T08:00:00Z"
+
+# True when the most recent nightly was partial — at least one matrix
+# leg of `nightly-gate` or `local-stability-gate` was cancelled or
+# failed before writing fresh evidence. The skills-value-report job
+# preserves the previously-committed per-cell evidence in this case
+# (and skips capabilities.yaml sync) to avoid mixing fresh and stale
+# rows; only the summary itself is rewritten.
+partial_run: false
+
+# Verbatim copy of artifacts/legs-status.json from the CI run that
+# produced this summary. `null` when the aggregator was invoked
+# outside CI without `--legs-status-file`.
+legs_status:
+  needs:
+    nightly-gate: success
+    local-stability-gate: success
+  partial_run: false
+  legs:
+    - {name: "nightly-gate (on)", conclusion: success}
+    - {name: "nightly-gate (off)", conclusion: success}
+
+cells:
+  - op: abs
+    dtype: float16
+    profile: cloud-default
+    on_date: "2026-05-19T12:00:00Z"   # ISO ts of the on-leg evidence file
+    off_date: "2026-05-19T13:00:00Z"  # ISO ts of the off-leg evidence file
+    # ... existing v2 fields ...
+
+by_profile:
+  cloud-default:
+    # ... existing v2 fields ...
+    on_last_run_at: "2026-05-19T12:00:00Z"
+    off_last_run_at: "2026-05-19T13:00:00Z"
+    # Age in whole days of the OLDEST off-leg evidence currently
+    # classified as a clean baseline (validity == "ok"). Used by the
+    # dashboard to flag profiles whose headline delta is built on
+    # data from a previous nightly. `null` when no clean off-baseline
+    # exists yet.
+    off_max_staleness_days: 0
+```
+
+The corresponding workflow contract is:
+
+- [`tests/tools/merge_evidence_artifacts.sh`](../tests/tools/merge_evidence_artifacts.sh)
+  folds each matrix leg's fresh per-leg files into `evidence/` using a
+  leg-specific glob, so cross-leg stale copies cannot win an overwrite
+  race.
+- [`tests/tools/detect_partial_run.py`](../tests/tools/detect_partial_run.py)
+  classifies the current CI run as `partial_run: true|false` based on
+  the per-job conclusions of `nightly-gate` and `local-stability-gate`
+  reported by the GitHub Actions API.
+
 ## Out of scope (planned)
 
 The following items are the next deliverables; this document is the

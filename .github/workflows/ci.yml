@@ -256,12 +256,22 @@ jobs:
           print(f"\n  Runtime pass: {rt_pass}/{total} | Skip: {rt_skip}/{total} | Fail: {rt_fail}/{total}")
           PYEOF
 
+      # Only upload the evidence files this leg actually owns. Uploading
+      # the whole `evidence/` directory used to bundle stale checkout
+      # copies of every other leg's filename into this artifact; the
+      # merge step in `skills-value-report` would then `cp -f` artifacts
+      # in non-deterministic order and the stale copies would silently
+      # overwrite freshly-written per-leg evidence. The conditional
+      # path expression below restricts each artifact to exactly the
+      # filename(s) this leg writes (legacy `*-generative.json` for
+      # `cloud-default + skills=on`, and `*-generative-cloud-default-off.json`
+      # for `cloud-default + skills=off`).
       - name: Upload evidence artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evidence-cloud-${{ matrix.skills_mode }}
-          path: evidence/
+          path: ${{ matrix.skills_mode == 'on' && 'evidence/*-generative.json' || 'evidence/*-generative-cloud-default-off.json' }}
           if-no-files-found: ignore
 
       - name: Upload generated kernel archive
@@ -407,12 +417,18 @@ jobs:
           done
           echo "=== Local stability summary ($PROFILE/$SKILLS_MODE): $PASS/$TOTAL passed ==="
 
+      # Only upload the evidence files this leg actually owns. See the
+      # equivalent note above `nightly-gate`'s upload step for the full
+      # rationale; the short version is that uploading the whole
+      # `evidence/` directory bundles stale checkout copies of every
+      # other leg's filename into this artifact and lets them race the
+      # merge step in `skills-value-report`.
       - name: Upload evidence artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: evidence-${{ matrix.profile }}-${{ matrix.skills_mode }}
-          path: evidence/
+          path: evidence/*-generative-${{ matrix.profile }}-${{ matrix.skills_mode }}.json
           if-no-files-found: ignore
 
       - name: Upload generated kernel archive
@@ -462,44 +478,78 @@ jobs:
           pattern: evidence-*
           merge-multiple: false
 
+      # Detect whether the most recent nightly was partial — at least
+      # one matrix leg of nightly-gate or local-stability-gate
+      # cancelled or failed before its evidence files were uploaded.
+      # We use this signal to (a) annotate the produced summary with
+      # `partial_run: true` so the dashboard can render a warning band
+      # and (b) gate the auto-commit so we never silently land a
+      # mixture of fresh + stale per-cell evidence on `main`.
+      - name: Detect partial run
+        id: partial-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          NIGHTLY_RESULT: ${{ needs.nightly-gate.result }}
+          LOCAL_RESULT: ${{ needs.local-stability-gate.result }}
+        run: |
+          mkdir -p artifacts
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            > artifacts/jobs.json
+          python3.10 tests/tools/detect_partial_run.py \
+            --jobs-file artifacts/jobs.json \
+            --output artifacts/legs-status.json \
+            --github-output "$GITHUB_OUTPUT"
+
       - name: Merge evidence into evidence/
         run: |
-          mkdir -p evidence
-          shopt -s nullglob
-          for d in artifacts/evidence-*; do
-            [ -d "$d" ] || continue
-            echo "Merging from $d"
-            # Each artifact contains the full evidence/ tree; copy *.json
-            # over the top. The collector chooses filenames so that
-            # (cloud-default, on) lands on the legacy filename and every
-            # other combo lands on its own -profile-mode variant, so no
-            # cross-leg overwrites happen. We use plain `cp` (default
-            # overwrite) so fresh evidence replaces the committed copy.
-            cp -f "$d"/*.json evidence/ 2>/dev/null || true
-          done
-          ls -1 evidence/ | wc -l
+          # Delegated to a tested script so the same logic runs in CI
+          # and in the local smoke harness (see
+          # tests/tools/test_skills_value_pipeline.py).
+          bash tests/tools/merge_evidence_artifacts.sh artifacts evidence
           ls -1 evidence/
 
       - name: Run OpenCode skills-intervention aggregator
+        env:
+          PARTIAL_RUN: ${{ steps.partial-run.outputs.partial_run }}
         run: |
+          EXTRA=()
+          if [ "$PARTIAL_RUN" = "true" ]; then
+            EXTRA+=(--partial-run)
+          fi
           python3.10 tests/tools/compare_skills_value.py \
+            "${EXTRA[@]}" \
+            --legs-status-file artifacts/legs-status.json \
             --output evidence/skills-value-summary.json \
             --markdown skills-value-report.md
           {
             echo "## OpenCode skills intervention report"
             echo ""
+            if [ "$PARTIAL_RUN" = "true" ]; then
+              echo "> :warning: **Partial nightly** — at least one matrix leg was cancelled or failed before writing fresh evidence. Only \`evidence/skills-value-summary.json\` will be committed; per-cell evidence files retain their previous values to avoid mixing fresh + stale rows. See \`legs_status\` in the summary for details."
+              echo ""
+            fi
             cat skills-value-report.md
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Sync capabilities.yaml
+        if: steps.partial-run.outputs.partial_run != 'true'
         run: |
           python3.10 tests/tools/sync_capabilities.py
 
       - name: Commit evidence, summary, and capabilities
+        env:
+          PARTIAL_RUN: ${{ steps.partial-run.outputs.partial_run }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add evidence/*.json capabilities.yaml
+          if [ "$PARTIAL_RUN" = "true" ]; then
+            echo "::warning::Partial nightly detected (at least one matrix leg cancelled or failed). Committing skills-value-summary.json only; per-cell evidence files and capabilities.yaml are NOT updated to avoid mixing fresh and stale rows. See evidence/skills-value-summary.json -> legs_status for the leg-by-leg breakdown."
+            git add evidence/skills-value-summary.json
+          else
+            git add evidence/*.json capabilities.yaml
+          fi
           if git diff --cached --quiet; then
             echo "No new evidence to commit."
           else

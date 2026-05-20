@@ -226,6 +226,12 @@ def compute_cell_deltas(
             "profile": profile,
             "on": on,
             "off": off,
+            # Per-cell freshness: pulled from the evidence ``date`` field
+            # so the dashboard can show how recently each leg of a cell
+            # was actually measured. None when that leg's evidence is
+            # absent.
+            "on_date": (on or {}).get("date") or None,
+            "off_date": (off or {}).get("date") or None,
         }
         if on and off:
             row["quality_delta"] = int(bool(on["pass"])) - int(bool(off["pass"]))
@@ -255,6 +261,23 @@ def compute_cell_deltas(
     return rows
 
 
+def _parse_iso_date(value):
+    """Parse an ISO-8601 timestamp into a tz-aware datetime, or return None."""
+    if not value or not isinstance(value, str):
+        return None
+    s = value.strip()
+    if not s:
+        return None
+    # The collector emits ``YYYY-MM-DDTHH:MM:SSZ``; ``datetime.fromisoformat``
+    # in 3.10 doesn't accept a trailing ``Z``, so normalise to ``+00:00``.
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
 def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
     """Per-profile aggregate of the OpenCode skills-intervention metrics.
 
@@ -268,6 +291,13 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
     ``None`` (not ``0/0``) when no clean off-runs exist.
     """
     by_profile: dict[str, dict] = {}
+    # Per-profile lists of evidence ``date`` strings so we can compute
+    # freshness aggregates (latest on/off run, max staleness of the
+    # clean off baseline) in the second pass below. Additive over the
+    # schema v2 contract — see docs/evaluation-methodology.md.
+    on_dates: dict[str, list[datetime]] = {}
+    off_dates: dict[str, list[datetime]] = {}
+    off_clean_dates: dict[str, list[datetime]] = {}
     for row in rows:
         prof = row["profile"]
         agg = by_profile.setdefault(prof, {
@@ -290,6 +320,21 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             "unresolved_due_to_off_infra": 0,
             "model": None,
         })
+        if row.get("on_date"):
+            dt = _parse_iso_date(row["on_date"])
+            if dt is not None:
+                on_dates.setdefault(prof, []).append(dt)
+        if row.get("off_date"):
+            dt = _parse_iso_date(row["off_date"])
+            if dt is not None:
+                off_dates.setdefault(prof, []).append(dt)
+                # Track dates only for off-legs that are clean baselines
+                # (validity == "ok") so ``off_max_staleness_days``
+                # measures the comparable baseline, not the
+                # placeholder fallbacks.
+                off_val = (row.get("off") or {}).get("validity")
+                if off_val == "ok":
+                    off_clean_dates.setdefault(prof, []).append(dt)
         agg["cells_total"] += 1
         if row["on"] and row["off"]:
             agg["cells_compared"] += 1
@@ -346,6 +391,26 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
         agg["cost_off_sum"] = round(agg["cost_off_sum"], 6)
         agg["elapsed_on_sum"] = round(agg["elapsed_on_sum"], 2)
         agg["elapsed_off_sum"] = round(agg["elapsed_off_sum"], 2)
+        # Freshness aggregates: each profile's most recent on/off
+        # measurement and the staleness (in whole days) of the OLDEST
+        # clean off-baseline observation. All three are ISO-8601
+        # strings (or an integer for ``off_max_staleness_days``); None
+        # when no measurement of that kind exists yet.
+        now = datetime.now(timezone.utc)
+        on_seen = on_dates.get(prof, [])
+        off_seen = off_dates.get(prof, [])
+        off_clean_seen = off_clean_dates.get(prof, [])
+        agg["on_last_run_at"] = (
+            max(on_seen).strftime("%Y-%m-%dT%H:%M:%SZ") if on_seen else None
+        )
+        agg["off_last_run_at"] = (
+            max(off_seen).strftime("%Y-%m-%dT%H:%M:%SZ") if off_seen else None
+        )
+        if off_clean_seen:
+            staleness_days = (now - min(off_clean_seen)).days
+            agg["off_max_staleness_days"] = staleness_days
+        else:
+            agg["off_max_staleness_days"] = None
     return by_profile
 
 
@@ -510,17 +575,34 @@ def render_markdown(rows: list[dict], by_profile: dict[str, dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_summary(rows: list[dict], by_profile: dict[str, dict]) -> dict:
-    return {
+def build_summary(
+    rows: list[dict],
+    by_profile: dict[str, dict],
+    *,
+    partial_run: bool = False,
+    legs_status: dict | None = None,
+) -> dict:
+    """Assemble the top-level summary document.
+
+    ``partial_run`` and ``legs_status`` are additive v2 fields written
+    by the CI ``skills-value-report`` job when one or more matrix legs
+    of the most recent nightly were cancelled or failed. They let the
+    dashboard render a "partial run" banner without changing the rest
+    of the v2 contract; see ``docs/evaluation-methodology.md``.
+    """
+    out: dict = {
         # schema_version "2" adds the validity-aware aggregates and
         # per-cell ``viability_unlocked_clean`` /
         # ``unresolved_due_to_off_infra`` flags. All schema_version "1"
         # fields are preserved alongside the new ones.
         "schema_version": "2",
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "partial_run": bool(partial_run),
+        "legs_status": legs_status or None,
         "cells": rows,
         "by_profile": by_profile,
     }
+    return out
 
 
 def main() -> int:
@@ -539,6 +621,24 @@ def main() -> int:
         "--markdown", default=None,
         help="Optional path to write the markdown report (default: stdout only)",
     )
+    parser.add_argument(
+        "--partial-run", action="store_true",
+        help=(
+            "Mark the produced summary as a partial nightly. Set by the "
+            "skills-value-report CI job when one or more matrix legs of "
+            "the most recent nightly were cancelled or failed before "
+            "writing fresh evidence."
+        ),
+    )
+    parser.add_argument(
+        "--legs-status-file", default=None,
+        help=(
+            "Optional JSON file describing the conclusion of each matrix "
+            "leg in the most recent nightly. Embedded under "
+            "`legs_status` in the summary so the dashboard can show "
+            "exactly what was/wasn't measured."
+        ),
+    )
     args = parser.parse_args()
 
     evidence_dir = Path(args.evidence_dir)
@@ -546,11 +646,32 @@ def main() -> int:
         print(f"ERROR: evidence dir not found: {evidence_dir}", file=sys.stderr)
         return 0
 
+    legs_status: dict | None = None
+    if args.legs_status_file:
+        legs_path = Path(args.legs_status_file)
+        if legs_path.exists():
+            try:
+                legs_status = json.loads(legs_path.read_text())
+            except json.JSONDecodeError as e:
+                print(
+                    f"WARNING: could not parse --legs-status-file {legs_path}: {e}",
+                    file=sys.stderr,
+                )
+        else:
+            print(
+                f"WARNING: --legs-status-file not found: {legs_path}",
+                file=sys.stderr,
+            )
+
     table = load_evidence(evidence_dir)
     rows = compute_cell_deltas(table)
     by_profile = aggregate_by_profile(rows)
 
-    summary = build_summary(rows, by_profile)
+    summary = build_summary(
+        rows, by_profile,
+        partial_run=args.partial_run,
+        legs_status=legs_status,
+    )
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

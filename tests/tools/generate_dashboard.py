@@ -1006,7 +1006,45 @@ var SVB_TIPS = {
   totals: "Cumulative totals across all paired cells for this profile. "
     + "Useful for budgeting: shows how much the on/off legs actually "
     + "consumed in absolute terms.",
+  freshness: "Date of the most recent on-leg and off-leg evidence "
+    + "feeding this card. The off-leg date reflects only its evidence "
+    + "files \u2014 it does not promise the leg was a valid comparable "
+    + "baseline; for that, see the off-leg validity row. "
+    + "'Clean baseline staleness' is the age of the OLDEST off-leg "
+    + "evidence that is currently classified as comparable ('ok'), so "
+    + "you can see whether the headline delta is built on fresh "
+    + "measurements or on data from a previous nightly.",
+  partialRun: "The most recent nightly was partial: at least one "
+    + "matrix leg of nightly-gate or local-stability-gate was cancelled "
+    + "or failed before writing fresh evidence. The skills-value-report "
+    + "job preserved the previously-committed per-cell evidence to "
+    + "avoid mixing fresh and stale rows; only the summary itself was "
+    + "updated. Re-running the nightly via 'Run workflow' \u2192 "
+    + "tier=nightly will restore a full measurement.",
 };
+
+// Render an ISO-8601 timestamp (the collector emits `YYYY-MM-DDTHH:MM:SSZ`)
+// as a short relative phrase like "today", "yesterday", or "N days ago".
+// Returns "—" when the input is missing or unparseable so callers can
+// embed the result directly into the HTML.
+function fmtAgo(iso) {
+  if (!iso) return "\u2014";
+  var t = Date.parse(iso);
+  if (isNaN(t)) return "\u2014";
+  var days = Math.floor((Date.now() - t) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 14) return days + " days ago";
+  if (days < 60) return Math.round(days / 7) + " weeks ago";
+  return Math.round(days / 30) + " months ago";
+}
+
+// "YYYY-MM-DD" excerpt of an ISO date for tooltip use; the dashboard
+// stays locale-agnostic so we don't reformat with toLocaleDateString.
+function fmtIsoDay(iso) {
+  if (!iso) return "";
+  return String(iso).slice(0, 10);
+}
 
 function renderSkillsValueBanner() {
   var sv = DATA.skills_value;
@@ -1017,7 +1055,29 @@ function renderSkillsValueBanner() {
   if (!profiles.length) return;
   el.classList.add("has-data");
 
-  var html = '<div class="svb-title">OpenCode skills intervention '
+  var partialRunHtml = '';
+  if (sv.partial_run) {
+    var legs = (sv.legs_status && sv.legs_status.legs) || [];
+    var nonOkLegs = legs.filter(function (l) {
+      return l.conclusion && l.conclusion !== "success" && l.conclusion !== "skipped";
+    });
+    var nonOkSummary = nonOkLegs.length
+      ? nonOkLegs.map(function (l) {
+          return l.name + " (" + l.conclusion + ")";
+        }).join(", ")
+      : "see legs_status for details";
+    partialRunHtml = '<div class="svb-baseline-note" '
+      + 'style="margin-top:0;margin-bottom:10px;">'
+      + '<strong>Partial nightly</strong> \u2014 the most recent '
+      + 'nightly run did not finish every matrix leg. To avoid '
+      + 'mixing fresh and stale per-cell evidence, the auto-commit '
+      + 'preserved the previously-measured rows; only the summary '
+      + 'shown here was updated. Unfinished legs: ' + nonOkSummary
+      + '. ' + svbHelp(SVB_TIPS.partialRun) + '</div>';
+  }
+
+  var html = partialRunHtml
+    + '<div class="svb-title">OpenCode skills intervention '
     + '<span style="font-weight:400;color:var(--fg-muted);">'
     + '(OpenCode skills-on vs skills-off, latest nightly)</span></div>'
     + '<div class="svb-subtitle">'
@@ -1249,8 +1309,38 @@ function renderSkillsValueBanner() {
       + fmtDelta(costTotal, "", {usd: true}) + ' \u00b7 '
       + fmtDelta(elapsedTotal, "s")
       + '</span></div>'
-      + '</div>'
+      + '</div>';
 
+    // Freshness footer: shows the date of the most recent on-leg
+    // and off-leg evidence feeding this card, plus the staleness of
+    // the oldest *clean* off-baseline (so a recent infra-failed
+    // off-leg doesn't make the headline look fresh when the actual
+    // comparable baseline is older).
+    var onAgo = fmtAgo(p.on_last_run_at);
+    var offAgo = fmtAgo(p.off_last_run_at);
+    var onIso = fmtIsoDay(p.on_last_run_at);
+    var offIso = fmtIsoDay(p.off_last_run_at);
+    var stalenessDays = p.off_max_staleness_days;
+    var stalenessHtml = '';
+    if (stalenessDays != null && stalenessDays > 7) {
+      stalenessHtml = '<span style="color:var(--pending);"> '
+        + '\u00b7 oldest clean off-baseline: ' + stalenessDays + 'd</span>';
+    } else if (stalenessDays != null) {
+      stalenessHtml = ' \u00b7 oldest clean off-baseline: '
+        + stalenessDays + 'd';
+    }
+    html += '<div class="svb-card-freshness" '
+      + 'style="font-size:11px;color:var(--fg-muted);'
+      + 'border-top:1px solid var(--border);'
+      + 'margin-top:8px;padding-top:6px;'
+      + 'font-variant-numeric:tabular-nums;">'
+      + 'Last measured: on '
+      + (onIso ? '<span title="' + onIso + '">' + onAgo + '</span>' : onAgo)
+      + ' \u00b7 off '
+      + (offIso ? '<span title="' + offIso + '">' + offAgo + '</span>' : offAgo)
+      + stalenessHtml + ' '
+      + svbHelp(SVB_TIPS.freshness)
+      + '</div>'
       + '</div>';
   }
   html += '</div>';
