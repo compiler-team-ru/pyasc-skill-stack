@@ -452,6 +452,54 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .svb-validity-pill .svb-tip { display: none; }
 .svb-validity-pill:hover .svb-tip,
 .svb-validity-pill:focus-visible .svb-tip { display: block; }
+.svb-fchips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.svb-fchips-label {
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  margin-right: 2px;
+}
+.svb-fchips-sep {
+  display: inline-block;
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.svb-fchip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  position: relative;
+}
+.svb-fchip.warn { color: var(--pending); border-color: var(--pending); }
+.svb-fchip.danger { color: var(--blocked); border-color: var(--blocked); }
+.svb-fchip .svb-tip { display: none; }
+.svb-fchip:hover .svb-tip,
+.svb-fchip:focus-visible .svb-tip { display: block; }
+.svb-ci-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
 .svb-baseline-note {
   font-size: 12px;
   line-height: 1.45;
@@ -1021,7 +1069,77 @@ var SVB_TIPS = {
     + "avoid mixing fresh and stale rows; only the summary itself was "
     + "updated. Re-running the nightly via 'Run workflow' \u2192 "
     + "tier=nightly will restore a full measurement.",
+  failureModes: "Per-leg breakdown of why cells didn\u2019t pass. "
+    + "Codes are heuristically derived from evidence v3 fields (no "
+    + "schema bump): F7 static-verify, F8 simulator correctness, F9 "
+    + "semantic-marker check, F10 agent never wrote a kernel.py, F12 "
+    + "incomplete evidence, F13 infra/config fail, F0 didn\u2019t pass "
+    + "but doesn\u2019t fit any of the above. Skills-on chips count "
+    + "every paired cell whose on-leg didn\u2019t pass; skills-off "
+    + "chips only count cells whose off-leg validity is \u2018ok\u2019, "
+    + "i.e. comparable baselines. See "
+    + "docs/evaluation-methodology.md \u00a7Failure taxonomy.",
+  attemptsToPass: "1-based index of the first attempt that produced "
+    + "a usable kernel, averaged over cells where the leg passed. A "
+    + "lower number means the agent reached a passing kernel in fewer "
+    + "tries on this profile. Skipped (\u2014) when the leg never "
+    + "passed a cell. Skills-off is averaged only over clean-baseline "
+    + "cells (off.validity = ok). This is the intervention-efficiency "
+    + "signal that survives even when pass-rates are equal.",
+  passRateCi: "Wilson 95% confidence interval on the pass-rate. For "
+    + "small samples like 11/12 or 0/8, the bare percentage looks more "
+    + "precise than the evidence supports; the CI shows what the data "
+    + "actually rules out. A wide CI (e.g. 0\u201332%) means we don\u2019t "
+    + "have enough samples to claim the underlying rate is 0%.",
 };
+
+// Display labels and a danger-level for each F-code. ``warn`` = orange,
+// ``danger`` = red, default = neutral. Keep the labels short so they
+// fit on a single chip; the full description lives in the tooltip.
+var SVB_FCODE_LABELS = {
+  F0_unknown:     {label: "F0 other",         tip: "Didn\u2019t pass but doesn\u2019t fit the known taxonomy (verification.mode missing, etc.). Worth investigating manually.", cls: "warn"},
+  F7_static:      {label: "F7 static",        tip: "Kernel was written but static_verify failed.", cls: "warn"},
+  F8_correctness: {label: "F8 correctness",   tip: "Simulator/runtime ran the kernel and the output was numerically wrong.", cls: "warn"},
+  F9_semantic:    {label: "F9 semantic",      tip: "Kernel was written but the semantic-marker check failed (e.g. expected pyasc API not present).", cls: "warn"},
+  F10_no_artifact:{label: "F10 no artifact",  tip: "Agent never wrote a kernel.py file. Most common pattern on smaller local models.", cls: "danger"},
+  F12_incomplete: {label: "F12 incomplete",   tip: "Partial or contradictory evidence (e.g. model resolved but no tokens captured).", cls: "warn"},
+  F13_infra_fail: {label: "F13 infra-fail",   tip: "Instrumentation/configuration failure: no model, no tokens, no artifact, no kernel path.", cls: "danger"},
+};
+
+function fchipsHtml(label, counts, includeNoneTip) {
+  var keys = counts ? Object.keys(counts) : [];
+  keys = keys.filter(function (k) { return (counts[k] || 0) > 0; });
+  if (!keys.length) return "";
+  keys.sort(function (a, b) {
+    // Group by danger > warn > neutral, then by name for stability.
+    var da = (SVB_FCODE_LABELS[a] || {}).cls || "";
+    var db = (SVB_FCODE_LABELS[b] || {}).cls || "";
+    var order = {danger: 0, warn: 1, "": 2};
+    if (order[da] !== order[db]) return order[da] - order[db];
+    return a.localeCompare(b);
+  });
+  var parts = keys.map(function (k) {
+    var meta = SVB_FCODE_LABELS[k] || {label: k, tip: "", cls: ""};
+    var cls = "svb-fchip" + (meta.cls ? " " + meta.cls : "");
+    var tipEsc = (meta.tip || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+    return '<span class="' + cls + '" tabindex="0" aria-label="'
+      + meta.label + ': ' + counts[k] + '. ' + tipEsc + '">'
+      + meta.label + ' \u00b7 ' + counts[k]
+      + (tipEsc ? '<span class="svb-tip">' + tipEsc + '</span>' : '')
+      + '</span>';
+  });
+  return '<span class="svb-fchips-label">' + label + '</span>'
+    + parts.join("");
+}
+
+function fmtCiPct(ci) {
+  if (!ci || ci.length !== 2) return "";
+  var lo = Math.round(ci[0] * 100);
+  var hi = Math.round(ci[1] * 100);
+  return "CI " + lo + "\u2013" + hi + "%";
+}
 
 // Render an ISO-8601 timestamp (the collector emits `YYYY-MM-DDTHH:MM:SSZ`)
 // as a short relative phrase like "today", "yesterday", or "N days ago".
@@ -1145,13 +1263,29 @@ function renderSkillsValueBanner() {
       ? '<div class="svb-card-model">' + p.model + '</div>'
       : '';
 
+    // Wilson 95% CI hints next to the percentages — the bare
+    // "0% -> 92%" reads as precise even when the sample is 11/12.
+    var ciOn = fmtCiPct(p.pass_rate_on_ci);
+    var ciOffClean = fmtCiPct(p.pass_rate_off_clean_ci);
+    var ciOnTip = ciOn ? svbHelp(SVB_TIPS.passRateCi) : '';
+
     var verdictHtml;
     if (hasCleanBaseline) {
+      var ciChunk = '';
+      if (ciOffClean || ciOn) {
+        ciChunk = ' <span class="svb-ci-hint">('
+          + (ciOffClean ? ciOffClean : '\u2014')
+          + ' \u2192 '
+          + (ciOn ? ciOn : '\u2014')
+          + ')</span>';
+      }
       verdictHtml = '<div class="svb-verdict ' + verdictClass + '">'
         + '<span class="svb-verdict-arrow">' + verdictArrow + '</span>'
         + fmtPct(passRateOffClean) + ' \u2192 ' + fmtPct(p.pass_rate_on)
+        + ciChunk
         + ' pass-rate (' + ppLabel + ', clean baseline) '
         + svbHelp(SVB_TIPS.verdict)
+        + ciOnTip
         + '</div>';
       var nonOk = cellsOffInfra + cellsOffIncomplete;
       if (nonOk > 0) {
@@ -1166,11 +1300,16 @@ function renderSkillsValueBanner() {
           + '</div>';
       }
     } else {
+      var ciChunkNoBaseline = ciOn
+        ? ' <span class="svb-ci-hint">(' + ciOn + ')</span>'
+        : '';
       verdictHtml = '<div class="svb-verdict svb-delta-neutral">'
         + '<span class="svb-verdict-arrow">\u26A0</span>'
         + 'Skills-on pass-rate: ' + fmtPct(p.pass_rate_on)
+        + ciChunkNoBaseline
         + '. Clean skills-off baseline unavailable '
         + svbHelp(SVB_TIPS.verdict)
+        + ciOnTip
         + '</div>'
         + '<div class="svb-baseline-note">'
         + '<strong>' + (cellsOffInfra + cellsOffIncomplete) + '/'
@@ -1254,6 +1393,23 @@ function renderSkillsValueBanner() {
       + '<span>' + passOff + '/' + compared + ' (' + passOffPct + '%)'
       + validityPillsHtml + '</span>'
       + '</div>'
+      // Failure-mode chip row: "why didn't this card pass?" Empty
+      // string is appended when both counts are zero (no failures to
+      // surface) so passing profiles stay visually clean.
+      + (function () {
+          var onChips = fchipsHtml('skills-on',
+            p.failure_mode_counts_on);
+          var offChips = fchipsHtml('skills-off',
+            p.failure_mode_counts_off);
+          if (!onChips && !offChips) return '';
+          return '<div class="svb-fchips">'
+            + onChips
+            + (onChips && offChips
+                ? '<span class="svb-fchips-sep"></span>' : '')
+            + offChips
+            + ' ' + svbHelp(SVB_TIPS.failureModes)
+            + '</div>';
+        })()
       + '<div class="svb-stat" style="margin-top:6px;">'
       + '<span class="svb-stat-label">Off-leg validity '
       + svbHelp(SVB_TIPS.offValidity) + '</span>'
@@ -1289,16 +1445,56 @@ function renderSkillsValueBanner() {
       + svbHelp(SVB_TIPS.tokens) + '</span>'
       + '<span class="' + deltaClassLowerBetter(p.tokens_delta_avg) + '">'
       + fmtDelta(p.tokens_delta_avg) + '</span></div>'
-      + '<div class="svb-stat">'
-      + '<span class="svb-stat-label">Cost '
-      + svbHelp(SVB_TIPS.cost) + '</span>'
-      + '<span class="' + deltaClassLowerBetter(p.cost_delta_avg_usd) + '">'
-      + fmtDelta(p.cost_delta_avg_usd, "", {usd: true}) + '</span></div>'
+      // Cost row: suppressed when both legs report $0 (local profiles
+      // never bill, and the cloud profile's cache pricing also
+      // collapses to $0 in this dataset). Hiding the row when both
+      // values are zero keeps the card free of dead-weight stats.
+      + (((p.cost_on_sum || 0) === 0 && (p.cost_off_sum || 0) === 0)
+          ? ''
+          : ('<div class="svb-stat">'
+              + '<span class="svb-stat-label">Cost '
+              + svbHelp(SVB_TIPS.cost) + '</span>'
+              + '<span class="' + deltaClassLowerBetter(p.cost_delta_avg_usd) + '">'
+              + fmtDelta(p.cost_delta_avg_usd, "", {usd: true}) + '</span></div>'))
       + '<div class="svb-stat">'
       + '<span class="svb-stat-label">Wall-time '
       + svbHelp(SVB_TIPS.walltime) + '</span>'
       + '<span class="' + deltaClassLowerBetter(p.elapsed_delta_avg_s) + '">'
       + fmtDelta(p.elapsed_delta_avg_s, "s") + '</span></div>'
+      // Attempts-to-pass row: intervention-efficiency signal. Hidden
+      // when both sides are null (the profile never passes a cell, so
+      // there's nothing to average).
+      + (function () {
+          var meanOn = p.attempts_to_pass_on_mean;
+          var meanOffClean = p.attempts_to_pass_off_clean_mean;
+          if (meanOn == null && meanOffClean == null) return '';
+          var diff = (meanOn != null && meanOffClean != null)
+            ? (meanOn - meanOffClean) : null;
+          var diffCls = deltaClassLowerBetter(diff);
+          var partsHtml = '';
+          if (meanOn != null) {
+            partsHtml += '<span style="color:var(--fg);">on '
+              + meanOn.toFixed(1) + '</span>';
+          } else {
+            partsHtml += '<span>on \u2014</span>';
+          }
+          partsHtml += ' \u00b7 ';
+          if (meanOffClean != null) {
+            partsHtml += '<span style="color:var(--fg);">off '
+              + meanOffClean.toFixed(1) + '</span>';
+          } else {
+            partsHtml += '<span>off \u2014</span>';
+          }
+          if (diff != null) {
+            var sign = diff > 0 ? '+' : (diff < 0 ? '\u2212' : '');
+            partsHtml += ' <span class="' + diffCls + '">('
+              + sign + Math.abs(diff).toFixed(1) + ')</span>';
+          }
+          return '<div class="svb-stat">'
+            + '<span class="svb-stat-label">Attempts to pass '
+            + svbHelp(SVB_TIPS.attemptsToPass) + '</span>'
+            + '<span class="svb-val">' + partsHtml + '</span></div>';
+        })()
       + '<div class="svb-stat" style="border-top:1px dashed var(--border);'
       + 'margin-top:4px;padding-top:4px;">'
       + '<span class="svb-stat-label" style="color:var(--fg-muted);'

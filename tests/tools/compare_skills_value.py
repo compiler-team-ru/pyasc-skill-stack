@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from datetime import datetime, timezone
@@ -165,12 +166,121 @@ def _classify_validity(ev: dict) -> str:
     return "incomplete"
 
 
+def _classify_failure_mode(ev: dict) -> str | None:
+    """Heuristic failure-mode classifier over schema v3 evidence.
+
+    Returns ``None`` if the cell passed (``_is_overall_pass`` is true),
+    otherwise one of the F-codes documented in
+    ``docs/evaluation-methodology.md`` (the in-flight derivation from
+    existing fields, not the eventual schema-v4 ``failure_category``
+    enum):
+
+      * ``F13_infra_fail`` — same as ``_classify_validity == "infra_fail"``.
+      * ``F12_incomplete`` — same as ``_classify_validity == "incomplete"``.
+      * ``F10_no_artifact`` — the agent never wrote a ``kernel.py``
+        (``agent.artifacts_found`` lacks a kernel entry).
+      * ``F7_static`` — kernel exists but ``static_verify == "fail"``.
+      * ``F9_semantic`` — kernel exists, static passes, but the
+        semantic-marker check failed (``semantic_check.passed`` is
+        ``False``).
+      * ``F8_correctness`` — kernel exists, static + semantic pass, but
+        the simulator/runtime evaluator rejected the output
+        (``verification.status == "fail"`` and ``verification.mode`` in
+        ``{"simulator", "runtime"}``).
+      * ``F0_unknown`` — anything that didn't pass but doesn't fit
+        the above signature. Worth surfacing on the dashboard so we
+        notice that a new failure shape has appeared.
+
+    The classifier checks F13/F12 first because those exclude the cell
+    from comparability and would otherwise be misread as a normal
+    failure mode. After that it tracks the natural pipeline order
+    (artifact -> static -> semantic -> runtime).
+    """
+    if _is_overall_pass(ev):
+        return None
+    validity = _classify_validity(ev)
+    if validity == "infra_fail":
+        return "F13_infra_fail"
+    if validity == "incomplete":
+        return "F12_incomplete"
+    agent = ev.get("agent") or {}
+    artifacts = agent.get("artifacts_found") or []
+    has_kernel = any(
+        isinstance(a, str) and (a == "kernel.py" or a.endswith("/kernel.py"))
+        for a in artifacts
+    )
+    if not has_kernel:
+        return "F10_no_artifact"
+    if (ev.get("static_verify") or "").lower() == "fail":
+        return "F7_static"
+    sem = ev.get("semantic_check") or {}
+    if sem.get("passed") is False:
+        return "F9_semantic"
+    ver = ev.get("verification") or {}
+    status = (ver.get("status") or "").lower()
+    mode = (ver.get("mode") or "").lower()
+    if status == "fail" and mode in {"simulator", "runtime"}:
+        return "F8_correctness"
+    return "F0_unknown"
+
+
+def _attempts_to_pass(ev: dict) -> int | None:
+    """1-based index of the first attempt that produced a usable kernel.
+
+    Reads ``ev.attempts`` (a list of per-attempt records emitted by
+    ``collect_generative_evidence.py``) and returns the 1-based index of
+    the first attempt where the agent wrote a kernel (``kernel_found``
+    truthy) and the attempt was not recorded as a failure
+    (``outcome != "fail"``). Returns ``None`` when no such attempt
+    exists or when ``attempts`` is absent — that is, the metric is the
+    *number of attempts the agent needed before producing a kernel that
+    cleared the per-attempt checks*. Cells that never produced any
+    usable attempt contribute ``None`` and are skipped by the mean /
+    median aggregators.
+    """
+    attempts = ev.get("attempts") or []
+    for i, a in enumerate(attempts, start=1):
+        if not isinstance(a, dict):
+            continue
+        if not a.get("kernel_found"):
+            continue
+        outcome = (a.get("outcome") or "").lower()
+        if outcome == "fail":
+            continue
+        return i
+    return None
+
+
+def _wilson_ci(passes: int, n: int, z: float = 1.96) -> tuple[float, float] | None:
+    """Two-sided Wilson score interval for a Bernoulli pass-rate.
+
+    Returns ``(low, high)`` clamped to ``[0, 1]``, or ``None`` when
+    ``n <= 0``. Default ``z == 1.96`` corresponds to a 95% CI. We use
+    Wilson rather than the normal approximation because pass-rates of
+    ``0/n`` and ``n/n`` are common in this dataset and normal-approx
+    intervals collapse to a degenerate point at those extremes.
+    """
+    if n <= 0:
+        return None
+    p = passes / n
+    denom = 1.0 + z * z / n
+    center = (p + z * z / (2.0 * n)) / denom
+    half = (z * math.sqrt((p * (1.0 - p) + z * z / (4.0 * n)) / n)) / denom
+    return (max(0.0, center - half), min(1.0, center + half))
+
+
 def _extract_metrics(ev: dict) -> dict:
     """Pull the fields we care about out of an evidence document."""
     tokens = ev.get("tokens", {}) or {}
     return {
         "pass": _is_overall_pass(ev),
         "validity": _classify_validity(ev),
+        # Failure-mode and attempts-to-pass are additive over schema v3
+        # (derived from existing fields) and feed the per-card
+        # explainability chips and the intervention-efficiency stat
+        # row. See _classify_failure_mode / _attempts_to_pass.
+        "failure_mode": _classify_failure_mode(ev),
+        "attempts_to_pass": _attempts_to_pass(ev),
         "tokens_total": int(tokens.get("total", 0) or 0),
         "tokens_input": int(tokens.get("input", 0) or 0),
         "tokens_output": int(tokens.get("output", 0) or 0),
@@ -232,6 +342,12 @@ def compute_cell_deltas(
             # absent.
             "on_date": (on or {}).get("date") or None,
             "off_date": (off or {}).get("date") or None,
+            # Per-cell failure mode for each leg, ``None`` when the leg
+            # passed or when that leg's evidence is absent. Lets the
+            # dashboard show "11 pass + 1 F8 correctness" rather than a
+            # bare "11/12" headline.
+            "failure_on": (on or {}).get("failure_mode") or None,
+            "failure_off": (off or {}).get("failure_mode") or None,
         }
         if on and off:
             row["quality_delta"] = int(bool(on["pass"])) - int(bool(off["pass"]))
@@ -298,6 +414,23 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
     on_dates: dict[str, list[datetime]] = {}
     off_dates: dict[str, list[datetime]] = {}
     off_clean_dates: dict[str, list[datetime]] = {}
+    # Per-profile collected ``attempts_to_pass`` integers. Skills-on is
+    # collected from every cell whose on-leg passed; skills-off is
+    # collected only from cells whose off-leg validity is ``ok`` and
+    # whose off-leg passed (so the metric is averaged over comparable
+    # baselines, not over infra-failed off legs that didn't pass for
+    # instrumentation reasons).
+    on_attempts_to_pass: dict[str, list[int]] = {}
+    off_clean_attempts_to_pass: dict[str, list[int]] = {}
+    # Per-profile failure-mode tallies for the explainability chips.
+    # The on-leg is tallied for every paired cell whose on-leg did not
+    # pass (so we surface the full failure shape including F13 when the
+    # on-leg itself was an infra fail). The off-leg is tallied only
+    # over clean off-baseline cells that did not pass, so the chips
+    # describe failure modes that meaningfully contribute to the
+    # comparable baseline.
+    failure_counts_on: dict[str, dict[str, int]] = {}
+    failure_counts_off: dict[str, dict[str, int]] = {}
     for row in rows:
         prof = row["profile"]
         agg = by_profile.setdefault(prof, {
@@ -362,6 +495,37 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
                 agg["cells_off_incomplete"] += 1
             if agg["model"] is None and row["on"].get("model"):
                 agg["model"] = row["on"]["model"]
+
+            # Failure-mode tallies (additive). Only count when the leg
+            # did not pass — _classify_failure_mode returns None on
+            # pass. We still record F13/F12 on the on-leg because a
+            # broken on-leg is a real outcome to surface; on the
+            # off-leg we restrict to clean baselines so the chip row
+            # describes the comparable failure mix.
+            f_on = row["on"].get("failure_mode")
+            if f_on:
+                failure_counts_on.setdefault(prof, {})[f_on] = (
+                    failure_counts_on.setdefault(prof, {}).get(f_on, 0) + 1
+                )
+            if off_validity == "ok":
+                f_off = row["off"].get("failure_mode")
+                if f_off:
+                    failure_counts_off.setdefault(prof, {})[f_off] = (
+                        failure_counts_off.setdefault(prof, {}).get(f_off, 0) + 1
+                    )
+
+            # Attempts-to-pass tallies. Only meaningful for cells the
+            # leg actually passed; skipped otherwise so the mean is
+            # "how many attempts when we *do* succeed", not diluted by
+            # never-passed cells.
+            if row["on"]["pass"]:
+                atp_on = row["on"].get("attempts_to_pass")
+                if isinstance(atp_on, int):
+                    on_attempts_to_pass.setdefault(prof, []).append(atp_on)
+            if off_validity == "ok" and row["off"]["pass"]:
+                atp_off = row["off"].get("attempts_to_pass")
+                if isinstance(atp_off, int):
+                    off_clean_attempts_to_pass.setdefault(prof, []).append(atp_off)
     for prof, agg in by_profile.items():
         n = agg["cells_compared"] or 1
         agg["pass_rate_on"] = round(agg["pass_on"] / n, 3) if agg["cells_compared"] else None
@@ -411,6 +575,47 @@ def aggregate_by_profile(rows: list[dict]) -> dict[str, dict]:
             agg["off_max_staleness_days"] = staleness_days
         else:
             agg["off_max_staleness_days"] = None
+
+        # Failure-mode breakdowns. Empty dict (not None) when nothing
+        # tallied — keeps the dashboard's optional-chaining simple.
+        agg["failure_mode_counts_on"] = dict(failure_counts_on.get(prof, {}))
+        agg["failure_mode_counts_off"] = dict(failure_counts_off.get(prof, {}))
+
+        # Attempts-to-pass aggregates (mean rounded to one decimal,
+        # median as a plain int via standard high-median for even
+        # samples). ``None`` when no pass-record contributed a value
+        # so the dashboard can suppress the row entirely.
+        on_atp = sorted(on_attempts_to_pass.get(prof, []))
+        off_atp = sorted(off_clean_attempts_to_pass.get(prof, []))
+        agg["attempts_to_pass_on_n"] = len(on_atp)
+        agg["attempts_to_pass_off_clean_n"] = len(off_atp)
+        agg["attempts_to_pass_on_mean"] = (
+            round(sum(on_atp) / len(on_atp), 2) if on_atp else None
+        )
+        agg["attempts_to_pass_off_clean_mean"] = (
+            round(sum(off_atp) / len(off_atp), 2) if off_atp else None
+        )
+        agg["attempts_to_pass_on_median"] = (
+            int(on_atp[len(on_atp) // 2]) if on_atp else None
+        )
+        agg["attempts_to_pass_off_clean_median"] = (
+            int(off_atp[len(off_atp) // 2]) if off_atp else None
+        )
+
+        # Wilson 95% CIs on the displayed pass-rates. Rounded to 3
+        # decimals to match the surrounding ``round(..., 3)`` style
+        # for ``pass_rate_*``. ``None`` when the denominator is zero
+        # (e.g. no clean off baseline yet) so the dashboard can hide
+        # the "(CI x-y%)" hint cleanly.
+        on_ci = _wilson_ci(agg["pass_on"], agg["cells_compared"])
+        agg["pass_rate_on_ci"] = (
+            [round(on_ci[0], 3), round(on_ci[1], 3)] if on_ci else None
+        )
+        off_clean_ci = _wilson_ci(agg["pass_off_clean"], agg["cells_off_ok"])
+        agg["pass_rate_off_clean_ci"] = (
+            [round(off_clean_ci[0], 3), round(off_clean_ci[1], 3)]
+            if off_clean_ci else None
+        )
     return by_profile
 
 

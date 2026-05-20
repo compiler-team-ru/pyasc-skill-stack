@@ -348,6 +348,48 @@ file — the earliest in the F1 → F13 order that applies.
 case; a v4 collector should write `failure_category: F13` for those
 runs.
 
+### Failure taxonomy (in-flight, derived from evidence v3)
+
+Schema v4's `result.failure_category` is not auto-filled yet (no v4
+collector exists). To unblock the dashboard's "why didn't this cell
+pass" view today,
+[`tests/tools/compare_skills_value.py`](../tests/tools/compare_skills_value.py)
+provides a `_classify_failure_mode(ev)` helper that derives the
+failure mode heuristically from existing v3 fields. It returns
+`None` when the cell passed (`_is_overall_pass`), otherwise exactly
+one of the codes below.
+
+The classifier checks F13 and F12 first because they exclude the cell
+from comparability (and would otherwise be misread as a normal
+failure shape). After that it follows the natural pipeline order:
+artifact -> static -> semantic -> runtime.
+
+| Code | Rule (first match wins) | Schema v4 mapping |
+|---|---|---|
+| `F13_infra_fail` | `_classify_validity == "infra_fail"` | `failure_category: F13` |
+| `F12_incomplete` | `_classify_validity == "incomplete"` | (no direct v4 code; deferred) |
+| `F10_no_artifact` | `agent.artifacts_found` contains no `kernel.py` | `failure_category: F10` |
+| `F7_static` | kernel exists, `static_verify == "fail"` | `failure_category: F6` (static verification) |
+| `F9_semantic` | kernel exists, static passes, `semantic_check.passed is False` | (no direct v4 code; closest is F1/F2 misuse) |
+| `F8_correctness` | kernel exists, static + semantic pass, `verification.status == "fail"` and `verification.mode in {"simulator", "runtime"}` | `failure_category: F8` |
+| `F0_unknown` | did not pass but doesn't fit any rule above | (no direct v4 code; surfaced so we notice new failure shapes) |
+
+The dashboard renders these as small chips beneath the pass-rate
+bars (`failure_mode_counts_on`, `failure_mode_counts_off` in the
+per-profile aggregate). Skills-on counts every paired cell whose
+on-leg didn't pass — including F13/F12 — so a broken on-leg surfaces
+visibly. Skills-off counts only cells whose off-leg validity is `ok`,
+so the off chips describe failure modes that meaningfully contribute
+to the comparable baseline; F13/F12 are reported separately via the
+existing off-validity row.
+
+Today's data exhibits two dominant codes: `F8_correctness` (the
+cloud-default `leaky_relu_f16` cell — kernel passes static and
+semantic, simulator output is numerically wrong) and `F10_no_artifact`
+(7B/8B local profiles where the agent never writes a kernel file
+under either skills-on or skills-off, indicating the model/harness
+capability boundary for those profiles).
+
 ## Performance layer (planned)
 
 For pyasc kernels, correctness is not enough. The proposed performance
@@ -418,6 +460,44 @@ by_profile:
     # data from a previous nightly. `null` when no clean off-baseline
     # exists yet.
     off_max_staleness_days: 0
+
+    # Explainability + intervention-efficiency additions.
+    # All additive; older readers ignore them safely.
+
+    # Per-leg breakdown of why cells didn't pass, as one entry per
+    # F-code derived from existing v3 fields (see
+    # "Failure taxonomy (in-flight, derived from evidence v3)").
+    # `failure_mode_counts_on` counts every paired cell whose on-leg
+    # did not pass (including F13/F12 to surface a broken on-leg).
+    # `failure_mode_counts_off` counts only cells whose off-leg
+    # validity is `ok`, so the off breakdown describes failure modes
+    # that meaningfully contribute to the comparable baseline.
+    # Empty dict (not `null`) when nothing is tallied.
+    failure_mode_counts_on:  {F8_correctness: 1}
+    failure_mode_counts_off: {}
+
+    # 1-based mean / median of `attempts_to_pass` (index of the first
+    # attempt that produced a usable kernel, see
+    # `_attempts_to_pass`). Skills-on is averaged over every cell
+    # whose on-leg passed; skills-off is averaged only over cells
+    # whose off-leg validity is `ok` AND off-leg passed. `null` when
+    # the leg never passed a cell on this profile. `*_n` records the
+    # sample size so the dashboard can show how many cells fed the
+    # average.
+    attempts_to_pass_on_mean: 1.18
+    attempts_to_pass_on_median: 1
+    attempts_to_pass_on_n: 11
+    attempts_to_pass_off_clean_mean: null
+    attempts_to_pass_off_clean_median: null
+    attempts_to_pass_off_clean_n: 0
+
+    # Wilson 95% confidence interval on the displayed pass-rates,
+    # rendered as `[low, high]` rounded to 3 decimals. `null` when
+    # the denominator is zero (e.g. no clean off-baseline yet). The
+    # dashboard appends a "(CI lo-hi%)" hint to the verdict so small
+    # samples like 11/12 don't read as more precise than they are.
+    pass_rate_on_ci: [0.646, 0.985]
+    pass_rate_off_clean_ci: null
 ```
 
 The corresponding workflow contract is:
