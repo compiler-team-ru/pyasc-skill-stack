@@ -24,6 +24,18 @@ isProject: false
 
 Drills into Phase 8 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. Sized at ~3 engineer-days across ~1 week. Lands last; the only sprint that explicitly references every other phase's output.
 
+## Precision audit revision (2026-05-22)
+
+The 2026-05-22 audit found a large amount of uncommitted worktree state. Stage 8.3 already enumerated most of these items, but the partition between "Phase 0/1 implementation work" (commit as part of those phases) and "unrelated platform/setup work" (Phase 8's job) is now made explicit:
+
+- Phase 0/1 implementation work — covered by [phase_0_protocol_aware_harness.plan.md](phase_0_protocol_aware_harness.plan.md) Stage 0.0 Groups A and B; *not* this plan's responsibility.
+- "Group C" — unrelated platform/setup work — IS this plan's responsibility (Stage 8.3 below).
+- New leftovers found during the audit (not previously listed):
+  - `.cursor/plans/rms_norm_platform_fix_and_gelu_tanh_9c16b5ec.plan.md` (untracked) — the historical plan record for the rms_norm + gelu/tanh fix. Should be committed for posterity, not deleted.
+  - `docs/manual-review-order.md` (untracked) — Stage 8.1 already handles this.
+
+Stage 8.3's file list below is also explicitly cross-referenced as "Group C" from Phase 0 Stage 0.0.
+
 ## Outcome
 
 After this sprint, every loose end the quarter accumulated is either resolved or has a documented owner and date. The git tree is clean. The deferred decisions from Phase 1 (ReLU), Phase 5 (split-row softmax), and Phase 6 (phased default, recommended_tile_size) are finalized. [docs/quarter-retrospective-q1.md](../../docs/) is the single document a future reader opens to learn what the quarter measured and why.
@@ -73,21 +85,32 @@ Deliverable: ReLU decision confirmed in [capabilities.yaml](../../capabilities.y
 
 ## Stage 8.3 — Git-status cleanup (~0.5 ED)
 
-The opening `git status` at quarter start showed the following dangling state. Resolve each item:
+This is "Group C" from [phase_0_protocol_aware_harness.plan.md](phase_0_protocol_aware_harness.plan.md) Stage 0.0. Phase 0 and Phase 1 explicitly exclude these from their PRs so that the Phase 0/1 review remains focused. Resolve each item independently in Phase 8:
 
-- **`.gitignore` (modified):** review the diff; commit if it tightens ignore rules sensibly, revert if it accidentally hides intended-to-be-tracked files.
-- **`README.md` (modified):** review against the v2 quickstart; commit if the changes match the intended documentation update from earlier sessions, revert otherwise.
-- **`docker/Dockerfile` and `docker/Dockerfile.overlay` (modified):** review against the documented Docker image rebuild dates; commit if the changes are part of the C310 simulator migration referenced in [docs/perf-methodology/](../../docs/perf-methodology/), revert if they are unintentional drift.
-- **`docker/pyasc-overlay/asc_C/{aarch64,x86_64}/README.md` (untracked):** these explain the per-arch overlay binary layout; commit.
-- **`docker/pyasc-overlay/asc_changed/language/core/{ir_value,range}.py` (deleted):** if these were intentional deletions during the asc2 migration, commit the deletion; otherwise restore.
-- **`docs/cann-setup.md` (modified):** review against the v2 setup guide; commit if aligned, revert if not.
-- **`golden/docs/python-api/language/core.md` (deleted):** confirm this was intentionally removed (the asc1 docs were dropped from the golden snapshot); commit.
-- **`scripts/install-host-deps.sh` (untracked):** referenced in [README.md](../../README.md); commit (likely landed mid-session, never staged).
-- **`skills/pyasc-env-check/SKILL.md` (modified):** review the diff; if it is the documented post-rms_norm-fix env-check update, commit; otherwise revert.
+- **`.gitignore` (modified, +4 lines):** review the diff; commit if it tightens ignore rules sensibly, revert if it accidentally hides intended-to-be-tracked files.
+- **`README.md` (modified, +31 lines):** the changes appear to be a host-deps + Docker quickstart refresh tied to `scripts/install-host-deps.sh` and the Dockerfile diffs. Commit as one logical unit with the install-host-deps + Dockerfile diff if the docs match the script behavior; revert otherwise.
+- **`docker/Dockerfile` (modified, +31 lines) and `docker/Dockerfile.overlay` (modified, +27 lines):** review against the documented Docker image rebuild dates and Group C as a whole; commit as part of the docker-overlay update if the changes are coherent (likely the C310 simulator migration referenced in [docs/perf-methodology/](../../docs/perf-methodology/)), revert if drift.
+- **`docker/pyasc-overlay/asc_C/{aarch64,x86_64}/README.md` (untracked):** these explain the per-arch overlay binary layout; commit alongside the Dockerfile diffs above.
+- **`docker/pyasc-overlay/asc_changed/language/core/{ir_value,range}.py` (deleted-tracked):** if these were intentional deletions during the asc2 migration (likely — the overlay no longer ships these shims), commit the deletion; otherwise restore. Bundle with the Docker commit above.
+- **`docs/cann-setup.md` (modified, +42 lines):** review against the host-deps + Dockerfile changes; commit if aligned with Group C as a whole.
+- **`golden/docs/python-api/language/core.md` (deleted-tracked):** the asc1 docs were dropped from the golden snapshot; commit the deletion with a one-line rationale ("asc1 docs removed; agent never reads asc1 surface anymore").
+- **`scripts/install-host-deps.sh` (untracked):** referenced in the README diff above; commit as the head of the Group C stack.
+- **`skills/pyasc-env-check/SKILL.md` (modified, +1 line):** the post-rms_norm-fix env-check update; commit standalone.
+- **`.cursor/plans/rms_norm_platform_fix_and_gelu_tanh_9c16b5ec.plan.md` (untracked, NEW IN AUDIT):** historical plan record for the rms_norm/gelu fix; commit as-is into the .cursor/plans/ tree alongside the other plan files, with a `docs(plans):` commit message. Do *not* delete (it is the record of work that landed earlier this quarter).
 
-For each, one of three actions: `git add` + commit (with a per-file rationale in the commit message), `git checkout` + discard, or `git rm` + commit. The final state: `git status --porcelain` returns zero lines (modulo the active branch's intentional new work).
+Suggested commit grouping (avoid one giant "chore: cleanup" commit; future-blame stays useful):
 
-Deliverable: a single commit (or short stack of commits) titled `chore: post-quarter git-status hygiene`; status reads clean afterwards.
+1. `chore(scripts): add install-host-deps.sh host bootstrap helper` (scripts/install-host-deps.sh + README.md hunks that reference it).
+2. `feat(docker): C310 overlay sync — drop ir_value/range shims and add per-arch READMEs` (docker/Dockerfile + Dockerfile.overlay + docker/pyasc-overlay/* changes + the two deletions).
+3. `docs(cann-setup): align host-deps section with install-host-deps.sh` (docs/cann-setup.md).
+4. `chore(golden): drop asc1 language/core docs (no longer referenced)` (golden/docs/python-api/language/core.md deletion).
+5. `chore(skills): refresh pyasc-env-check post-rms_norm-fix` (skills/pyasc-env-check/SKILL.md).
+6. `chore(gitignore): tighten ignore rules` (.gitignore).
+7. `docs(plans): commit historical rms_norm + gelu/tanh plan record` (.cursor/plans/rms_norm_platform_fix_and_gelu_tanh_9c16b5ec.plan.md).
+
+The final state: `git status --porcelain` returns zero lines (modulo the active branch's intentional new work).
+
+Deliverable: a short stack of focused commits per the grouping above; `git status` reads clean afterwards.
 
 ## Stage 8.4 — Promote Phase 6 recommendations (~0.5 ED)
 

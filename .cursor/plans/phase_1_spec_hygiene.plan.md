@@ -1,36 +1,74 @@
 ---
 name: Phase 1 golden-kernel spec hygiene
-overview: "Concrete sprint plan (~5 engineer-days) for Phase 1 of the quarterly roadmap. Adds per-cell metadata (shape_regime, reduce_axis, output_shape, accumulator_dtype, identity, tail_behavior, padding, partitioning, unsupported_regimes) to every cell in capabilities.yaml, ships docs/glossary.md as the term-of-art reference, decorates every golden kernel with a non-obvious-constraint header block, decides the ReLU scope question, and tightens check_capabilities.py so the new fields are enforced rather than optional."
+overview: "Concrete sprint plan for Phase 1 of the quarterly roadmap. Adds per-cell metadata to every cell in capabilities.yaml, ships docs/glossary.md, decorates every golden kernel with a non-obvious-constraint header, decides ReLU scope, and tightens check_capabilities.py. As of the 2026-05-22 precision audit, all five stages are implemented uncommitted in the worktree (10/10 golden headers, 12/12 populated cells, glossary.md present at 288 lines, check_capabilities --strict-metadata default, test-golden-header.sh green). This revision demotes stages to commit + audit and adds Stage 1.0 (land in-flight code)."
 todos:
+  - id: p1-0-land-inflight
+    content: "Stage 1.0 (NEW): Land the in-flight Phase 1 worktree as the 'Group B' PR described in phase_0_protocol_aware_harness.plan.md Stage 0.0 (10 golden kernels + capabilities.yaml metadata + check_capabilities.py + docs/glossary.md + tests/unit/tools/test-golden-header.sh). One commit per concern; CI green; --strict-metadata default verified in pr-gate."
+    status: pending
   - id: p1-1-design-glossary-relu
-    content: "Stage 1.1: Design the cell metadata schema (allowed values + back-compat policy); write docs/glossary.md covering the standard pyasc/asc2 terminology + the new enum values; decide ReLU scope (recommendation: close as covered-by-pattern via abs.representative_of)."
+    content: "Stage 1.1 [DONE in worktree]: docs/glossary.md (288 lines, \u00a7\u00a71\u20136) present; covers shape vocabulary, memory hierarchy, compute partitioning, reduction vocabulary, tail vocabulary, cell metadata enums. Verify during Stage 1.0 PR review. ReLU scope decision: still owed (no coverage_note on the abs op yet)."
     status: pending
   - id: p1-2-populate-cells
-    content: "Stage 1.2: Populate shape_regime/reduce_axis/output_shape/accumulator_dtype/identity/tail_behavior/padding/partitioning/unsupported_regimes for all 12 cells in capabilities.yaml. Per-cell research where the field is not obvious (rms_norm dispatcher, softmax full-row path, matmul cube alignment, reduce_sum OUT_PAD)."
+    content: "Stage 1.2 [DONE in worktree]: 12/12 cells in capabilities.yaml carry shape_regime, reduce_axis, output_shape, accumulator_dtype, identity, tail_behavior, padding, partitioning, unsupported_regimes. Verify the dispatcher_note on rms_norm and the regime_note on gelu/f32 + softmax/f16 are present during Stage 1.0 PR review."
     status: pending
   - id: p1-3-golden-headers
-    content: "Stage 1.3: Add a non-obvious-constraint header docstring block to every golden/kernels/*.py covering alignment, UB/L1/L0 placement, padding, tail behavior, accumulator dtype, dispatcher choice, and simulator/platform assumptions (per notes 1.5)."
+    content: "Stage 1.3 [DONE in worktree]: 10/10 golden kernels have 'Cell metadata (mirrors capabilities.yaml; do not drift)' + 'Non-obvious constraints (Phase 1.5)' header blocks. test-golden-header.sh enforces shape_regime/tail_behavior/partitioning match against capabilities.yaml."
     status: pending
   - id: p1-4-enforce-checker
-    content: "Stage 1.4: Extend tests/tools/check_capabilities.py to validate the new fields (presence + enum membership + cross-field consistency: reduce_axis null iff op is non-reducing). Start as warning, promote to hard fail once 1.2 lands."
+    content: "Stage 1.4 [DONE in worktree]: check_capabilities.py _check_cell_metadata enforces presence + enum membership + cross-field consistency (reduce_axis<->accumulator_dtype, tail_behavior<->partitioning host_dispatcher, tier<->reduce_axis); --strict-metadata default; --no-strict-metadata escape hatch documented."
     status: pending
   - id: p1-5-verify-noop-nightly
-    content: "Stage 1.5: Re-run pr-gate locally; dispatch one nightly to confirm no regression on the 12 cells (the metadata additions must not change prompts or kernel behavior). Update docs/evaluation-methodology.md with a 'Capability cell metadata schema (Phase 1)' section."
+    content: "Stage 1.5 [DONE in worktree]: docs/evaluation-methodology.md 'Capability cell metadata schema (Phase 1)' section referenced from check_capabilities.py docstring (line 207). Dispatch a nightly post-Stage-1.0 to confirm 12/12 cells stay gen_confirmed (no prompt/behavior regression)."
+    status: pending
+  - id: p1-6-relu-and-test-wiring
+    content: "Stage 1.6 (NEW): Two leftovers from the precision audit. (a) Add the explicit ReLU scope decision as a coverage_note on the abs op + glossary paragraph (currently undocumented despite Stage 1.1 design). (b) Wire tests/unit/tools/test-golden-header.sh into pr-gate so future header/metadata drift hard-fails (today the test exists but no wrapper invokes it)."
     status: pending
 isProject: false
 ---
 
 # Phase 1 — Golden-kernel spec hygiene
 
-Drills into Phase 1 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. Sized at ~5 engineer-days across ~1.5 weeks. All changes are additive and reporting-only: no prompt rewrites (those land in Phase 2), no kernel behavior changes, no schema_version bump.
+Drills into Phase 1 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. As originally planned this was ~5 engineer-days; with the in-flight worktree already covering stages 1.1–1.5, the remaining work fits in ~1 ED (Stage 1.0 land + Stage 1.6 leftovers + Stage 1.5 verification nightly).
+
+## Precision audit (2026-05-22)
+
+A critical review against the live worktree found that stages 1.1–1.5 are implemented but uncommitted. Evidence:
+
+- [docs/glossary.md](../../docs/glossary.md) — 288 lines, sections §1–§6, exists untracked.
+- [capabilities.yaml](../../capabilities.yaml) — every one of the 12 cells has all 9 new metadata fields populated; `python3 tests/tools/check_capabilities.py` passes for all 12 with the default `--strict-metadata`.
+- [golden/kernels/](../../golden/kernels/) — every one of the 10 kernels carries a "Cell metadata (mirrors capabilities.yaml; do not drift)" block and a "Non-obvious constraints (Phase 1.5)" block; [tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh) (untracked) verifies the header ↔ cell mapping and passes.
+- [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) — lines 203–386 implement `_check_cell_metadata` exactly as Stage 1.4 described, with `_ALLOWED_SHAPE_REGIME`, `_ALLOWED_TAIL_BEHAVIOR`, `_ALLOWED_PARTITIONING`, `_KNOWN_UNSUPPORTED_REGIMES`, cross-field rules, and `--strict-metadata` / `--no-strict-metadata` flags. Line 207 already references "Capability cell metadata schema (Phase 1)" in docs/evaluation-methodology.md.
+
+Conclusion: Phase 1's design and code work is complete; what is missing is (a) the commit + PR, (b) the ReLU coverage_note decision (Stage 1.1 noted it but no edit lands in capabilities.yaml or glossary.md), and (c) wiring the new tests into pr-gate.
 
 ## Outcome
 
 After this sprint, every cell in [capabilities.yaml](../../capabilities.yaml) advertises *what it actually claims to prove* — the shape regime, the reduce axis, the accumulator dtype, the tail-handling mechanism, the partitioning strategy, and the regimes that are explicitly out of scope. [docs/glossary.md](../../docs/glossary.md) is the single source of truth for the terminology. Every golden kernel has a non-obvious-constraint header that the agent can read alongside the code. [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) refuses cells with missing or contradictory metadata.
 
-## Stage 1.1 — Design schema + glossary + ReLU scope (~1 ED)
+## Stage 1.0 — Land the in-flight Phase 1 worktree (~0.5 ED) — NEW
 
-Decide and document, do not touch cells yet.
+This is the "Group B" PR referenced from [phase_0_protocol_aware_harness.plan.md](phase_0_protocol_aware_harness.plan.md) Stage 0.0. The exact file list lives there; the shape of the PR is:
+
+1. Commit A — `golden/kernels/*.py` headers (10 files, no behavioral change). CI green via the existing simulator gate.
+2. Commit B — [capabilities.yaml](../../capabilities.yaml) Phase 1 metadata additions for all 12 cells (separate hunk from the `prompt_variants.minimal` additions in Phase 0's Group A).
+3. Commit C — [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) `_check_cell_metadata` + `_check_prompt_variants` + the `--strict-metadata` / `--no-strict-metadata` / `--soft-runtime` flags.
+4. Commit D — [docs/glossary.md](../../docs/glossary.md) + [tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh).
+
+Sequencing matters: commit A and B *must* land before commit C, otherwise `--strict-metadata` (the default) hard-fails the gate on the not-yet-populated cells. The escape hatch is `--no-strict-metadata` during the partial-rollout window — already implemented and documented in the docstring of check_capabilities.py.
+
+PR pre-merge checklist:
+
+```bash
+python3 tests/tools/check_capabilities.py            # default strict; must PASS
+bash tests/unit/tools/test-golden-header.sh           # must PASS
+git diff capabilities.yaml | grep -E 'tail_behavior|partitioning|shape_regime' | head
+```
+
+Acceptance: Phase 1 PR merged; main branch carries every Phase 1 deliverable.
+
+## Stage 1.1 — Design schema + glossary + ReLU scope (~0 ED) — VERIFY ONLY
+
+[DONE in worktree, except ReLU coverage_note]. Verify during Stage 1.0 PR review.
 
 ### Cell metadata schema (additive on `schema_version: "3"`)
 
@@ -292,14 +330,46 @@ Update [docs/evaluation-methodology.md](../../docs/evaluation-methodology.md) wi
 
 Deliverable: one nightly green; the dashboard implicitly gains the new metadata (rendered in Phase 2 / Phase 3 panels).
 
+## Stage 1.6 — Close precision leftovers (~0.25 ED) — NEW
+
+Two items that the original Stage 1.1 + 1.4 plans called for but did not actually land in the worktree.
+
+### 1.6.a — ReLU coverage_note + glossary paragraph
+
+The Stage 1.1 design says: *"Deliverable: a one-line decision note appended to capabilities.yaml under the `abs` operation (`coverage_note: \"relu covered by representative_of from abs\"`) and a paragraph in docs/glossary.md §6."* Neither edit is in the worktree. Add:
+
+- In [capabilities.yaml](../../capabilities.yaml), at the `abs` operation level (sibling of `tier:` and `representative_of:`):
+
+  ```yaml
+  - name: abs
+    tier: elementwise
+    representative_of: [exp, log, sqrt, relu, erf, sin, cos, neg, ceil, floor, rsqrt, tanh]
+    coverage_note: |
+      ReLU is intentionally covered as part of abs.representative_of rather than
+      as its own cell: the generative challenge (single asc2.<op> template
+      substitution) is identical, so a standalone ReLU cell would not
+      surface any new evaluation signal. Revisit if a generative failure
+      shows the model treats relu/abs as semantically distinct.
+  ```
+
+- In [docs/glossary.md](../../docs/glossary.md) §6 (or a new §7 "Coverage policy"), add a short paragraph anchoring the decision and pointing back to the `abs` op.
+
+### 1.6.b — Wire test-golden-header.sh into pr-gate
+
+[tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh) passes against the current worktree but is not invoked by any wrapper. Without that wiring, a stale header (e.g. someone edits the kernel but forgets the docstring) lands with a green pr-gate. Add the invocation to `tests/unit/tools/run-tests.sh` (or the local equivalent the pr-gate calls), alongside the new `test-protocol-derivation.sh` and `test-baseline-agents-md.sh` from Phase 0 Stage 0.8.
+
+Acceptance: pr-gate fails when a Phase 1 metadata field is edited in capabilities.yaml without a matching docstring update; one local synthetic-drift test demonstrates the catch.
+
 ## Definition of done for Phase 1
 
+- Stage 1.0 PR (Group B) landed on the active branch.
 - 12/12 cells in [capabilities.yaml](../../capabilities.yaml) have all 9 new metadata fields populated.
-- [docs/glossary.md](../../docs/glossary.md) covers every term used in the new metadata + the standard pyasc/asc2 vocabulary from notes §2.1.
+- [docs/glossary.md](../../docs/glossary.md) covers every term used in the new metadata + the standard pyasc/asc2 vocabulary.
 - 10/10 goldens in [golden/kernels/](../../golden/kernels/) carry a non-obvious-constraint header that mirrors the cell's metadata.
-- [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) enforces the new contract (`--strict-metadata` on in pr-gate).
+- [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) enforces the new contract (`--strict-metadata` on by default in pr-gate).
+- [tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh) wired into pr-gate (Stage 1.6.b).
+- ReLU scope decision documented as `coverage_note` + glossary paragraph (Stage 1.6.a).
 - One full nightly green: 12/12 cells `gen_confirmed`, no behavior regression.
-- ReLU scope decision documented (`coverage_note` on the `abs` op + glossary paragraph).
 
 ## Risks specific to Phase 1
 

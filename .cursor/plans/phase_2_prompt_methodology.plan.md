@@ -1,12 +1,12 @@
 ---
 name: Phase 2 prompt methodology
-overview: "Concrete sprint plan (~4 engineer-days) for Phase 2 of the quarterly roadmap. Publishes docs/prompt-template.md as the canonical slot order for every capability prompt, rewrites all 12 cells' prompt + prompt_variants.minimal + prompt_variants.guided to read the new Phase 1 metadata fields in one consistent vocabulary, adds an examples_policy field per cell, refreshes the prompt-methodology section of pyasc-codegen-workflow, and runs one nightly to confirm no behavior regression."
+overview: "Concrete sprint plan (~4 engineer-days) for Phase 2 of the quarterly roadmap. Publishes docs/prompt-template.md as the canonical slot order for every capability prompt, audits/rewrites all 12 cells' prompt + prompt_variants.minimal + prompt_variants.guided to follow the template, adds an examples_policy field per cell, refreshes the prompt-methodology section of pyasc-codegen-workflow, and runs one nightly to confirm no behavior regression. Precision-audit revision: Phase 0 already landed prompt_variants.{minimal,guided} on all 12 cells, so Stage 2.2 is an audit-and-rewrite (not write-from-scratch) and the existing minimal prompts are the starting point for the template-conformance pass."
 todos:
   - id: p2-1-prompt-template
     content: "Stage 2.1: Author docs/prompt-template.md defining the 13 required slots (operator semantics, input shapes, output shapes, dtype, layout, axis, tiling constraints, padding/tail behavior, accumulator dtype, numerical tolerance, platform, build/run command, expected evidence artifact); reference Phase 1 docs/glossary.md vocabulary."
     status: pending
   - id: p2-2-rewrite-cells
-    content: "Stage 2.2: Rewrite prompt, prompt_variants.minimal, prompt_variants.guided for all 12 cells in capabilities.yaml to follow the template; cells with workaround content (matmul torch.Tensor note, gelu/f32 Tile-on-left rule, rms_norm dispatcher contract) get re-labeled as oracle-guided per evaluation-methodology.md."
+    content: "Stage 2.2 (REVISED): Audit and rewrite the existing prompt, prompt_variants.minimal, prompt_variants.guided for all 12 cells to follow the template. Cells with workaround content (matmul torch.Tensor note, gelu/f32 Tile-on-left rule, rms_norm dispatcher contract) get re-labeled as oracle-guided per evaluation-methodology.md. The minimal prompts authored during Phase 0 are reviewed for template-conformance (slots 1-4 only); guided prompts are reviewed against all 13 slots."
     status: pending
   - id: p2-3-examples-policy
     content: "Stage 2.3: Add examples_policy field per cell (declares whether agent may see golden_kernels, golden_docs, external_web during the run); validate in check_capabilities.py; default to {golden_kernels: false, golden_docs: false, external_web: false} for every cell."
@@ -19,6 +19,16 @@ todos:
     status: pending
 isProject: false
 ---
+
+## Precision audit revision (2026-05-22)
+
+Phase 0 Stage 0.2 already populated `prompt_variants.{minimal,guided}` for all 12 cells (see [capabilities.yaml](../../capabilities.yaml)). The original Phase 2 plan assumed many of these slots would be written from scratch in Stage 2.2; in reality the work is now **audit-and-rewrite-for-template-conformance**, which is cheaper but requires a different review discipline:
+
+- Read each existing `prompt_variants.minimal` against slots 1–4 of the template (operator semantics, input shapes, output shape, dtype). Today's prompts already obey this in spirit; verify the wording is template-conforming.
+- Read each existing `prompt_variants.guided` against all 13 slots. Identify which slots are present / missing / *informal*. The `matmul/f16` "Reference golden/kernels/matmul_f16.py for the proven pattern" line is oracle-guided content and must be split off; same for `gelu/f32`'s Tile-on-left rule (slot 12 territory) and `rms_norm`'s dispatcher contract (a host-side claim that belongs in a separate slot or the cell's `dispatcher_note`).
+- The existing minimal prompts have been validated as **structurally adequate for P2 measurement** (Stage 0.7's smoke check); the Phase 2 rewrite must not over-augment them or P2 stops being measurable.
+
+Stage 2.2 size estimate remains ~2 ED; the workmix shifts from "write 9 minimal prompts" to "review 24 existing prompts and rewrite where they deviate from the template".
 
 # Phase 2 — Prompt methodology
 

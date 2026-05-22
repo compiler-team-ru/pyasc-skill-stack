@@ -24,6 +24,13 @@ isProject: false
 
 Drills into Phase 7 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. Sized at ~7 engineer-days across ~2 weeks. The rigor layer; lands once Phase 0–6 data shape is stable, otherwise schema churn races the experiments.
 
+## Precision audit revision (2026-05-22)
+
+The Phase 0 worktree already emits a `protocol` block on `schema_version: "3"` evidence (see [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) lines 1139–1151). That means the v3 → v4 cut is **not** "add protocol" — it is "consolidate the additive blocks, retire the v3 top-level aliases, and add the new `model.*` / `agent.harness_version` / `result.*` fields". Two updates to the original plan:
+
+- Stage 7.1's back-compat matrix is partially redundant for `protocol.*`. The collector already populates `protocol.{id,name,prompt_variant,skills_enabled,allowed_context}` when `--protocol-id` is given. Phase 7 just promotes that emission from conditional (only when `--protocol-id` is set) to unconditional, and adds `protocol.skill_set_hash`.
+- Stage 7.2's v4 bump should be paired with a one-cycle dual-emit window where the collector writes both `protocol` (already done) and the existing v3 top-level aliases (`skills_mode`, `model_profile`, `model`, `tokens`, `agent.platform`, `agent.artifacts_found`, `kernel_path`, `score`, `static_verify`, `verification.status`) so that v3-aware readers (today's `compare_skills_value.py` legacy paths) keep parsing. After one quarter, drop the v3 aliases in a v5 cut. The original plan's "preserve every v3 field for one quarter" is the right discipline; this audit only clarifies that *what is already emitted by Phase 0's protocol block does not need to be re-added*.
+
 ## Outcome
 
 After this sprint, every evidence file emitted by [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) carries the full v4 contract documented in [docs/evaluation-methodology.md](../../docs/evaluation-methodology.md) §"Evidence schema v4 (proposed)" — protocol id, model identity, agent harness identity, separated `artifact_found / artifact_accepted / agent_clean_completion / timeout_after_success`, a populated `failure_category` from F1..F13. The aggregator stops needing its heuristic `_classify_failure_mode` because the collector emits the category directly. A process-as-tests integration test enforces the contract that the matrix is testable and reproducible (notes §5).

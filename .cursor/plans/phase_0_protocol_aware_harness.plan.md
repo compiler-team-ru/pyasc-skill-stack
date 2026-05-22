@@ -1,42 +1,109 @@
 ---
 name: Phase 0 protocol-aware harness
-overview: "Concrete sprint plan (~5 engineer-days) for Phase 0 of the quarterly roadmap. Adds a first-class protocol axis (P2/P3/P4/P6) to collect_generative_evidence.py, introduces the AGENTS.md-only project layout, expands the CI nightly matrix from 2 legs to 4, teaches compare_skills_value.py and the dashboard to read per-protocol deltas, and validates everything end-to-end on a single abs/f16 cell."
+overview: "Concrete sprint plan for Phase 0 of the quarterly roadmap. Adds a first-class protocol axis (P2/P3/P4/P6) to collect_generative_evidence.py, the AGENTS.md-only project layout, the 4-leg nightly matrix, and per-protocol aggregator/dashboard views. As of the 2026-05-22 precision audit, the bulk of stages 0.1–0.6 is implemented uncommitted in the worktree (28 modified files, 5 untracked paths) with both unit tests green and check_capabilities strict-mode passing; this revision demotes those stages to commit + audit and adds Stage 0.0 (land in-flight code) and Stage 0.8 (precision-gap closure)."
 todos:
+  - id: p0-0-land-inflight
+    content: "Stage 0.0 (NEW): Land the in-flight Phase 0 worktree (separate the Phase 0 + Phase 1 + unrelated groups, three focused commits, one PR per group). Confirms the protocol-axis code path is reviewable, lint-clean, and tested before any further work."
+    status: pending
   - id: p0-1-design
-    content: "Stage 0.1: Document the protocol-id -> (skills_mode, prompt_variant, agents_md) mapping table + the new evidence filename scheme + additive schema fields. Append a 'Protocol-axis CI mapping (Phase 0)' section to docs/evaluation-methodology.md."
+    content: "Stage 0.1 [DONE in worktree]: docs/evaluation-methodology.md \u00a7'Protocol-axis CI mapping (Phase 0)' at line 528 lays out the P2/P3/P4/P6 mapping, the additive evidence schema, and the filename convention. Audit during Stage 0.0 review."
     status: pending
   - id: p0-2-minimal-variants
-    content: "Stage 0.2: Add prompt_variants.minimal for the 9 cells that lack it (add/f16, reduce_sum/{f16,f32}, gelu/f32, leaky_relu/f16, softmax/f16, matmul/f16, rms_norm/{f16,f32}); update check_capabilities.py to enforce minimal+guided."
+    content: "Stage 0.2 [DONE in worktree]: All 12 cells now have prompt_variants.{minimal,guided}; check_capabilities.py._check_prompt_variants hard-fails on missing. Audit prompts against docs/prompt-template.md once Phase 2 ships."
     status: pending
   - id: p0-3-agents-md-layout
-    content: "Stage 0.3: Vendor docs/baseline/pyasc-fork-AGENTS.md (SHA-pinned); add --agents-md-source flag and AGENTS.md-only third layout to collect_generative_evidence.py.create_test_project; refuse skills_mode=on + agents_md=true."
+    content: "Stage 0.3 [DONE in worktree]: docs/baseline/pyasc-fork-AGENTS.md vendored with SHA pin (sha256 1544c058df24050b5edce6c7a69d0b00809e914b787fb1783e31885883d36cda); collect_generative_evidence has --agents-md-source/--no-agents-md and three-way layout. Add a re-vendoring guard in Stage 0.8."
     status: pending
   - id: p0-4-protocol-id-flag
-    content: "Stage 0.4: Add --protocol-id {P2,P3,P4,P6} to collect_generative_evidence.py; derive skills_mode/prompt_variant/agents_md from it; emit protocol object in evidence; new filename <op>-<dtype>-generative-<profile>-<protocol_id>.json; argparse mismatch validation; unit test for derivation table."
+    content: "Stage 0.4 [DONE in worktree]: --protocol-id wired, PROTOCOL_TABLE + derive_protocol() implemented, tests/unit/tools/test-protocol-derivation.sh passes, filename convention applied. Land + wire test into pr-gate during Stage 0.0."
     status: pending
   - id: p0-5-ci-matrix
-    content: "Stage 0.5: Expand .github/workflows/ci.yml nightly-gate matrix to protocol_id: [P2,P3,P4,P6]; route minimum-pass threshold to P6 only; update artifact paths/names; teach tests/tools/merge_evidence_artifacts.sh about evidence-cloud-P* artifacts; leave local-stability-gate untouched."
+    content: "Stage 0.5 [DONE in worktree]: .github/workflows/ci.yml nightly-gate matrix expanded to protocol_id: [P2,P3,P4,P6]; minimum-pass threshold gated to P6; per-protocol artifact upload; merge_evidence_artifacts.sh updated. Validate end-to-end via Stage 0.7."
     status: pending
   - id: p0-6-aggregator-dashboard
-    content: "Stage 0.6: Extend compare_skills_value.py to group by (profile, protocol_id) and emit by_protocol/deltas_pp; sync_capabilities.py treats P6 (or legacy) as authoritative; generate_dashboard.py adds 'Skill stack value decomposition' panel; smoke test gains a P2+P3+P4+P6 fixture."
+    content: "Stage 0.6 [DONE in worktree]: compare_skills_value.py parses *-p2/p3/p4/p6 filenames + legacy fallback (_LEGACY_MODE_TO_PROTOCOL), generate_dashboard.py + sync_capabilities.py + skills_value_smoke.py modified. Confirm by_protocol/deltas_pp emit correctly on a real run during Stage 0.7."
     status: pending
   - id: p0-7-min-experiment
-    content: "Stage 0.7: Run the 4-leg matrix on abs/f16 locally; check 4 evidence files exist with valid protocol.id and no infra_fail; verify aggregator emits by_protocol + deltas_pp; push branch and workflow_dispatch nightly to scale to 12 cells."
+    content: "Stage 0.7: Run the 4-leg matrix on abs/f16 locally with the now-landed code; check 4 evidence files exist with valid protocol.id and no infra_fail; verify aggregator emits by_protocol + deltas_pp; push branch and workflow_dispatch nightly to scale to 12 cells. PRECONDITION: Stage 0.0 must have landed first."
+    status: pending
+  - id: p0-8-precision-gaps
+    content: "Stage 0.8 (NEW): Close known precision compromises uncovered during the audit. (a) Wire tests/unit/tools/test-protocol-derivation.sh into pr-gate; (b) add a re-vendoring guard for docs/baseline/pyasc-fork-AGENTS.md (re-compute the SHA on every pr-gate run); (c) tighten OP_SEMANTIC_MARKERS['gelu'] so the marker set encodes the dtype-conditioned form requirement (f16=erf-form, f32=tanh-form) instead of accepting either; (d) backfill evidence/* legacy files with an explicit protocol.id by re-running them so the aggregator does not need to fall back to _LEGACY_MODE_TO_PROTOCOL."
     status: pending
 isProject: false
 ---
 
 # Phase 0 — Protocol-aware harness
 
-Drills into Phase 0 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. Sized at ~5 engineer-days across ~1.5 weeks. All changes are additive: no schema bump, no breaking change to existing aggregator/dashboard contracts.
+Drills into Phase 0 of [pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md](pyasc_skill_stack_quarterly_roadmap_aed2c154.plan.md) and only that phase. As originally planned this was ~5 engineer-days; with the in-flight worktree already covering stages 0.1–0.6, the remaining work fits in ~1.5 ED (Stage 0.0 land + Stage 0.7 first experiment + Stage 0.8 precision closure).
+
+## Precision audit (2026-05-22)
+
+A critical precision review against the live worktree found that stages 0.1–0.6 are already implemented but uncommitted. Evidence:
+
+- [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) lines 62–96 contain `PROTOCOL_TABLE` and `derive_protocol()`; line 924 declares `--protocol-id {P2,P3,P4,P6}`; lines 942–988 enforce all the mismatch validations; line 1139 emits the additive `protocol` block in the evidence.
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml) line 132 holds `protocol_id: ["P2", "P3", "P4", "P6"]` and lines 161–281 wire the per-protocol leg, artifact upload, and lowercase id.
+- [tests/tools/compare_skills_value.py](../../tests/tools/compare_skills_value.py) lines 65–96 parse the protocol-id filenames and apply `_LEGACY_MODE_TO_PROTOCOL` to legacy outputs.
+- [docs/baseline/pyasc-fork-AGENTS.md](../../docs/baseline/pyasc-fork-AGENTS.md) is vendored (195 lines, SHA pinned in the header).
+- [docs/evaluation-methodology.md](../../docs/evaluation-methodology.md) line 528 ff. is the methodology section the design called for.
+- All 12 cells in [capabilities.yaml](../../capabilities.yaml) have both `prompt_variants.minimal` and `prompt_variants.guided`.
+- [tests/unit/tools/test-protocol-derivation.sh](../../tests/unit/tools/test-protocol-derivation.sh) and [tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh) both pass against the worktree.
+- `python3 tests/tools/check_capabilities.py` passes for all 12 cells with the strict-metadata default.
+
+Conclusion: the design + code path is solid. What is missing is (a) the commit + PR landing, (b) a real 4-leg run, (c) closure of small precision compromises. Stages have been demoted accordingly.
 
 ## Outcome
 
 After this sprint, [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) can drive a generative run for any of the four protocols documented in [docs/evaluation-methodology.md](../../docs/evaluation-methodology.md) §"Generation protocol taxonomy" — P2 (minimal, skills off), P3 (guided, skills off), P4 (guided, AGENTS.md mounted, skills off), P6 (guided, skills on) — and CI exercises all four on `cloud-default` for every capability cell.
 
-## Stage 0.1 — Design: additive schema + filename scheme (~0.5 ED)
+## Stage 0.0 — Land the in-flight Phase 0 worktree (~0.5 ED) — NEW
 
-Decide and document, do not code yet.
+Discovered during the 2026-05-22 precision audit: 28 modified files + 5 untracked paths in the worktree implement most of stages 0.1–0.6 without any commit. The risk of carrying this forward (rebase pain, partial state, no PR review) is higher than the cost of landing it now.
+
+Partition the worktree into three commit groups; land each as its own PR.
+
+**Group A — Phase 0 protocol axis (this sprint):**
+
+- [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py)
+- [tests/tools/compare_skills_value.py](../../tests/tools/compare_skills_value.py)
+- [tests/tools/generate_dashboard.py](../../tests/tools/generate_dashboard.py)
+- [tests/tools/sync_capabilities.py](../../tests/tools/sync_capabilities.py)
+- [tests/tools/skills_value_smoke.py](../../tests/tools/skills_value_smoke.py)
+- [tests/tools/merge_evidence_artifacts.sh](../../tests/tools/merge_evidence_artifacts.sh)
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
+- [docs/evaluation-methodology.md](../../docs/evaluation-methodology.md) (the §"Protocol-axis CI mapping (Phase 0)" section at line 528)
+- [docs/baseline/pyasc-fork-AGENTS.md](../../docs/baseline/pyasc-fork-AGENTS.md) (untracked, vendor it)
+- [tests/unit/tools/test-protocol-derivation.sh](../../tests/unit/tools/test-protocol-derivation.sh) (untracked, add and wire into pr-gate)
+- `capabilities.yaml` rows for `prompt_variants.minimal` only (split this hunk from Group B)
+
+**Group B — Phase 1 spec hygiene (deferred to Phase 1 plan; see [phase_1_spec_hygiene.plan.md](phase_1_spec_hygiene.plan.md) Stage 1.0):**
+
+- All 10 `golden/kernels/*.py` header blocks
+- [capabilities.yaml](../../capabilities.yaml) Phase 1 metadata fields (`shape_regime`, `reduce_axis`, `output_shape`, `accumulator_dtype`, `identity`, `tail_behavior`, `padding`, `partitioning`, `unsupported_regimes`)
+- [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) `_check_cell_metadata` + `_check_prompt_variants` + `--strict-metadata`/`--no-strict-metadata`/`--soft-runtime`
+- [docs/glossary.md](../../docs/glossary.md) (untracked, add)
+- [tests/unit/tools/test-golden-header.sh](../../tests/unit/tools/test-golden-header.sh) (untracked, add)
+
+**Group C — Unrelated platform / setup work (out of Phase 0/1 scope; ship separately or via Phase 8):**
+
+- `.gitignore`, `README.md`, `docker/Dockerfile`, `docker/Dockerfile.overlay`, `docs/cann-setup.md`, `skills/pyasc-env-check/SKILL.md`
+- Deleted files: `docker/pyasc-overlay/asc_changed/language/core/ir_value.py`, `docker/pyasc-overlay/asc_changed/language/core/range.py`, `golden/docs/python-api/language/core.md`
+- Untracked: `docker/pyasc-overlay/asc_C/`, `scripts/install-host-deps.sh`, `docs/manual-review-order.md`, `.cursor/plans/rms_norm_platform_fix_and_gelu_tanh_9c16b5ec.plan.md` (the historical plan record)
+
+Pre-PR gate sequence per group:
+
+```bash
+git add -p <group A files>
+git commit -m "feat(phase-0): protocol-aware harness for P2/P3/P4/P6"
+python3 tests/tools/check_capabilities.py
+bash tests/unit/tools/test-protocol-derivation.sh
+bash tests/unit/tools/run-tests.sh  # if a wrapper exists, otherwise run individuals
+```
+
+Acceptance: each PR is reviewable in isolation, pr-gate green, no straggling worktree state remains for Phase 0/1 files. Group C is *enumerated* here only so it doesn't get accidentally swept into Group A or B; its triage happens in Phase 8 Stage 8.4.
+
+## Stage 0.1 — Design: additive schema + filename scheme (~0 ED) — VERIFY ONLY
+
+This stage was completed in the worktree. Verify during Stage 0.0 PR review.
 
 - Filename scheme:
   - Legacy `evidence/<op>-<dtype>-generative.json` is preserved as a back-compat alias for `cloud-default + P6` (today's primary `on` leg). The aggregator continues to read it.
@@ -181,7 +248,7 @@ Deliverable: aggregator handles both legacy and protocol-id evidence files in on
 
 ## Stage 0.7 — Minimum first experiment: abs/f16 × 4 protocols (~0.5 ED)
 
-End-to-end validation of stages 0.1–0.6 on a single cell before scaling to all 12.
+End-to-end validation of stages 0.1–0.6 on a single cell before scaling to all 12. PRECONDITION: Stage 0.0 must have landed (Group A merged into the active branch) so the harness changes are unambiguously in scope.
 
 Commands (run locally on the host with CANN sourced):
 
@@ -214,15 +281,74 @@ If green: push the feature branch and dispatch the nightly with `tier=nightly` t
 
 If any leg fails the validity check, do not scale — fix the harness for that leg first.
 
+## Stage 0.8 — Close precision compromises (~0.5 ED) — NEW
+
+Four small precision gaps emerged in the audit. They are not blockers for the 4-leg experiment but they should land in the same sprint so Phase 0 is genuinely "done", not "done-ish".
+
+### 0.8.a — Wire the protocol-derivation test into pr-gate
+
+[tests/unit/tools/test-protocol-derivation.sh](../../tests/unit/tools/test-protocol-derivation.sh) exists and passes but is not invoked by any CI job. Without that wiring, future edits to `PROTOCOL_TABLE` can drift silently. Add the script to `tests/unit/tools/run-tests.sh` (or whichever wrapper pr-gate calls). One-line change; deliverable is the wrapper edit + green pr-gate.
+
+### 0.8.b — Re-vendoring guard on docs/baseline/pyasc-fork-AGENTS.md
+
+The vendored baseline has a SHA in its header (`1544c058df24050b5edce6c7a69d0b00809e914b787fb1783e31885883d36cda`). Today nothing verifies that SHA against the file body, so a silent hand-edit would not be caught. Add a small check:
+
+```bash
+# tests/unit/tools/test-baseline-agents-md.sh (new)
+expected=$(grep -E '^\s+sha256:\s+' docs/baseline/pyasc-fork-AGENTS.md | awk '{print $2}')
+got=$(sed -n '/^-->$/,$p' docs/baseline/pyasc-fork-AGENTS.md | tail -n +2 | sha256sum | awk '{print $1}')
+[ "$expected" = "$got" ] || { echo "FAIL: baseline AGENTS.md SHA drift ($expected vs $got)"; exit 1; }
+```
+
+Wire into pr-gate (same wrapper as 0.8.a).
+
+### 0.8.c — Tighten gelu semantic markers (form discriminator)
+
+Today [tests/tools/semantic_markers.py](../../tests/tools/semantic_markers.py) line 21 says:
+
+```python
+"gelu": ["asc2.tanh", "0.044715", "asc2.erf", "gelu"],
+```
+
+With the per-marker check being "any match", a gelu/f32 generation that uses the erf form would pass markers — directly contradicting the gelu/f32 guided prompt which says "do NOT call asc2.erf". The marker check should be dtype-aware so f16 accepts erf form and f32 requires tanh form. Concrete fix:
+
+```python
+OP_SEMANTIC_MARKERS: dict[str, list[str] | dict[str, list[str]]] = {
+    ...
+    "gelu": {
+        "float16": ["asc2.erf", "gelu"],
+        "float32": ["asc2.tanh", "0.044715"],
+    },
+    ...
+}
+```
+
+…with [tests/tools/score_kernel.py](../../tests/tools/score_kernel.py) and [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) consuming `OP_SEMANTIC_MARKERS[op]` via a small helper that resolves `dict | list[str]` against the `dtype`. Add a unit test `tests/unit/tools/test-semantic-markers-gelu-dtype.sh` to lock the discriminator. This also unblocks Phase 2 (it lets the prompt template encode "the markers enforce the form for me").
+
+### 0.8.d — Backfill legacy `evidence/*` files with explicit `protocol.id`
+
+Today 12 legacy `evidence/<op>-<dtype>-generative.json` files exist (no profile / no protocol suffix). The aggregator's `_LEGACY_MODE_TO_PROTOCOL = {"on": "P6", "off": "P3"}` falls back to "treat legacy on as P6" — correct semantics, but a *fallback* still on the read path. Re-run those 12 cells under `--protocol-id P6` once the harness lands, then delete the legacy short-name files. After this, `compare_skills_value._LEGACY_MODE_TO_PROTOCOL` becomes a defensive fallback for archived runs only; the live nightly is fully protocol-tagged.
+
+Acceptance: `evidence/` has no `*-generative.json` files without a profile/protocol suffix; aggregator behavior is unchanged; smoke fixture green.
+
+### 0.8 acceptance
+
+- `tests/unit/tools/run-tests.sh` (or equivalent) invokes `test-protocol-derivation.sh` and `test-baseline-agents-md.sh`; both pass in pr-gate.
+- `OP_SEMANTIC_MARKERS["gelu"]` is dtype-keyed; a kernel using erf-form for f32 now fails `semantic_check`; gelu/f16 + gelu/f32 evidence regenerated.
+- `evidence/*-generative.json` (legacy short name) is empty; every active evidence file carries `protocol.id`.
+
 ## Definition of done for Phase 0
 
-- `--protocol-id` flag merged in [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) with the derivation table tested.
+- Stage 0.0 PRs landed: Group A (Phase 0 axis) merged into the active branch; Group B held for the Phase 1 plan; Group C explicitly enumerated for Phase 8 triage.
+- `--protocol-id` flag in [tests/tools/collect_generative_evidence.py](../../tests/tools/collect_generative_evidence.py) with the derivation table tested in pr-gate (Stage 0.8.a).
 - All 12 cells in [capabilities.yaml](../../capabilities.yaml) have both `prompt_variants.minimal` and `prompt_variants.guided`; [tests/tools/check_capabilities.py](../../tests/tools/check_capabilities.py) enforces.
-- `docs/baseline/pyasc-fork-AGENTS.md` vendored with a SHA pin.
+- `docs/baseline/pyasc-fork-AGENTS.md` vendored with a SHA pin *and* the SHA verified by a pr-gate test (Stage 0.8.b).
 - CI `nightly-gate` runs 4 legs (P2/P3/P4/P6) for `cloud-default` per dispatch.
 - `evidence/skills-value-summary.json` exposes `by_protocol` and `deltas_pp` for `cloud-default`.
 - Dashboard renders the "Skill stack value decomposition" panel.
 - One full nightly green: 48 evidence files written, no infra_fail, `P6 ≥ 9/12` cells passing (today's `on` baseline).
+- `OP_SEMANTIC_MARKERS['gelu']` is dtype-keyed and gelu/f32 evidence regenerated (Stage 0.8.c).
+- Legacy `evidence/*-generative.json` short names cleared in favour of protocol-tagged files (Stage 0.8.d).
 
 ## Risks specific to Phase 0
 
