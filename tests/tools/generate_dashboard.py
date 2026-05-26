@@ -623,6 +623,22 @@ h1 { font-size: 24px; margin-bottom: 4px; }
   color: var(--fg-muted);
   font-style: italic;
 }
+.protocol-decomp-panel .pdp-ci {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+.protocol-decomp-panel .pdp-methodology-link {
+  margin-left: 8px;
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--link, #4c8cff);
+  text-decoration: none;
+}
+.protocol-decomp-panel .pdp-methodology-link:hover {
+  text-decoration: underline;
+}
 .tier-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1272,6 +1288,8 @@ function renderProtocolDecomp() {
   if (!anyProtocol) return;
   el.classList.add("has-data");
 
+  var methodologyHref = "https://github.com/aloschilov/pyasc-skill-stack/"
+    + "blob/main/docs/evaluation-methodology.md#comparisons-of-interest";
   var html = '<div class="pdp-title">Skill stack value decomposition '
     + svbHelp("Phase 0 protocol-axis breakdown. Each row isolates one "
       + "intervention on the same OpenCode harness/model/budget: P3 "
@@ -1280,14 +1298,18 @@ function renderProtocolDecomp() {
       + "itself. P5 vs P2 (minimal prompt + skills) is deferred to a "
       + "future sprint. See docs/evaluation-methodology.md "
       + "\u00a7\"Protocol-axis CI mapping (Phase 0)\".")
+    + ' <a href="' + methodologyHref + '" class="pdp-methodology-link" '
+    + 'rel="noopener" target="_blank">see methodology \u2192</a>'
     + '</div>'
     + '<div class="pdp-subtitle">Profile <code>' + profile + '</code>. '
     + 'Bars show the marginal effect of each protocol-axis change, '
-    + 'holding all other variables constant.</div>'
+    + 'holding all other variables constant. Pass-rate \u0394 includes '
+    + 'a Newcombe 95% CI (Wilson-based, robust at small samples).</div>'
     + '<table class="pdp-table">'
     + '<thead><tr>'
     + '<th>Comparison</th>'
     + '<th>Pass-rate \u0394 (pp)</th>'
+    + '<th>95% CI</th>'
     + '<th>Tokens \u0394 (%)</th>'
     + '<th>Attempts-to-pass \u0394</th>'
     + '<th>Sample (n_clean / n_cells)</th>'
@@ -1319,15 +1341,22 @@ function renderProtocolDecomp() {
     if (!d) {
       html += '<tr>'
         + '<td><strong>' + meta.label + '</strong></td>'
-        + '<td colspan="3" class="pdp-unavailable">' + sampleHtml + '</td>'
+        + '<td colspan="4" class="pdp-unavailable">' + sampleHtml + '</td>'
         + '<td></td>'
         + '<td>' + meta.caption + '</td>'
         + '</tr>';
       return;
     }
+    var ciHtml = '\u2014';
+    if (d.pass_pp_ci_low != null && d.pass_pp_ci_high != null) {
+      ciHtml = '['
+        + _pdpFmtPp(d.pass_pp_ci_low) + ', '
+        + _pdpFmtPp(d.pass_pp_ci_high) + ']';
+    }
     html += '<tr>'
       + '<td><strong>' + meta.label + '</strong></td>'
       + '<td class="' + _pdpPpClass(d.pass_pp) + '">' + _pdpFmtPp(d.pass_pp) + '</td>'
+      + '<td class="pdp-ci">' + ciHtml + '</td>'
       + '<td>' + _pdpFmtPct(d.tokens_pct) + '</td>'
       + '<td>' + _pdpFmtAttempts(d.attempts_delta) + '</td>'
       + '<td>' + sampleHtml + '</td>'

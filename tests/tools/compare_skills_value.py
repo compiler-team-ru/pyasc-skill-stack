@@ -855,6 +855,41 @@ def _pct_change(a: float | None, b: float | None) -> float | None:
     return round((a - b) / b * 100.0, 1)
 
 
+def _newcombe_ci_pp(
+    passes_a: int, n_a: int, passes_b: int, n_b: int,
+    *, z: float = 1.96,
+) -> tuple[float, float] | None:
+    """Newcombe's method 10 CI for the difference (p_a - p_b), in
+    percentage-points.
+
+    Robust at sample-size extremes (any of p_a=0 / p_a=1 / p_b=0 / p_b=1)
+    where the normal-approximation Wald interval degenerates. The
+    underlying single-proportion intervals use the same Wilson score
+    interval as :func:`_wilson_ci`. Returns ``None`` when either sample
+    is empty.
+
+    Phase 3 Stage 3.5: this CI is the per-delta uncertainty rendered
+    next to ``pass_pp`` in the Skill-stack value decomposition panel.
+    """
+    if n_a <= 0 or n_b <= 0:
+        return None
+    ci_a = _wilson_ci(passes_a, n_a, z=z)
+    ci_b = _wilson_ci(passes_b, n_b, z=z)
+    if ci_a is None or ci_b is None:
+        return None
+    p_a = passes_a / n_a
+    p_b = passes_b / n_b
+    l_a, u_a = ci_a
+    l_b, u_b = ci_b
+    diff = p_a - p_b
+    # Newcombe Method 10 in proportion units (pre-scaled by 100 to pp).
+    lo = diff - math.sqrt((p_a - l_a) ** 2 + (u_b - p_b) ** 2)
+    hi = diff + math.sqrt((u_a - p_a) ** 2 + (p_b - l_b) ** 2)
+    lo = max(-1.0, lo)
+    hi = min(1.0, hi)
+    return (round(lo * 100, 1), round(hi * 100, 1))
+
+
 def aggregate_by_protocol(
     table_by_protocol: dict[tuple[str, str, str, str], dict],
 ) -> dict[str, dict]:
@@ -869,18 +904,27 @@ def aggregate_by_protocol(
     {
       profile: {
         "by_protocol": {
-          "P2": {pass_rate, attempts_to_pass_mean, tokens_mean,
-                 n_cells, n_clean},
+          "P2": {pass_rate, pass_rate_ci_low, pass_rate_ci_high,
+                 attempts_to_pass_mean, tokens_mean, n_cells, n_clean,
+                 pass_count},
           ...
         },
         "deltas_pp": {
-          "P3-P2": {pass_pp, tokens_pct, attempts_delta},
+          "P3-P2": {pass_pp, pass_pp_ci_low, pass_pp_ci_high,
+                    tokens_pct, attempts_delta},
           ...
           "P5-P2": None,  # protocol not yet run
         },
+        "deltas_pp_history": [],  # populated by a multi-night merger
+                                   # (Phase 3 Stage 3.4 follow-up)
       }
     }
     ```
+
+    Phase 3 Stage 3.5 additions are additive (no existing field
+    changes). Old consumers see the same shape; new consumers can read
+    ``pass_rate_ci_{low,high}`` and ``pass_pp_ci_{low,high}`` plus the
+    history stub.
     """
     grouped: dict[tuple[str, str], list[dict]] = {}
     for (op, dtype, profile, protocol_id), metric in table_by_protocol.items():
@@ -910,13 +954,30 @@ def aggregate_by_protocol(
                 round(sum(attempts_vals) / len(attempts_vals), 2)
                 if attempts_vals else None
             )
+            # Phase 3 Stage 3.5: attach Wilson 95% CI to every per-
+            # protocol pass-rate so the dashboard can show uncertainty.
+            ci = _wilson_ci(pass_count, n_cells)
             by_protocol[pid] = {
                 "pass_rate": round(pass_count / n_cells, 3) if n_cells else None,
+                "pass_rate_ci_low":
+                    round(ci[0], 3) if ci is not None else None,
+                "pass_rate_ci_high":
+                    round(ci[1], 3) if ci is not None else None,
+                "pass_count": pass_count,
                 "attempts_to_pass_mean": attempts_mean,
                 "tokens_mean": tokens_mean,
                 "n_cells": n_cells,
                 "n_clean": n_clean,
             }
+
+        # Stash per-protocol pass_count / n_cells for the delta-CI step
+        # so we can call _newcombe_ci_pp without re-iterating metrics.
+        passcounts: dict[str, tuple[int, int]] = {
+            pid: (sum(1 for m in (grouped.get((profile, pid)) or []) if m.get("pass")),
+                  len(grouped.get((profile, pid)) or []))
+            for pid in ("P2", "P3", "P4", "P5", "P6")
+            if grouped.get((profile, pid))
+        }
 
         deltas_pp: dict[str, dict | None] = {}
         for spec in _PROTOCOL_DELTAS:
@@ -938,12 +999,27 @@ def aggregate_by_protocol(
                 and b["attempts_to_pass_mean"] is not None
                 else None
             )
+            ci_pp = None
+            if a_id in passcounts and b_id in passcounts:
+                pa, na = passcounts[a_id]
+                pb, nb = passcounts[b_id]
+                ci_pp = _newcombe_ci_pp(pa, na, pb, nb)
             deltas_pp[spec] = {
                 "pass_pp": pass_pp,
+                "pass_pp_ci_low": ci_pp[0] if ci_pp is not None else None,
+                "pass_pp_ci_high": ci_pp[1] if ci_pp is not None else None,
                 "tokens_pct": tokens_pct,
                 "attempts_delta": attempts_delta,
             }
-        out[profile] = {"by_protocol": by_protocol, "deltas_pp": deltas_pp}
+        out[profile] = {
+            "by_protocol": by_protocol,
+            "deltas_pp": deltas_pp,
+            # Stage 3.4 follow-up: a multi-night merger appends past-night
+            # deltas here (oldest first); the renderer plots a sparkline.
+            # Today we emit an empty list so consumers can detect the
+            # field's presence without crashing.
+            "deltas_pp_history": [],
+        }
     return out
 
 
@@ -1039,18 +1115,21 @@ def main() -> int:
     rows = compute_cell_deltas(table_by_mode)
     by_profile = aggregate_by_profile(rows)
 
-    # Phase 0 protocol-axis decomposition. Merge into each profile's
-    # entry so older readers can ignore the new keys safely. Profiles
-    # with no per-protocol evidence emit empty by_protocol /
-    # all-null deltas_pp dicts (additive contract).
+    # Phase 0 protocol-axis decomposition + Phase 3 Stage 3.5 CIs.
+    # Merge into each profile's entry so older readers can ignore the
+    # new keys safely. Profiles with no per-protocol evidence emit
+    # empty by_protocol / all-null deltas_pp dicts + an empty history
+    # (additive contract).
     protocol_view = aggregate_by_protocol(table_by_protocol)
     for profile, agg in by_profile.items():
         view = protocol_view.get(profile) or {
             "by_protocol": {},
             "deltas_pp": {spec: None for spec in _PROTOCOL_DELTAS},
+            "deltas_pp_history": [],
         }
         agg["by_protocol"] = view["by_protocol"]
         agg["deltas_pp"] = view["deltas_pp"]
+        agg["deltas_pp_history"] = view.get("deltas_pp_history", [])
     # Profiles that exist only in the protocol-axis view (no on/off
     # pair, e.g. a future P2/P4-only profile) still get rendered.
     for profile, view in protocol_view.items():
@@ -1060,6 +1139,7 @@ def main() -> int:
                 "cells_compared": 0,
                 "by_protocol": view["by_protocol"],
                 "deltas_pp": view["deltas_pp"],
+                "deltas_pp_history": view.get("deltas_pp_history", []),
             }
 
     summary = build_summary(

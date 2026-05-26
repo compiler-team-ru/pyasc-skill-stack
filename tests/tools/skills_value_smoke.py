@@ -822,6 +822,37 @@ def smoke_protocol_axis() -> None:
         assert deltas["P5-P2"] is None, deltas["P5-P2"]
         assert deltas["P3-P2"]["tokens_pct"] == 100.0
         assert deltas["P6-P4"]["tokens_pct"] is not None
+
+        # Phase 3 Stage 3.5: every protocol carries a Wilson CI on its
+        # pass-rate; every delta carries a Newcombe CI on its pass_pp.
+        # The empty history stub is present (Stage 3.4 follow-up populates it).
+        for pid in ("P2", "P3", "P4", "P6"):
+            assert "pass_rate_ci_low" in bp[pid], pid
+            assert "pass_rate_ci_high" in bp[pid], pid
+            assert "pass_count" in bp[pid], pid
+            lo = bp[pid]["pass_rate_ci_low"]
+            hi = bp[pid]["pass_rate_ci_high"]
+            assert lo is not None and hi is not None, pid
+            assert 0.0 <= lo <= hi <= 1.0, (pid, lo, hi)
+        # Specific anchors: 0/4 (P2) -> CI ~ [0.0, 0.49], 4/4 (P6) -> ~ [0.51, 1.0]
+        assert bp["P2"]["pass_rate_ci_low"] == 0.0
+        assert 0.40 <= bp["P2"]["pass_rate_ci_high"] <= 0.55
+        assert bp["P6"]["pass_rate_ci_high"] == 1.0
+        assert 0.45 <= bp["P6"]["pass_rate_ci_low"] <= 0.55
+
+        for spec in ("P3-P2", "P4-P3", "P6-P4"):
+            delta = deltas[spec]
+            assert "pass_pp_ci_low" in delta, spec
+            assert "pass_pp_ci_high" in delta, spec
+            assert delta["pass_pp_ci_low"] is not None, spec
+            assert delta["pass_pp_ci_high"] is not None, spec
+            assert (
+                delta["pass_pp_ci_low"] <= delta["pass_pp"] <= delta["pass_pp_ci_high"]
+            ), (spec, delta)
+
+        # Stage 3.4 stub: deltas_pp_history exists as an empty list.
+        assert "deltas_pp_history" in p, list(p.keys())
+        assert p["deltas_pp_history"] == [], p["deltas_pp_history"]
         # Dashboard: regenerate against this synthetic summary and
         # confirm the inlined data carries the new fields. The
         # render-side keys are already asserted by smoke_dashboard_payload.
