@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
-  "date": "2026-05-26T16:05:46Z",
+  "date": "2026-05-26T19:33:03Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
@@ -21,24 +21,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 96231,
-    "output": 6032,
-    "cache_read": 420293,
-    "total": 102263
+    "input": 77363,
+    "output": 5057,
+    "cache_read": 423175,
+    "total": 82420
   },
-  "elapsed_total_s": 300.0,
+  "elapsed_total_s": 240.07,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 300.0,
+      "elapsed_s": 240.07,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 96231,
-        "output": 6032,
-        "cache_read": 420293,
-        "total": 102263,
+        "input": 77363,
+        "output": 5057,
+        "cache_read": 423175,
+        "total": 82420,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -48,8 +48,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -132,7 +135,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 gelu/float16 P6; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P6",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

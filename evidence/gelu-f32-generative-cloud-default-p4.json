@@ -4,133 +4,62 @@
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants outside the @asc2.jit body; use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "kernel.py",
-  "date": "2026-05-26T16:04:12Z",
+  "kernel_path": "",
+  "date": "2026-05-26T19:38:22Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
-    "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "timeout_s": 240,
+    "completed": false,
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
-  "model": "dashscope/glm-5",
+  "model": "glm-5",
   "tokens": {
-    "input": 27119,
-    "output": 1488,
-    "cache_read": 108997,
-    "total": 28607
+    "input": 8325,
+    "output": 220,
+    "cache_read": 31330,
+    "total": 8545
   },
-  "elapsed_total_s": 96.21,
+  "elapsed_total_s": 240.1,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 96.21,
-      "exit": 0,
-      "outcome": "pass",
+      "elapsed_s": 240.1,
+      "exit": 124,
+      "outcome": "fail",
       "tokens": {
-        "input": 27119,
-        "output": 1488,
-        "cache_read": 108997,
-        "total": 28607,
+        "input": 8325,
+        "output": 220,
+        "cache_read": 31330,
+        "total": 8545,
         "cost_usd": 0.0
       },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "model": "glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "static_only",
-    "status": "pass",
+    "status": "fail",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.tanh', '0.044715', 'gelu']",
-    "markers_found": [
-      "asc2.tanh",
-      "0.044715",
-      "gelu"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=1 params, found 2"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.tanh', '0.044715', 'gelu']"
-      }
-    }
+    "accepted": false,
+    "checks": {}
   },
-  "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 gelu/float32 P4; cloud-default; dashscope/glm-5",
+  "static_verify": "fail",
+  "notes": "Stage B re-run with simulator (host backend) P4",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

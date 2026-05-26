@@ -4,8 +4,8 @@
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-26T18:01:19Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs/kernel.py",
+  "date": "2026-05-26T18:16:04Z",
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -21,24 +21,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 63465,
-    "output": 4106,
-    "cache_read": 308145,
-    "total": 67571
+    "input": 74730,
+    "output": 5446,
+    "cache_read": 259507,
+    "total": 80176
   },
-  "elapsed_total_s": 240.02,
+  "elapsed_total_s": 240.08,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.02,
+      "elapsed_s": 240.08,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 63465,
-        "output": 4106,
-        "cache_read": 308145,
-        "total": 67571,
+        "input": 74730,
+        "output": 5446,
+        "cache_read": 259507,
+        "total": 80176,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -134,7 +134,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage A.6 smoke: host runtime backend verification",
+  "notes": "Stage B re-run with simulator (host backend) P6",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

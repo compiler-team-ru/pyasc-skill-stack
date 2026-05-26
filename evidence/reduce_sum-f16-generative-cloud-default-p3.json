@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=16 (float16 \u2192 16 elements \u00d7 2 bytes = 32-byte alignment); generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: host_pad (padding=16 element scalar pad). Accumulator: float32 (mixed-precision reduce: accumulate in fp32). Tolerance: atol=2.0, rtol=5e-2 against np.sum(x.astype(np.float32), axis=1) (fp16 reductions accumulate larger error). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T15:55:30Z",
+  "date": "2026-05-26T18:51:04Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,24 +18,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 4806,
-    "output": 1117,
-    "cache_read": 63577,
-    "total": 5923
+    "input": 17156,
+    "output": 1636,
+    "cache_read": 75736,
+    "total": 18792
   },
-  "elapsed_total_s": 68.85,
+  "elapsed_total_s": 67.68,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 68.85,
+      "elapsed_s": 67.68,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 4806,
-        "output": 1117,
-        "cache_read": 63577,
-        "total": 5923,
+        "input": 17156,
+        "output": 1636,
+        "cache_read": 75736,
+        "total": 18792,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -45,8 +45,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -129,7 +132,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 reduce_sum/float16 P3; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P3",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

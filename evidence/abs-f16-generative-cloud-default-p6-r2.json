@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-26T16:42:28Z",
+  "date": "2026-05-26T21:19:33Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
@@ -21,24 +21,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 102695,
-    "output": 5350,
-    "cache_read": 391669,
-    "total": 108045
+    "input": 41133,
+    "output": 5310,
+    "cache_read": 372649,
+    "total": 46443
   },
-  "elapsed_total_s": 300.0,
+  "elapsed_total_s": 240.06,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 300.0,
+      "elapsed_s": 240.06,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 102695,
-        "output": 5350,
-        "cache_read": 391669,
-        "total": 108045,
+        "input": 41133,
+        "output": 5310,
+        "cache_read": 372649,
+        "total": 46443,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -48,8 +48,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -131,7 +134,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.4 \u2014 stability trial #2; abs/float16 P6; cloud-default; dashscope/glm-5",
+  "notes": "Stage C stability trial 2 P6",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

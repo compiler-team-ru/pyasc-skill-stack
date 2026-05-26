@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T15:34:04Z",
+  "date": "2026-05-26T18:05:37Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,24 +18,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 15982,
-    "output": 2039,
-    "cache_read": 87688,
-    "total": 18021
+    "input": 7254,
+    "output": 673,
+    "cache_read": 37548,
+    "total": 7927
   },
-  "elapsed_total_s": 128.61,
+  "elapsed_total_s": 49.52,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 128.61,
+      "elapsed_s": 49.52,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 15982,
-        "output": 2039,
-        "cache_read": 87688,
-        "total": 18021,
+        "input": 7254,
+        "output": 673,
+        "cache_read": 37548,
+        "total": 7927,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -45,8 +45,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a1.9xepwt1g/kernel.py\", line 5, in <module>\n    class Model:\n  File \"/tmp/gen-abs-float16-a1.9xepwt1g/kernel.py\", line 9, in Model\n    def __call__(self, x: asc2.Tensor):\n                          ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -57,7 +60,7 @@
     ]
   },
   "score": {
-    "value": 10.0,
+    "value": 9.0,
     "threshold": 12,
     "accepted": false,
     "checks": {
@@ -86,8 +89,8 @@
         "detail": "no range call in kernel"
       },
       "verification": {
-        "passed": true,
-        "detail": "verification call present"
+        "passed": false,
+        "detail": "no allclose/assert_close call"
       },
       "launch_pattern": {
         "passed": false,
@@ -115,7 +118,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "detail": "verify x0, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -128,7 +131,7 @@
     }
   },
   "static_verify": "fail",
-  "notes": "Phase 0 DoD item (d): abs/f16 \\xc3\\x97 4-protocol evidence; local cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P3",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

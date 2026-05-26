@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T16:04:00Z",
+  "date": "2026-05-26T19:26:23Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,35 +18,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 39596,
-    "output": 1790,
-    "cache_read": 192293,
-    "total": 41386
+    "input": 27878,
+    "output": 1485,
+    "cache_read": 117220,
+    "total": 29363
   },
-  "elapsed_total_s": 233.84,
+  "elapsed_total_s": 79.16,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 233.84,
+      "elapsed_s": 79.16,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 39596,
-        "output": 1790,
-        "cache_read": 192293,
-        "total": 41386,
+        "input": 27878,
+        "output": 1485,
+        "cache_read": 117220,
+        "total": 29363,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "pass",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Timeout after 330s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -129,7 +132,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 gelu/float16 P4; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P4",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

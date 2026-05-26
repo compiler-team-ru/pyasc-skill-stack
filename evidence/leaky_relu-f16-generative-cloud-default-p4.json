@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T16:07:28Z",
+  "date": "2026-05-26T19:57:00Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,35 +18,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 24701,
-    "output": 1293,
-    "cache_read": 94859,
-    "total": 25994
+    "input": 7756,
+    "output": 1152,
+    "cache_read": 90507,
+    "total": 8908
   },
-  "elapsed_total_s": 106.84,
+  "elapsed_total_s": 81.77,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 106.84,
+      "elapsed_s": 81.77,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 24701,
-        "output": 1293,
-        "cache_read": 94859,
-        "total": 25994,
+        "input": 7756,
+        "output": 1152,
+        "cache_read": 90507,
+        "total": 8908,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "pass",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Timeout after 330s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -128,7 +131,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 leaky_relu/float16 P4; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P4",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

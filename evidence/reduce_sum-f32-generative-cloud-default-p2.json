@@ -4,62 +4,135 @@
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32.",
-  "kernel_path": "",
-  "date": "2026-05-26T15:54:11Z",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T19:00:20Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
-    "completed": false,
-    "artifacts_found": []
+    "timeout_s": 240,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 74983,
-    "output": 5627,
-    "cache_read": 624069,
-    "total": 80610
+    "input": 27453,
+    "output": 1229,
+    "cache_read": 104321,
+    "total": 28682
   },
-  "elapsed_total_s": 300.0,
+  "elapsed_total_s": 57.07,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 300.0,
-      "exit": 124,
-      "outcome": "fail",
+      "elapsed_s": 57.07,
+      "exit": 0,
+      "outcome": "pass",
       "tokens": {
-        "input": 74983,
-        "output": 5627,
-        "cache_read": 624069,
-        "total": 80610,
+        "input": 27453,
+        "output": 1229,
+        "cache_read": 104321,
+        "total": 28682,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "fail",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "no kernel found",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.reduce_sum', '.sum(']",
+    "markers_found": [
+      "asc2.reduce_sum",
+      ".sum("
+    ]
   },
   "score": {
-    "value": 0.0,
+    "value": 15.0,
     "threshold": 12,
-    "accepted": false,
-    "checks": {}
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.reduce_sum', '.sum(']"
+      }
+    }
   },
-  "static_verify": "fail",
-  "notes": "Phase 3 Stage 3.3 \u2014 reduce_sum/float32 P2; cloud-default; dashscope/glm-5",
+  "static_verify": "pass",
+  "notes": "Stage B re-run with simulator (host backend) P2",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",

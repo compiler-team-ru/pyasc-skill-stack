@@ -4,11 +4,11 @@
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_f16/kernel.py",
-  "date": "2026-05-26T16:15:51Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/softmax_float16/kernel.py",
+  "date": "2026-05-26T20:12:26Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
@@ -21,24 +21,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 89515,
-    "output": 6019,
-    "cache_read": 311091,
-    "total": 95534
+    "input": 61733,
+    "output": 6624,
+    "cache_read": 409898,
+    "total": 68357
   },
-  "elapsed_total_s": 300.0,
+  "elapsed_total_s": 240.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 300.0,
+      "elapsed_s": 240.03,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 89515,
-        "output": 6019,
-        "cache_read": 311091,
-        "total": 95534,
+        "input": 61733,
+        "output": 6624,
+        "cache_read": 409898,
+        "total": 68357,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -48,8 +48,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -132,7 +135,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 softmax/float16 P6; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P6",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

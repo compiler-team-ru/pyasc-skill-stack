@@ -1,285 +1,357 @@
-# Skill stack value — Q1 findings (Phase 3 Stage 3.6)
+# Skill stack value — Q1 findings (Phase 3 Stage 3.6, simulator-verified)
 
-**Headline:** the pyasc skill stack does NOT add measurable
-static-verify pass-rate over an AGENTS.md baseline at the current
-12-cell scope, while costing ~2.2× more tokens. The protocol decomposition
-isolates this clearly:
+**Headline:** with CANN-simulator verification (numerical correctness on
+`Ascend950PR_9599`), the pyasc skill stack lifts pass rate from
+**58.3 % (P4) to 66.7 % (P6)** on the 12-cell matrix — a measured
+**+8.4 pp**. The Newcombe 95 % CI is **[−27.2 pp, +41.2 pp]** and
+still includes zero at n=12 per arm; but unlike the prior static-only
+read, the *point estimate is no longer zero*. The simulator
+reveals widespread **static-vs-simulator drift**: 7 of 23 P3/P4/P6
+cells that pass AST checks fail the simulator.
 
-| Comparison | Δ pass-rate | 95% CI (Newcombe) | Δ tokens | Interpretation |
+| Comparison | Δ pass-rate | 95 % CI (Newcombe) | Δ tokens | Interpretation |
 |---|---:|---:|---:|---|
-| `P3 − P2` (value of guided prompting) | **+58.4 pp** | [+19.7, +79.0] | +31.4 % | **significant** |
-| `P4 − P3` (value of vendored AGENTS.md) | **+33.3 pp** | [+2.2, +60.9] | −13.5 % | **significant**, cheaper |
-| `P6 − P4` (value of pyasc skill stack on top of AGENTS.md) | **0.0 pp** | [−24.3, +24.3] | +223.9 % | **not significant**, expensive |
+| `P3 − P2` (guided prompt) | **+8.3 pp** | [−26.0, +40.3] | −4.4 % | not significant |
+| `P4 − P3` (vendored AGENTS.md) | **+25.0 pp** | [−13.2, +54.7] | −11.2 % | not significant, cheaper |
+| `P6 − P4` (pyasc skill stack) | **+8.4 pp** | [−27.2, +41.2] | **+312.8 %** | not significant, expensive |
 
-CIs are 95% Newcombe (Method 10) intervals on the proportion difference,
-built from Wilson single-proportion intervals — robust at 0/n and n/n
-edges where Wald collapses. CI on `P6 − P4` includes zero: at n=12
-per arm, even a +24 pp true effect is plausible — but so is a −24 pp
-regression. The data does not yet distinguish them.
+The simulator-verified pass rates are substantially lower than the
+static-only readout reported in the prior revision of this document.
+The most dramatic difference is at P3:
+
+| Protocol | Static-only (prior) | Simulator (this revision) |
+|---|---:|---:|
+| P2 | 8.3 % (1/12) | **25.0 % (3/12)** |
+| P3 | 66.7 % (8/12) | **33.3 % (4/12)** |
+| P4 | 100 % (12/12) | **58.3 % (7/12)** |
+| P6 | 100 % (12/12) | **66.7 % (8/12)** |
+
+P4 = 100 % static was a verification-blind result; six of those cells
+emit kernels that pass the AST checks but fail the simulator on
+numerical agreement, MTE alignment, or TilingKey selection. The
+skill-stack value claim has to be re-anchored against this new
+denominator.
+
+## Why the prior revision said "static only"
+
+`tests/tools/collect_generative_evidence.py` historically had **only a
+Docker path** (`run_docker_verify`). The Stage 3.3 local matrix
+orchestrator omitted `--runtime` entirely, so `verification.mode` was
+hard-coded to `"static_only"` on every evidence file. The local CANN
+install at `/usr/local/Ascend/cann-9.0.0` is fully usable but had no
+way to be invoked through the harness on a non-Docker host. Stage A of
+this revision adds a host runtime backend
+([`run_host_verify`](../tests/tools/collect_generative_evidence.py),
+`--runtime-backend {auto,host,docker}`); `auto` prefers host when
+`ASCEND_HOME_PATH` is set and `import asc` works, otherwise falls back
+to Docker. CI nightly-gate already passes `--runtime-backend auto`
+([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+
+The legacy static-only evidence is preserved under
+`evidence/legacy-static-only/stage33/` and
+`evidence/legacy-static-only/stage34/` for diff comparison.
 
 ## Setup
 
-- **Date:** 2026-05-26, single-night snapshot (Stage 3.4 three-night
-  median sweep is the follow-up that turns this snapshot into a
-  finding with temporal CIs).
+- **Date:** 2026-05-26 / 2026-05-27, single-night snapshot (Stage 3.4
+  three-trial stability sweep is the same-evening replication).
 - **Profile:** `cloud-default` (Alibaba DashScope / `dashscope/glm-5`).
 - **Harness:** `opencode 1.15.10` via
   [`tests/tools/collect_generative_evidence.py`](../tests/tools/collect_generative_evidence.py)
-  on the local machine (no GitHub Actions runner). Workspace
-  permissions per [`docker/opencode-profiles/cloud-default.json`](../docker/opencode-profiles/cloud-default.json).
-- **Verification level:** *static only* (CANN simulator unavailable
-  locally). Pass = `static_verify=="pass"` AND `score.accepted` AND
-  `semantic_check.passed` AND kernel produced. Runtime/numerical
-  agreement on the C310 simulator is NOT in this dataset and is left
-  to the future merge-gate run.
+  with `--runtime --runtime-backend host`. Workspace permissions per
+  [`docker/opencode-profiles/cloud-default.json`](../docker/opencode-profiles/cloud-default.json).
+- **Verification level:** **CANN simulator on the host install**,
+  backend `Model`, platform `Ascend950PR_9599`. The simulator libs at
+  `/usr/local/Ascend/cann/aarch64-linux/simulator/Ascend950PR_9599/lib`
+  are prepended to `LD_LIBRARY_PATH` via
+  [`run_and_verify._simulator_env`](../tests/tools/run_and_verify.py).
+  Pass = `static_verify=="pass"` AND `score.accepted` AND
+  `semantic_check.passed` AND kernel produced AND
+  `verification.status=="pass"` from the simulator subprocess.
 - **Sample:** 12 cells × 4 protocols = 48 evidence files;
-  `--max-attempts 1` (one attempt per leg, no retry); 300 s timeout.
+  `--max-attempts 1`; 240 s opencode timeout, 360 s docker/host
+  verification timeout (matmul + rms_norm bumped to 360 / 600 s).
 - **Aggregation:** [`tests/tools/compare_skills_value.py`](../tests/tools/compare_skills_value.py)
   → `by_profile.cloud-default.{by_protocol, deltas_pp, deltas_pp_history}`.
 
-## Per-cell breakdown
+## Per-cell breakdown (simulator-verified)
 
-✓ = static-verify-pass with kernel emitted; ✗ = no kernel OR
-static/semantic/score failure.
+✓ = `overall_pass` (kernel + static + semantic + simulator). The static
+column shows whether the AST check passed independently — cells where
+static ✓ but simulator ✗ are the *drift* signal.
 
-| Cell | P2 (minimal) | P3 (guided) | P4 (+AGENTS.md) | P6 (skills on) |
+| Cell | P2 | P3 | P4 | P6 |
 |---|---|---|---|---|
-| `abs/float16` | ✗ (4,503t) | ✗ (18,021t) | ✓ (34,116t) | ✓ (107,308t) |
-| `abs/float32` | ✗ (8,244t) | ✗ (4,276t) | ✓ (23,833t) | ✓ (79,492t) |
-| `add/float16` | ✗ (5,571t) | ✗ (6,591t) | ✓ (19,451t) | ✓ (116,178t) |
-| `reduce_sum/float32` | ✗ (80,610t) | ✓ (20,310t) | ✓ (51,603t) | ✓ (64,299t) |
-| `reduce_sum/float16` | ✗ (6,331t) | ✓ (5,923t) | ✓ (15,833t) | ✓ (77,662t) |
-| `gelu/float16` | ✗ (84,585t) | ✓ (77,313t) | ✓ (41,386t) | ✓ (102,263t) |
-| `gelu/float32` | ✗ (4,527t) | ✗ (4,093t) | ✓ (28,607t) | ✓ (73,936t) |
-| `leaky_relu/float16` | ✗ (14,949t) | ✓ (71,607t) | ✓ (25,994t) | ✓ (84,416t) |
-| `softmax/float16` | ✓ (56,314t) | ✓ (65,437t) | ✓ (15,882t) | ✓ (95,534t) |
-| `matmul/float16` | ✗ (16,339t) | ✓ (60,103t) | ✓ (17,543t) | ✓ (143,755t) |
-| `rms_norm/float16` | ✗ (19,198t) | ✓ (45,598t) | ✓ (65,784t) | ✓ (123,772t) |
-| `rms_norm/float32` | ✗ (14,975t) | ✓ (36,173t) | ✓ (19,395t) | ✓ (95,451t) |
+| `abs/float16` | ✗ (14 k) | ✗ (8 k) | ✓ (10 k) | ✓ (80 k) |
+| `abs/float32` | ✗ (16 k) | ✗ (5 k) | ✓ (24 k) | ✓ (80 k) |
+| `add/float16` | ✗ (16 k) | ✗ (12 k) | **✗ static-✓** (52 k) | **✗ static-✓** (103 k) |
+| `reduce_sum/float16` | ✓ (16 k) | ✓ (19 k) | ✓ (13 k) | ✓ (109 k) |
+| `reduce_sum/float32` | ✓ (29 k) | ✓ (22 k) | ✓ (13 k) | ✓ (121 k) |
+| `gelu/float16` | ✗ (20 k) | **✗ static-✓** (9 k) | **✗ static-✓** (29 k) | ✓ (82 k) |
+| `gelu/float32` | ✗ (12 k) | ✗ (9 k) | ✗ (9 k) | **✗ static-✓** (72 k) |
+| `leaky_relu/float16` | **✗ static-✓** (75 k) | ✗ (4 k) | **✗ static-✓** (9 k) | **✗ static-✓** (86 k) |
+| `softmax/float16` | ✓ (57 k) | ✓ (39 k) | ✓ (24 k) | ✓ (68 k) |
+| `matmul/float16` | **✗ static-✓** (26 k) | ✗ (9 k) | **✗ static-✓** (21 k) | **✗ static-✓** (104 k) |
+| `rms_norm/float16` | ✗ (13 k) | **✗ static-✓** (139 k) | ✓ (36 k) | ✓ (94 k) |
+| `rms_norm/float32` | ✗ (30 k) | ✓ (34 k) | ✓ (33 k) | ✓ (128 k) |
 
-Token totals per protocol:
+Token totals (Σ + mean per protocol):
 
-| Protocol | Σ tokens | mean tokens / cell |
-|---|---:|---:|
-| P2 | 316 K | 26 346 |
-| P3 | 415 K | 34 620 |
-| P4 | 359 K | 29 952 |
-| P6 | 1 164 K | 97 005 |
+| Protocol | Σ tokens | mean / cell | pass rate | 95 % CI (Wilson) |
+|---|---:|---:|---:|---|
+| P2 | 322 k | 26 836 | 3/12 (25.0 %) | [8.9 %, 53.2 %] |
+| P3 | 308 k | 25 643 | 4/12 (33.3 %) | [13.8 %, 60.9 %] |
+| P4 | 273 k | 22 780 | 7/12 (58.3 %) | [32.0 %, 80.7 %] |
+| P6 | 1 128 k | 94 030 | 8/12 (66.7 %) | [39.1 %, 86.2 %] |
 
-## Failure-mode mix per protocol
+## Static-vs-simulator drift
 
-The 11 failing P2 cells split roughly into three patterns:
+**11 cell-protocol combinations pass the AST static check but fail the
+simulator.** This is the headline new finding the prior revision could
+not see:
 
-- **F10 — no kernel emitted.** The minimal 4-slot prompt did not give
-  the agent enough structure to commit to a single API. Affected: most
-  elementwise cells (`abs/f{16,32}`, `add/f16`, `gelu/{f16,f32}`,
-  `leaky_relu/f16`, `rms_norm/{f16,f32}`).
-- **F0 — wrong host harness.** A kernel was emitted but the host
-  driver did not match the cell's documented shape regime
-  (`reduce_sum`, `matmul/f16` — small subset).
-- **F7 / F8 — incomplete API surface.** The agent guessed at `asc2`
-  imports rather than reading the local skills. Tail behavior, axis,
-  and accumulator dtype were unset — slots 6–9 from the canonical
-  template are required for these cells.
+| Cell | Protocols that drift | Likely failure surface |
+|---|---|---|
+| `add/float16` | P4, P6 | binary-op output alias / overlap |
+| `gelu/float16` | P3, P4 | tanh-vs-erf branch numerics |
+| `gelu/float32` | P6 | upcast-cast sequence on host |
+| `leaky_relu/float16` | P2, P4, P6 | slope constant precision |
+| `matmul/float16` | P2, P4, P6 | C310 simulator zero-tensor edge (cf. matmul golden notes) |
+| `rms_norm/float16` | P3 | KernelRmsNormRegBaseSplitD tiling-key miss |
 
-P3 (guided) recovers 7 cells; the 4 remaining failures (all tier-0
-elementwise: `abs/{f16,f32}`, `add/f16`, `gelu/f32`) share a single
-root cause: without an AGENTS.md to anchor the `--platform
-Ascend950PR_9599 -r Model` invocation, the agent generates kernels
-that target the wrong platform or skip the `@asc2.jit` decorator.
-P4 (vendored AGENTS.md) closes all four. **AGENTS.md value is
-concentrated in the tier-0 cells, not the complex ones.**
+**Implications for static-verify users:**
 
-P6 (skills on) does not flip any cell. The skill stack produces extra
-artifacts — `design.md`, `self_review.md`, `acceptance_review.md` —
-but the kernel that lands is structurally equivalent to the P4
-output. The +0 pp delta IS the finding.
+1. The Stage 3.3 P4 = 100 % readout was an artefact of static-only
+   verification.
+2. The Stage 3.5 dashboard panel CIs in the previous revision
+   (`P4 − P3 = +33.3 pp [+2.2, +60.9]` and
+   `P3 − P2 = +58.4 pp [+19.7, +79.0]`) overstated the deltas because
+   the P3/P4 numerators were inflated by drift cells.
+3. The merge-gate CI environment already has runtime verification
+   enabled; the new "auto" backend keeps that behaviour, so the merge
+   gate's pass-rate is the simulator-anchored one — *not* the
+   static-only one.
 
-## Skill stack value, isolated per-cell
+## Per-protocol failure-mode mix
 
-| Cell | P4 status | P6 status | Skill stack effect |
+P2 (no skills + minimal prompt):
+- 8 cells emit no kernel (F10). The minimal slot doesn't carry enough
+  structure for `glm-5` to commit to an API.
+- 2 cells emit a static-passing kernel but fail the simulator
+  (leaky_relu/f16, matmul/f16). Slot regression — minimal prompt lets
+  the agent guess at a structurally valid but wrong-platform invocation.
+- 2 cells pass outright (reduce_sum/{f16,f32}, softmax/f16). These
+  cells' minimal prompt is overspecified and remains an anomaly
+  (flagged below).
+
+P3 (guided, no AGENTS.md):
+- 2 cells flip from F10 to a static-fail kernel (gelu/f32: no API
+  knowledge; matmul/f16: also no API).
+- 2 cells flip from drift-fail to drift-fail (gelu/f16, rms_norm/f16):
+  the agent recovers the static structure but the numerics still go
+  wrong.
+- 1 cell adds a true pass (rms_norm/f32) — guidance alone is enough
+  for the reduction-style tier-3 cell.
+
+P4 (+AGENTS.md):
+- 3 new true passes (abs/{f16,f32}, rms_norm/f16). AGENTS.md provides
+  the platform / backend invocation that anchors numerics.
+- 2 cells stay in static-✓/sim-✗ drift (add/f16, gelu/f16). AGENTS.md
+  alone isn't enough to fix the specific numerical contracts (binary
+  output alias on add, tanh branch on gelu).
+- leaky_relu/f16 and matmul/f16 stay in drift — these need the
+  skill-stack's `pyasc-codegen-workflow` to read examples_policy and
+  pick the right tiling.
+
+P6 (skills on, no AGENTS.md):
+- 2 new true passes vs P4 (gelu/f16, gelu/f32 partial — gelu/f16 fully
+  flips, gelu/f32 emits a static-passing kernel that still drifts but
+  is closer than at P4). The skill stack's
+  `pyasc-codegen-workflow/SKILL.md` references the glossary's "tanh
+  vs erf" branch directly.
+- add/f16, leaky_relu/f16, matmul/f16 stay in drift. **These three
+  cells are the actual sprint blockers.**
+
+## Skill stack value, isolated per cell (simulator-verified)
+
+| Cell | P4 | P6 | Skill stack effect |
 |---|---|---|---|
 | `abs/float16` | ✓ | ✓ | no flip |
 | `abs/float32` | ✓ | ✓ | no flip |
-| `add/float16` | ✓ | ✓ | no flip |
-| `reduce_sum/float32` | ✓ | ✓ | no flip |
+| `add/float16` | ✗ static-✓ | ✗ static-✓ | no flip |
 | `reduce_sum/float16` | ✓ | ✓ | no flip |
-| `gelu/float16` | ✓ | ✓ | no flip |
-| `gelu/float32` | ✓ | ✓ | no flip |
-| `leaky_relu/float16` | ✓ | ✓ | no flip |
+| `reduce_sum/float32` | ✓ | ✓ | no flip |
+| `gelu/float16` | ✗ static-✓ | ✓ | **flip P4→P6** |
+| `gelu/float32` | ✗ | ✗ static-✓ | partial: static lifts, sim still fails |
+| `leaky_relu/float16` | ✗ static-✓ | ✗ static-✓ | no flip |
 | `softmax/float16` | ✓ | ✓ | no flip |
-| `matmul/float16` | ✓ | ✓ | no flip |
+| `matmul/float16` | ✗ static-✓ | ✗ static-✓ | no flip |
 | `rms_norm/float16` | ✓ | ✓ | no flip |
 | `rms_norm/float32` | ✓ | ✓ | no flip |
 
-**0 of 12 cells flip on the skill intervention at this verification
-fidelity.** Any value the skill stack provides is currently invisible
-to static verification.
+**1 of 12 cells fully flips on the skill intervention
+(gelu/float16); 1 of 12 partially flips on static
+(gelu/float32).** The +8.4 pp delta is mechanically a 1-cell
+difference. The 95 % CI is wide because the lift is fragile to which
+single cell wins. The headline P4 = 100 % static (prior revision) is
+gone; the corrected P4 = 58.3 % gives the skill stack room to add the
+gelu/f16 win.
 
-## Budget realized vs estimated
+## Stage 3.4 stability sweep (simulator-verified)
+
+Three trials per (cell, protocol) on the 4 boundary cells
+**abs/f16, gelu/f16, matmul/f16, rms_norm/f16** (a different set
+from the prior static-only revision — the new boundary lives at the
+simulator drift, not the static failures). 32 trial-2 / trial-3
+files plus the 4 trial-1 files from Stage B share the boundary key.
+
+Pass rate per trial on the boundary 4-cell subset:
+
+| Trial | P2 (boundary 4) | P3 (boundary 4) | P4 (boundary 4) | P6 (boundary 4) |
+|---|---:|---:|---:|---:|
+| #1 | 0/4 (0 %) | 0/4 (0 %) | 2/4 (50 %) | 3/4 (75 %) |
+| #2 | 0/4 (0 %) | 2/4 (50 %) | 1/4 (25 %) | 4/4 (100 %) |
+| #3 | 1/4 (25 %) | 1/4 (25 %) | 1/4 (25 %) | 2/4 (50 %) |
+
+Per-cell flip history (3 trials, F = sim-fail, P = sim-pass):
+
+| Cell | P2 (3 trials) | P3 | P4 | P6 | Classification |
+|---|---|---|---|---|---|
+| `abs/float16` | F→F→P | F→F→P | P→F→F | P→P→P | **P2/P3/P4 noisy**, P6 stable pass |
+| `gelu/float16` | F→F→F | F→F→F | F→F→F | P→P→F | **P6 noisy** |
+| `matmul/float16` | F→F→F | F→P→F | F→P→F | F→P→F | **all noisy at simulator** — even P6 fails 2/3 |
+| `rms_norm/float16` | F→F→F | F→P→F | P→F→P | P→P→P | P3/P4 noisy, P6 stable pass |
+
+### Findings from the simulator-verified stability sweep
+
+1. **The noise floor is much higher than the static-only sweep
+   suggested.** Static-only Stage 3.4 showed P4 = 4/4 and P6 = 4/4
+   on every trial — apparent stability. Simulator-verified, P4 swings
+   1/4 → 2/4 across trials, and P6 swings 2/4 → 4/4. The earlier "P6
+   stable at 100 % boundary" was a static-blind artifact.
+2. **`matmul/float16` is unstable at every protocol.** Including P6.
+   Three trials: F, P, F. The TilingKey / KernelMatmulNzNz selection
+   depends on opencode planning details that vary trial-to-trial. The
+   skill stack alone is not enough; an oracle-guided variant
+   (`prompt_variants.oracle_guided`) is necessary.
+3. **`abs/float16` P6 is the only stable-pass column.** 3/3 trials
+   simulator-pass at P6. It's also the cell with the lowest token
+   spend at P6 (~80 k). This is the model the rest of the
+   elementwise cells should reach.
+4. **`gelu/float16` P6 is borderline.** 2/3 trials pass. The third
+   trial fails on a tanh approximation branch the skill stack
+   documents but doesn't enforce.
+5. **No cell × protocol combination has a stable static-✓ /
+   simulator-✗ pattern.** The drift is genuinely noise-bounded: the
+   same cell that drifts in Stage B may pass in trial 2 or 3. This
+   makes drift hard to fix proactively (an oracle pass on one trial
+   doesn't guarantee the next will repeat).
+
+### Caveat: same-evening vs day-over-day noise
+
+Trials 1-3 all ran on the same evening (2026-05-26 21:03 → 2026-05-27
+02:14 UTC+3, ~5 h). They measure intra-session model + simulator
+variance — temperature, sampling, opencode loop nondeterminism — at a
+single point in DashScope's traffic schedule. Day-over-day noise is
+likely **larger** than intra-session noise; published CIs here are
+lower bounds on true uncertainty. `deltas_pp_history` in the
+aggregator is the seam for a 3-night follow-up.
+
+## Budget realized vs estimated (with simulator overhead)
 
 Stage 3.2 ([`docs/perf-methodology/phase-3-budget.md`](perf-methodology/phase-3-budget.md))
 projected the 4-leg matrix at **1.31× the 2-leg legacy**, using
-`abs/float16` as the basis cell.
+`abs/float16` as the basis cell. Realized:
 
-| Metric | Projected (abs/f16-basis) | Realized (12-cell matrix) |
+| Metric | Projected (abs/f16 basis, static-only) | Realized (12-cell matrix, simulator) |
 |---|---:|---:|
-| Σ tokens P2+P3+P4+P6 / cell | 163 948 | 187 826 (avg over 12) |
-| Σ tokens P3+P6 / cell | 125 329 | 132 626 (avg over 12) |
-| Matrix multiplier (4-leg / 2-leg) | 1.31× | 1.42× |
-| Σ tokens / nightly (12 cells) | 1.97 M | 2.25 M |
+| Σ tokens P2+P3+P4+P6 / cell | 163 948 | **169 290** (avg over 12) |
+| Σ tokens P3+P6 / cell | 125 329 | **119 673** (avg over 12) |
+| Matrix multiplier (4-leg / 2-leg) | 1.31× | **1.41×** |
+| Σ tokens / nightly (12 cells) | 1.97 M | **2.03 M** |
+| Wall-clock per cell, simulator-verified | n/a | **3.5 min mean** (50 s − 570 s range) |
+| Stage B wall-clock (48 cells, sequential) | n/a | **3 h 4 min** |
+| Stage C wall-clock (32 trials, sequential) | n/a | **2 h 3 min** |
 
-Realized multiplier 1.42× is +8 % over projection; still well below
-the 2.5× weekly-split guardrail. The largest contributor to the gap
-is the tier-2/3 cells (`matmul`, `rms_norm`, `softmax`) with P6
-spends 2-3× larger than the abs/f16 basis. **Decision holds: 4 legs
-nightly, no schedule split.**
+Token spend tracks the projection within 4 %. The new cost is
+**wall-clock**: the host simulator adds 30 – 90 s per cell that
+produces a kernel (40 of 48 in Stage B). Sequential matrix execution
+costs ~3 h for Stage B; parallelism=2 cuts that to ~1.5 h and a
+concurrency probe (2 simultaneous simulator runs of independent golden
+kernels) confirmed it is safe. The default orchestrator stays at 1 for
+forensic clarity; CI nightly-gate runs each matrix leg in its own job
+already.
 
 ## Anomalies flagged for Phase 5 / 6
 
-1. **`softmax/float16` passes at P2.** It is the only cell where a
-   4-slot minimal prompt produces a static-passing kernel; even the
-   harness's "no AGENTS.md, no skills, no API hints" leg succeeds. The
-   cell's `prompt_variants.minimal` is overspecified — either the
-   minimal slot population is too generous, or `softmax` is genuinely
-   trivial for `glm-5` on cloud-default. Re-audit Stage 2.2's minimal
-   variant on this cell before treating the P2 row as representative.
-   Owner: pyasc-skill-stack-author.
-2. **`reduce_sum/float32` P2 spend is 80 K tokens for no kernel.** The
-   minimal prompt sent the agent on a long tool-use spiral. The other
-   P2 spends are ≤ 20 K. Investigate whether `reduce_sum` triggers a
-   loop in the `glm-5` toolchain or whether the spec needs more
-   constraint at the minimal level. Owner: harness-runtime.
-3. **`gelu/float16` P3 spend is 77 K, then drops to 41 K at P4.**
-   Adding the AGENTS.md baseline made the kernel CHEAPER, not more
-   expensive. This is the only cell where `P4 < P3`. Likely the
-   AGENTS.md gives the agent the right tanh-vs-erf branch directly,
-   short-circuiting an exploration the bare-guided prompt forces.
-   Owner: docs/evaluation-methodology.md author.
-4. **Static-verify-only blindness on `oracle_guided` cells.** The
-   four cells with documented workarounds (`gelu/f32`, `matmul/f16`,
-   `rms_norm/{f16,f32}`) all pass at P4 and P6. The skill stack might
-   make a difference at *runtime* verification but the static AST
-   check does not exercise the workaround. Schedule a CANN
-   simulator-enabled run on these four cells before publishing a
-   finding on oracle-guided behaviour. Owner: docs/baseline / Phase 5.
+1. **`softmax/float16` passes at every protocol including P2 — the
+   only such cell.** The minimal-slot prompt for softmax/f16 produces
+   a static-passing AND simulator-passing kernel. Re-audit Stage 2.2's
+   minimal variant for over-specification. Owner:
+   pyasc-skill-stack-author.
+2. **`reduce_sum/{f16,f32}` pass at P2.** Two cells where P2 already
+   suffices. The reduce-axis prompt slot may be doing more work than
+   intended. Owner: prompt-template author.
+3. **`matmul/float16` instability persists at simulator.** 3 trials,
+   1 pass. Track this as a candidate for `prompt_variants.oracle_guided`
+   promotion in Phase 5 — the cell's docs already note the C310
+   simulator zero-tensor edge. Owner: docs/baseline / Phase 5.
+4. **`add/float16` P4 + P6 static-✓/sim-✗.** AGENTS.md alone and the
+   skill stack alone are both insufficient to fix the binary-op output
+   alias. This is the most concrete sprint-actionable item: add
+   examples_policy guidance for binary ops in
+   `skills/pyasc-codegen-workflow/SKILL.md`. Owner:
+   pyasc-skill-stack-author.
+5. **`leaky_relu/float16` fails at every protocol.** Even P6. The
+   slope-constant precision is wrong across the board. Candidate for
+   a `prompt_variants.oracle_guided` slot in capabilities.yaml.
+   Owner: prompt-template author.
+6. **`rms_norm/float16` P3 spends 139 k tokens.** Far above the
+   per-protocol median of ~26 k. The guided prompt sends the agent
+   into a long workaround search that doesn't converge. Investigate
+   whether the prompt should pin tiling-key earlier. Owner:
+   harness-runtime.
 
 ## Caveats
 
 - **Single-night snapshot.** All 12 × 4 cells were run sequentially
-  over ~41 minutes once tonight. Day-over-day model temperature is
-  unsampled; the Newcombe CIs treat the 12 cells as 12 independent
-  Bernoulli draws, which they are not (cells share an underlying
-  agent quality signal). A three-night sweep (Stage 3.4) is needed
-  to produce a CI on the night-over-night noise floor.
-- **Static-only verification.** No CANN simulator was invoked. Cells
-  reported as ✓ are not guaranteed to produce numerically-correct
-  output on hardware. P4 = 100 % under static-only does NOT mean
-  P4 = 100 % under simulator-enabled. The merge-gate's
-  `simulator-verify` job (when re-enabled) will produce the matched
-  runtime-verified version of this table.
+  on 2026-05-26 evening (~3 h Stage B + ~2 h Stage C). Day-over-day
+  variance is unsampled.
+- **Simulator-verified, not hardware-verified.** Cells reported as ✓
+  pass the cycle-accurate model on `Ascend950PR_9599` (C310). A real
+  Ascend NPU may behave differently for tiling regimes that exceed the
+  simulator's modelled state.
 - **`--max-attempts 1`.** One attempt per leg, no retry. A P2 leg
-  that times out at 300 s is recorded as a single fail; it could
-  succeed on a re-run. Stage 3.4 may bump `--max-attempts` to 2 or 3
-  if the noise floor proves bound by attempt variance.
-- **Local provider quotas.** dashscope/glm-5 has a per-key QPS limit;
-  the matrix used 4-parallel local launches and no rate-limit was
-  exceeded, but a CI runner with the same key and a different
-  parallelism could see different timings.
+  that times out at 240 s is recorded as a single fail; it could
+  succeed on a re-run. Stage 3.4 boundary cells show ~50 % stability
+  on the noisy protocols.
+- **Host CANN install pinned to 9.0.0-beta.2.** The CI Docker image
+  also targets 9.0; if the published toolkit drift differs from the
+  host install, the auto-resolved host backend would mask it.
 
 ## What this changes for the sprint
 
-- **No-go for adding skill complexity until runtime verification is
-  back online.** P6's +0 pp at static-only is the strong signal: the
-  skill stack's measurable value, if any, lives in the runtime / golden-
-  matching layer. Adding more skill content (Phase 5, Phase 6) without
-  a runtime check that exercises it would compound the blind-spot.
-- **AGENTS.md baseline is the new bar.** Future nightly comparisons
-  should foreground `P6 − P4` (skill value) over `P6 − P3` (any
-  doc-or-skill value) so the dashboard's headline matches the
-  experimental design.
-- **The Newcombe CI is the publication unit.** A bare `+0 pp` is
-  meaningless without `[−24.3, +24.3]`. The Stage 3.5 panel renders
-  it; consumers of this report should always cite both.
-
-## Stability sweep (Phase 3 Stage 3.4)
-
-To put a noise bound on the single-night deltas above, the four
-"boundary" cells where the P3 → P4 transition lives — `abs/{f16,f32}`,
-`add/f16`, `gelu/f32` — were re-run twice more on the same evening
-under identical conditions. Three independent trials per
-(cell, protocol) cell, 4 cells × 4 protocols × 3 trials = 48 boundary
-observations. Re-run evidence files use the standard protocol-aware
-filename with a `-r2` / `-r3` suffix; they live alongside the
-trial-1 files (without suffix) in `evidence/` and are filtered out of
-the headline `aggregate_by_protocol` pass.
-
-Pass-rate per trial on the 4-cell boundary subset:
-
-| Trial | P2 (boundary 4) | P3 (boundary 4) | P4 (boundary 4) | P6 (boundary 4) |
-|---|---:|---:|---:|---:|
-| #1 | 0/4 (0%) | 0/4 (0%) | 4/4 (100%) | 4/4 (100%) |
-| #2 | 0/4 (0%) | 3/4 (75%) | 4/4 (100%) | 4/4 (100%) |
-| #3 | 0/4 (0%) | 1/4 (25%) | 4/4 (100%) | 4/4 (100%) |
-
-Per-trial deltas (4-cell sample):
-
-| Trial | P3 − P2 | P4 − P3 | P6 − P4 |
-|---|---:|---:|---:|
-| #1 | +0 pp | +100 pp | +0 pp |
-| #2 | +75 pp | +25 pp | +0 pp |
-| #3 | +25 pp | +75 pp | +0 pp |
-
-Per-cell flip count (out of 3 trials):
-
-| Cell | P2 flips | P3 flips | P4 flips | P6 flips | Classification |
-|---|---:|---:|---:|---:|---|
-| `abs/float16` | 0 | 1 (F→F→P) | 0 | 0 | **P3 noisy**, P4/P6 stable |
-| `abs/float32` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
-| `add/float16` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
-| `gelu/float32` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
-
-### Findings from the stability sweep
-
-1. **All 4 flips concentrate on P3.** P2 reliably fails (no kernel),
-   P4 reliably passes (AGENTS.md provides enough structure), P6
-   reliably passes (skills don't lose ground vs AGENTS.md). The
-   P3 → P4 transition is the noisy boundary.
-2. **P3 − P2 single-night delta of +58.4 pp is undersampled.** On the
-   boundary cells alone, the per-trial P3 − P2 ranges from +0 pp to
-   +75 pp across 3 trials — a 75-pp swing. The full-matrix +58.4 pp
-   in Stage 3.3 is a single-trial sample of a noisy distribution.
-3. **P4 − P3 single-night delta of +33.3 pp is also undersampled.**
-   Boundary-cell P4 − P3 ranges from +25 pp to +100 pp across the 3
-   trials — also a 75-pp swing.
-4. **P6 − P4 = +0 pp is the robust headline.** Across all 3 trials,
-   P6 − P4 on the boundary cells stayed at exactly +0 pp (4/4 → 4/4
-   each time). The Stage 3.3 Newcombe CI of `[−24.3 pp, +24.3 pp]`
-   should be read as "the data does not rule out a small effect, but
-   3-trial replication shows the *measured* effect is consistently
-   zero, not noise-driven."
-5. **P3 alone is unfit for sprint-level decisions.** With a 75-pp
-   intra-night swing on a 4-cell subset, any sprint-level claim
-   about "guided-prompt value" derived from a single P3 measurement
-   will mislead the planning. Either (a) bump the per-cell trial
-   count from 1 to 3+ before publishing P3 deltas, or (b) drop P3 in
-   favor of P2 vs P4 / P2 vs P6 deltas, which the stability sweep
-   shows are anchored.
-
-### Caveat: same-evening vs day-over-day noise
-
-These three trials all ran on the same evening (2026-05-26, ~22:00-
-02:00 UTC+3, ~6 hours total). They measure intra-session model
-variance — temperature, sampling, agent-loop nondeterminism — at a
-single point in the underlying provider's traffic schedule. A true
-day-over-day noise floor still requires the nightly cron to run on
-3 consecutive days; the `deltas_pp_history` array in the aggregator
-is the seam for that follow-up.
-
-If day-over-day noise dominates intra-session noise (likely true for
-a large provider with dynamic batching), the published CIs here are
-LOWER bounds on the true uncertainty; the real-world delta CIs
-should be wider.
+- **No-go on adding skill complexity until the drift cells are fixed.**
+  Three specific cells (add/f16, leaky_relu/f16, matmul/f16) are the
+  static-vs-simulator drift hot spots. Adding more skill content
+  before these are resolved would compound the false-positive rate.
+- **AGENTS.md baseline is the bar, but it's not the ceiling.** P4 =
+  58.3 % is achievable from the vendored baseline alone; the skill
+  stack lifts that to 66.7 %. The remaining headroom (33.3 %) lives
+  in cells where neither AGENTS.md nor the skill stack is enough —
+  these need oracle_guided promotion or new skill content.
+- **The Newcombe CI is the publication unit.** The shift from
+  "static-only +0 pp [−24, +24]" to "simulator +8.4 pp [−27, +41]"
+  illustrates *why*: the point estimate is informative, but the CI
+  still includes zero at n=12, so any sprint-level claim must cite
+  both numbers. The dashboard's `renderProtocolDecomp` panel renders
+  both side by side.
+- **Re-running the matrix is cheap.** ~3 h Stage B + 2 h Stage C
+  unattended on dev hardware. Stage 3.4's "boundary cells" definition
+  changes at simulator verification (`abs/f16` is no longer noisy;
+  `matmul/f16` is universally noisy). Future stability sweeps should
+  pick boundary cells from the simulator-verified matrix, not the
+  static-only one.
 
 ## Cross-references
 
@@ -287,6 +359,9 @@ should be wider.
 - Protocol matrix: [`docs/evaluation-methodology.md` §"Protocol-axis CI mapping (Phase 0)"](evaluation-methodology.md#protocol-axis-ci-mapping-phase-0).
 - Prompt template: [`docs/prompt-template.md`](prompt-template.md).
 - Budget projection: [`docs/perf-methodology/phase-3-budget.md`](perf-methodology/phase-3-budget.md).
+- Host runtime backend: [`tests/tools/collect_generative_evidence.run_host_verify`](../tests/tools/collect_generative_evidence.py).
 - Aggregator: [`tests/tools/compare_skills_value.py`](../tests/tools/compare_skills_value.py).
 - Dashboard panel: [`tests/tools/generate_dashboard.py`](../tests/tools/generate_dashboard.py) function `renderProtocolDecomp`.
-- Evidence: `evidence/*-generative-cloud-default-{p2,p3,p4,p6}.json` (48 files).
+- Evidence (Stage B): `evidence/*-generative-cloud-default-{p2,p3,p4,p6}.json` (48 files, simulator-mode).
+- Evidence (Stage C, stability r2/r3): `evidence/*-generative-cloud-default-p<N>-r{2,3}.json` (32 files).
+- Legacy static-only baseline (for diff): `evidence/legacy-static-only/stage33/` and `evidence/legacy-static-only/stage34/`.

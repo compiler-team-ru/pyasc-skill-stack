@@ -15,6 +15,13 @@ _site/
 # CI-only generative kernel archive (uploaded as artifact, not committed)
 generative-archive/
 
+# Stage B/C kernel archive — keep kernels + review docs for forensics,
+# but exclude the high-noise duplicates (agent stdout log, copy of
+# AGENTS.md / opencode.json that live in the repo already).
+evidence/runtime-archive/**/agent-output.txt
+evidence/runtime-archive/**/opencode.json
+evidence/runtime-archive/**/AGENTS.md
+
 # Large binary files in Docker overlay (built locally, not tracked).
 # Per-arch subdirectories (x86_64/, aarch64/) keep their host-built .so
 # locally; both are picked up by docker/Dockerfile.overlay at build time.

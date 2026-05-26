@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T15:47:58Z",
+  "date": "2026-05-26T18:31:02Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,24 +18,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 4849,
-    "output": 1742,
-    "cache_read": 40578,
-    "total": 6591
+    "input": 8922,
+    "output": 3113,
+    "cache_read": 168671,
+    "total": 12035
   },
-  "elapsed_total_s": 72.17,
+  "elapsed_total_s": 139.15,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 72.17,
+      "elapsed_s": 139.15,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4849,
-        "output": 1742,
-        "cache_read": 40578,
-        "total": 6591,
+        "input": 8922,
+        "output": 3113,
+        "cache_read": 168671,
+        "total": 12035,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -45,14 +45,18 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "fail",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'float16'\nt recent call last):\n  File \"/tmp/gen-add-float16-a1.dt97eg_b/kernel.py\", line 93, in <module>\n    main()\n  File \"/tmp/gen-add-float16-a1.dt97eg_b/kernel.py\", line 78, in main\n    output = kernel.run(shape)\n             ^^^^^^^^^^^^^^^^^\n  File \"/tmp/gen-add-float16-a1.dt97eg_b/kernel.py\", line 43, in run\n    x_tensor = asc2.tensor((TILE_SIZE,), dtype=asc2.float16, scope=asc2.UB)\n                                               ^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'float16'\n",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['+ y']",
+    "detail": "found ['x + y', '+ y']",
     "markers_found": [
+      "x + y",
       "+ y"
     ]
   },
@@ -123,12 +127,12 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['+ y']"
+        "detail": "found ['x + y', '+ y']"
       }
     }
   },
   "static_verify": "fail",
-  "notes": "Phase 3 Stage 3.3 \u2014 add/float16 P3; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P3",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

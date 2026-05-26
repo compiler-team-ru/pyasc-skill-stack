@@ -4,40 +4,41 @@
   "operation": "rms_norm",
   "dtype": "float32",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float32 (gamma is float32 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; use asc2.reduce_sum for sum_sq accumulation; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (matches dtype). Tolerance: atol=1e-4, rtol=1e-4 for both regimes ((8, 256) and (8, 1055)) against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float32/kernel.py",
-  "date": "2026-05-26T16:26:46Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
+  "date": "2026-05-26T21:07:30Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 360,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 89586,
-    "output": 5865,
-    "cache_read": 276554,
-    "total": 95451
+    "input": 117182,
+    "output": 11241,
+    "cache_read": 456322,
+    "total": 128423
   },
-  "elapsed_total_s": 300.02,
+  "elapsed_total_s": 360.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 300.02,
+      "elapsed_s": 360.03,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 89586,
-        "output": 5865,
-        "cache_read": 276554,
-        "total": 95451,
+        "input": 117182,
+        "output": 11241,
+        "cache_read": 456322,
+        "total": 128423,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -47,8 +48,11 @@
     }
   ],
   "verification": {
-    "mode": "static_only",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
     "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -61,7 +65,7 @@
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -118,8 +122,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -132,7 +136,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 rms_norm/float32 P6; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P6",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

@@ -5,11 +5,11 @@
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T16:16:46Z",
+  "date": "2026-05-26T20:14:35Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
-    "completed": false,
+    "timeout_s": 360,
+    "completed": true,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,52 +18,56 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 56738,
-    "output": 3365,
-    "cache_read": 909083,
-    "total": 60103
+    "input": 7826,
+    "output": 922,
+    "cache_read": 19507,
+    "total": 8748
   },
-  "elapsed_total_s": 300.01,
+  "elapsed_total_s": 47.52,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 300.01,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 47.52,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 56738,
-        "output": 3365,
-        "cache_read": 909083,
-        "total": 60103,
+        "input": 7826,
+        "output": 922,
+        "cache_read": 19507,
+        "total": 8748,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "pass",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Layout'\nt):\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 83, in <module>\n    main()\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 75, in main\n    run_matmul(M, K, N, m_tile, n_tile, k_tile)\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 54, in run_matmul\n    a_device = asc2.tensor(a.shape, dtype=a.dtype, layout=asc2.Layout.contiguous)\n                                                          ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Layout'\n",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['@ ']",
+    "detail": "found ['asc2.matmul', '@ ']",
     "markers_found": [
+      "asc2.matmul",
       "@ "
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 9.0,
     "threshold": 12,
-    "accepted": true,
+    "accepted": false,
     "checks": {
       "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
+        "passed": false,
+        "detail": "missing"
       },
       "no_return_value": {
         "passed": true,
@@ -74,12 +78,12 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
         "passed": false,
@@ -90,12 +94,12 @@
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -103,7 +107,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=3 params, found 3"
+        "detail": "skipped (no --op or op not in arity table)"
       },
       "output_dtype": {
         "passed": true,
@@ -123,12 +127,12 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['@ ']"
+        "detail": "found ['asc2.matmul', '@ ']"
       }
     }
   },
-  "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 matmul/float16 P3; cloud-default; dashscope/glm-5",
+  "static_verify": "fail",
+  "notes": "Stage B re-run with simulator (host backend) P3",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

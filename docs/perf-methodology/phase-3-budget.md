@@ -80,6 +80,37 @@ The +463 K tokens / nightly delta is the price of the protocol-axis
 decomposition. The 4-leg matrix adds two new measurement legs (P2 +
 P4) for ~31 % more spend.
 
+## Realized (post Stage B re-run with simulator)
+
+After Stage A added the host CANN runtime backend
+([`tests/tools/collect_generative_evidence.run_host_verify`](../../tests/tools/collect_generative_evidence.py)),
+Stage B re-ran the full 12-cell × 4-protocol matrix with
+`--runtime --runtime-backend host` on `dashscope/glm-5`. Token spend
+tracked the abs/f16-basis projection within ~4 %; the new realized
+cost is **wall-clock** introduced by the simulator subprocess.
+
+| Metric | Projected (abs/f16-basis) | Realized (12-cell matrix, simulator) | Δ |
+|---|---:|---:|---:|
+| Σ tokens P2+P3+P4+P6 / cell (mean) | 163 948 | 169 290 | +3.3 % |
+| Σ tokens P3+P6 / cell (mean) | 125 329 | 119 673 | −4.5 % |
+| Σ tokens / nightly (12 cells) | 1.97 M | 2.03 M | +3.0 % |
+| Multiplier (4-leg / 2-leg) | 1.31× | 1.41× | +0.10× |
+| Wall-clock, simulator-pass cell | n/a | 200–450 s | new dimension |
+| Wall-clock, no-kernel cell (P2 fail-fast) | n/a | 25–140 s | — |
+| Stage B wall-clock (48 cells, parallelism=1) | n/a | 3 h 4 min | — |
+| Stage C wall-clock (32 stability trials, parallelism=1) | n/a | 2 h 3 min | — |
+
+**Decision still holds: 4 legs nightly, no schedule split.** Token
+multiplier is 1.41× (vs the 2.5× guardrail). The new cost is wall-
+clock: the host simulator adds 30 – 90 s per cell that produces a
+kernel (40 of 48 in Stage B). A 2-cell concurrency probe (two
+independent golden kernels through `run_and_verify --backend Model`
+simultaneously) succeeded cleanly; parallelism=2 would halve the
+Stage B wall-clock to ~1.5 h. The orchestrator defaults to
+parallelism=1 for forensic clarity but the CI nightly-gate already
+parallelizes across protocol-id matrix jobs, so the realized CI
+wall-clock should be even shorter.
+
 ## Decision tree (per the Phase 3 plan)
 
 | Projected multiplier | Decision |

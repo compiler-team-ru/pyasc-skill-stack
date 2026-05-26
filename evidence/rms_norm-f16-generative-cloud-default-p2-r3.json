@@ -1,0 +1,76 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "rms_norm",
+  "dtype": "float16",
+  "prompt": "Operator: RMSNorm (y = x * gamma * rsqrt(mean(x\u00b2) + eps), per row); host-side dispatcher between full_row and split_d kernels. Input shapes: (8, 256) and (8, 1055). Output shape: same_as_input. Dtype: float16.",
+  "kernel_path": "",
+  "date": "2026-05-26T22:57:16Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 360,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 8608,
+    "output": 2432,
+    "cache_read": 60131,
+    "total": 11040
+  },
+  "elapsed_total_s": 78.15,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 78.15,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 8608,
+        "output": 2432,
+        "cache_read": 60131,
+        "total": 11040,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Stage C stability trial 3 P2",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

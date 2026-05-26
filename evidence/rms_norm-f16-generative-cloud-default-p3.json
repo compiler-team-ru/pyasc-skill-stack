@@ -5,11 +5,11 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T16:19:19Z",
+  "date": "2026-05-26T20:35:15Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
-    "completed": true,
+    "timeout_s": 360,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,35 +18,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 42021,
-    "output": 3577,
-    "cache_read": 380053,
-    "total": 45598
+    "input": 130622,
+    "output": 8674,
+    "cache_read": 1263129,
+    "total": 139296
   },
-  "elapsed_total_s": 197.26,
+  "elapsed_total_s": 360.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 197.26,
-      "exit": 0,
-      "outcome": "pass",
+      "elapsed_s": 360.0,
+      "exit": 124,
+      "outcome": "fail",
       "tokens": {
-        "input": 42021,
-        "output": 3577,
-        "cache_read": 380053,
-        "total": 45598,
+        "input": 130622,
+        "output": 8674,
+        "cache_read": 1263129,
+        "total": 139296,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "static_only",
-    "status": "pass",
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: ValueError: float32 cannot be specified for <asc.language.tile.tile.Tile object at 0xffff7bb88a10> which is not PlainValue\n self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:32:17:\n        gamma_fp32 = gamma_tile.to(float32).broadcast_to(1, tile_cols)\n        \n        x_sq = x_fp32 * x_fp32\n        tile_sum_sq = asc2.reduce_sum(x_sq, 1, keep_dims=True)\n                 ^\n        sum_sq = sum_sq + tile_sum_sq\n    \n    mean_sq = sum_sq / float(num_cols)\nValueError: float32 cannot be specified for <asc.language.tile.tile.Tile object at 0xffff7bb88a10> which is not PlainValue\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -59,7 +62,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -120,8 +123,8 @@
         "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
-        "passed": false,
-        "detail": "numeric shape tuples found inside JIT function"
+        "passed": true,
+        "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
         "passed": true,
@@ -130,7 +133,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Phase 3 Stage 3.3 \u2014 rms_norm/float16 P3; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P3",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

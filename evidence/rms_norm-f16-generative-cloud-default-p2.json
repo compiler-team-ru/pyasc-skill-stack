@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm (y = x * gamma * rsqrt(mean(x\u00b2) + eps), per row); host-side dispatcher between full_row and split_d kernels. Input shapes: (8, 256) and (8, 1055). Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-05-26T16:16:29Z",
+  "date": "2026-05-26T20:29:01Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 300,
+    "timeout_s": 360,
     "completed": true,
     "artifacts_found": []
   },
@@ -16,24 +16,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 15355,
-    "output": 3843,
-    "cache_read": 143700,
-    "total": 19198
+    "input": 7228,
+    "output": 5296,
+    "cache_read": 103997,
+    "total": 12524
   },
-  "elapsed_total_s": 127.95,
+  "elapsed_total_s": 139.7,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 127.95,
+      "elapsed_s": 139.7,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 15355,
-        "output": 3843,
-        "cache_read": 143700,
-        "total": 19198,
+        "input": 7228,
+        "output": 5296,
+        "cache_read": 103997,
+        "total": 12524,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -59,7 +59,7 @@
     "checks": {}
   },
   "static_verify": "fail",
-  "notes": "Phase 3 Stage 3.3 \u2014 rms_norm/float16 P2; cloud-default; dashscope/glm-5",
+  "notes": "Stage B re-run with simulator (host backend) P2",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
