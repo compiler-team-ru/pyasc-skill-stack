@@ -1,0 +1,146 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "reduce_sum",
+  "dtype": "float32",
+  "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=8 (float32 \u2192 8 elements \u00d7 4 bytes = 32-byte alignment). Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T15:53:57Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 300,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 17921,
+    "output": 2389,
+    "cache_read": 428322,
+    "total": 20310
+  },
+  "elapsed_total_s": 255.72,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 255.72,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 17921,
+        "output": 2389,
+        "cache_read": 428322,
+        "total": 20310,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "pass",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.reduce_sum', '.sum(']",
+    "markers_found": [
+      "asc2.reduce_sum",
+      ".sum("
+    ]
+  },
+  "score": {
+    "value": 15.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.reduce_sum', '.sum(']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Phase 3 Stage 3.3 \u2014 reduce_sum/float32 P3; cloud-default; dashscope/glm-5",
+  "protocol": {
+    "id": "P3",
+    "name": "opencode-skills-off-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

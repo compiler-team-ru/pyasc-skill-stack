@@ -339,7 +339,29 @@ def load_evidence(
     """
     table_by_mode: dict[tuple[str, str, str, str], dict] = {}
     table_by_protocol: dict[tuple[str, str, str, str], dict] = {}
-    for path in sorted(evidence_dir.glob("*-generative*.json")):
+    # Two-pass iteration so that explicit per-protocol filenames
+    # (``<op>-<dtype>-generative-<profile>-p<n>.json``) always win
+    # over legacy on/off-tagged filenames sharing the same (op, dtype,
+    # profile, inferred protocol_id) key. Without this, a stale
+    # ``<op>-<dtype>-generative.json`` from a pre-Phase-0 nightly
+    # silently overwrites the freshly-collected protocol-axis file.
+    paths = list(evidence_dir.glob("*-generative*.json"))
+
+    def _explicit_protocol_sort_key(p) -> tuple[int, str]:
+        # Files whose leg field is an explicit `p<n>` slot sort LAST,
+        # so their dict assignment overwrites any legacy file that maps
+        # to the same protocol via the on/off → P3/P6 fallback.
+        parsed = _parse_filename(p.name)
+        is_explicit = (
+            bool(parsed) and isinstance(parsed.get("protocol_id"), str)
+            and parsed["protocol_id"].startswith("P")
+            and parsed.get("mode") not in (None,)  # always set
+            and p.name.find("-p" + parsed["protocol_id"][1:].lower() + ".") != -1
+        )
+        return (1 if is_explicit else 0, p.name)
+
+    paths = sorted(paths, key=_explicit_protocol_sort_key)
+    for path in paths:
         parsed = _parse_filename(path.name)
         if parsed is None:
             continue
