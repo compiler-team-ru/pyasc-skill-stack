@@ -30,8 +30,7 @@ operations:
   - floor
   - rsqrt
   - tanh
-  coverage_note: relu covered by representative_of from abs; see docs/glossary.md
-    §7
+  coverage_note: relu covered by representative_of from abs; see docs/glossary.md §7
   cells:
   - dtype: float16
     platform: Ascend950PR_9599
@@ -44,12 +43,17 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    prompt: Help me develop an abs operator that supports float16 data type. The shape
-      is mainly [1,128], [4,2048], [32,4096].
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].
     prompt_variants:
-      minimal: Generate an abs kernel for float16.
-      guided: Generate an abs kernel using asc2.abs() with tiling via asc2.range.
-        Use float16, shapes [1,128], [4,2048], [32,4096].
+      minimal: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only — no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
       - 128
@@ -73,12 +77,17 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    prompt: Help me develop an abs operator that supports float32 data type. The shape
-      is mainly [1,128], [4,2048], [32,4096].
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].
     prompt_variants:
-      minimal: Generate an abs kernel for float32.
-      guided: Generate an abs kernel using asc2.abs() with tiling via asc2.range.
-        Use float32, shapes [1,128], [4,2048], [32,4096].
+      minimal: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32.'
+      guided: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only — no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
       - 128
@@ -108,15 +117,17 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    prompt: Help me develop an add operator that supports float16 data type. The shape
-      is mainly [1,128], [4,2048], [32,4096].
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].
     prompt_variants:
-      minimal: Generate an add (element-wise addition) kernel for float16. Two input
-        tensors x and y, output x+y. Shapes [1,128], [4,2048], [32,4096].
-      guided: Generate an add (element-wise addition) kernel for float16. Two input
-        tensors x and y, output x+y. Use asc2.load/store and asc2.range for tiling.
-        Shapes [1,128], [4,2048], [32,4096]. Generate test data as rng.random(shape,
-        dtype=np.float32).astype(np.float16). Use atol=1e-3, rtol=1e-3.
+      minimal: 'Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
       - 128
@@ -150,17 +161,17 @@ operations:
     - non_last_axis
     - multi_axis_reduction
     - dynamic_num_rows
-    prompt: Help me develop a reduce_sum operator that supports float32 data type.
-      The input shape is [32, 4096], reduce along the last axis to produce shape [32].
-      Each row should be summed independently.
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].
     prompt_variants:
-      minimal: Generate a reduce_sum kernel for float32 with input shape [32, 4096],
-        reducing along the last axis to produce shape [32].
-      guided: Generate a reduce_sum kernel for float32 with shape [32, 4096]. Use
-        asc2.reduce_sum on each row, wrap scalar result with asc2.full([1, OUT_PAD],
-        s, dtype=row.dtype) for 32-byte alignment (OUT_PAD=8 for float32). Use asc2.range
-        for row distribution. Verify with np.testing.assert_allclose(out, expected,
-        atol=1e-2, rtol=1e-3).
+      minimal: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32.'
+      guided: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=8 (float32 → 8 elements × 4 bytes = 32-byte alignment). Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 32
       - 4096
@@ -184,19 +195,17 @@ operations:
     - non_last_axis
     - multi_axis_reduction
     - dynamic_num_rows
-    prompt: Help me develop a reduce_sum operator that supports float16 data type.
-      The input shape is [32, 4096], reduce along the last axis to produce shape [32].
-      Each row should be summed independently. Use OUT_PAD=16 for 32-byte alignment
-      with float16. Use atol=2.0, rtol=5e-2 for verification (float16 reductions accumulate
-      error).
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float16, summing each row of a [32, 4096] tensor along the last axis to produce [32].
     prompt_variants:
-      minimal: Generate a reduce_sum kernel for float16 with input shape [32, 4096],
-        reducing along the last axis to produce shape [32].
-      guided: Generate a reduce_sum kernel for float16 with shape [32, 4096]. Use
-        asc2.reduce_sum on each row, wrap scalar result with asc2.full([1, OUT_PAD],
-        s, dtype=row.dtype) for 32-byte alignment (OUT_PAD=16 for float16). Use asc2.range
-        for row distribution. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).
-        Verify with np.testing.assert_allclose(out_f32, expected_f32, atol=2.0, rtol=5e-2).
+      minimal: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float16.'
+      guided: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=16 (float16 → 16 elements × 2 bytes = 32-byte alignment); generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: host_pad (padding=16 element scalar pad). Accumulator: float32 (mixed-precision reduce: accumulate in fp32). Tolerance: atol=2.0, rtol=5e-2 against np.sum(x.astype(np.float32), axis=1) (fp16 reductions accumulate larger error). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 32
       - 4096
@@ -221,16 +230,17 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    prompt: Help me develop a GELU activation operator that supports float16 data
-      type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))).
-      For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).
     prompt_variants:
-      minimal: Generate a GELU activation kernel for float16.
-      guided: 'Generate a GELU kernel composing asc2.erf, multiplication, and addition:
-        0.5*x*(1+erf(x/sqrt(2))). Use float16, shapes [1,128], [4,2048], [32,4096].
-        Use asc2.load/store and asc2.range for tiling. For host-side verification
-        use: import math; _verf = np.vectorize(math.erf). Do NOT use np.erf or scipy.special.erf.
-        Use atol=5e-2, rtol=5e-2.'
+      minimal: 'Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
       - 128
@@ -254,36 +264,27 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    regime_note: tanh/Padé approximation form; do not use asc2.erf on float32 (simulator
-      erf is too noisy).
-    prompt: 'Help me develop a GELU activation operator (tanh / Padé approximation
-      form) that supports float32 data type. The shape is mainly [1,128], [4,2048],
-      [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh;
-      do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when
-      multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile MUST
-      be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`). The asc2
-      Tile class does not implement __rmul__, so scalar-on-left raises AttributeError
-      at codegen time. Compute sqrt(2/pi) and 0.044715 as Python module-level constants
-      outside the @asc2.jit function. For host-side reference, use np.tanh. Use np.testing.assert_allclose(out,
-      expected, atol=1e-2, rtol=1e-2).'
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    regime_note: tanh/Padé approximation form; do not use asc2.erf on float32 (simulator erf is too noisy).
+    prompt: Help me develop a GELU activation operator (tanh/Padé approximation form) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do not use asc2.erf (simulator erf is too noisy on float32 — this is documented in the cell's regime_note).
     prompt_variants:
-      minimal: Generate a GELU activation kernel for float32. Shapes [1,128], [4,2048],
-        [32,4096].
-      guided: 'Generate a GELU kernel for float32 using the tanh/Padé approximation
-        (PyTorch gelu(approximate=''tanh'')): out = 0.5 * x * (1 + tanh(sqrt(2/pi)
-        * (x + 0.044715 * x^3))). The kernel must use asc2.tanh; do NOT call asc2.erf
-        (simulator erf has up to 4.7 absolute error on float32 and is excluded from
-        this prompt). CRITICAL ordering rule: inside the @asc2.jit body, every scalar-times-tile
-        multiplication MUST place the Tile on the left. Write `x_cubed * 0.044715`,
-        NOT `0.044715 * x_cubed`; write `inner * GELU_K`, NOT `GELU_K * inner`. The
-        asc2 Tile class lacks __rmul__, so scalar-on-left fails at codegen with `AttributeError:
-        ''Tile'' object has no attribute ''__rmul__''`. Use TILE_SIZE=64 (a conservative
-        single-lane width that is the safe default for goldens on C310; wider tiles
-        can hit lowering bugs that only write the first 64 elements). Compute sqrt(2/pi)
-        and 0.044715 as Python module-level constants outside the @asc2.jit function.
-        For host-side reference, use: k = np.sqrt(2.0 / np.pi); expected = 0.5 * x
-        * (1.0 + np.tanh(k * (x + 0.044715 * x**3))). Use np.testing.assert_allclose(out,
-        expected, atol=1e-2, rtol=1e-2). Shapes [1,128], [4,2048], [32,4096].'
+      minimal: 'Operator: GELU activation, tanh/Padé form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32.'
+      guided: 'Operator: GELU activation, tanh/Padé approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants outside the @asc2.jit body; use asc2.tanh (the tanh/Padé form of GELU is the correctness specification at this cell — asc2.erf is excluded from this cell''s correctness spec, see the cell''s regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: GELU activation, tanh/Padé approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants outside the @asc2.jit body; use asc2.tanh (the tanh/Padé form of GELU is the correctness specification at this cell — asc2.erf is excluded from this cell''s correctness spec, see the cell''s regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: Inside @asc2.jit, every scalar-times-tile multiplication MUST place the Tile on the LEFT: write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`; write `inner * GELU_K`, NOT `GELU_K * inner`. The asc2 Tile class lacks `__rmul__`, so scalar-on-left raises `AttributeError: ''Tile'' object has no attribute ''__rmul__''` at codegen time. Also pin TILE_SIZE=64 (a conservative single-lane width that is the safe default for goldens on C310; wider tiles can hit a lowering bug that writes only the first 64 elements).'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
     shapes:
     - - 1
       - 128
@@ -312,15 +313,17 @@ operations:
     padding: null
     partitioning: tile_per_core
     unsupported_regimes: []
-    prompt: Help me develop a leaky_relu operator that supports float16 data type
-      with alpha=0.01. The shape is mainly [1,128], [4,2048], [32,4096].
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a leaky_relu operator on Ascend950PR_9599 (C310) for float16 with alpha=0.01 and shapes [1,128], [4,2048], [32,4096].
     prompt_variants:
-      minimal: Generate a leaky_relu kernel for float16 with alpha=0.01. Shapes [1,128],
-        [4,2048], [32,4096].
-      guided: Generate a leaky_relu kernel for float16 with alpha=0.01. Use asc2.where(x
-        >= 0, x, x * alpha) for the kernel op. Shapes [1,128], [4,2048], [32,4096].
-        Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).
-        Use atol=1e-3, rtol=1e-3.
+      minimal: 'Operator: leaky_relu with alpha=0.01 (out = x if x >= 0 else alpha * x). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
       - 128
@@ -351,23 +354,18 @@ operations:
     unsupported_regimes:
     - split_row
     - long_rows_exceeding_UB
-    regime_note: 'Full-row path only: row fits in UB and asc2.softmax handles the
-      full row in one call. Split-row is a separate capability cell, deferred to
-      Phase 5/8.'
-    prompt: Help me develop a softmax operator that supports float16 data type. Test
-      with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is
-      slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2,
-      rtol=5e-2 for verification.
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    regime_note: 'Full-row path only: row fits in UB and asc2.softmax handles the full row in one call. Split-row is a separate capability cell, deferred to Phase 5/8.'
+    prompt: Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell — see unsupported_regimes.
     prompt_variants:
-      minimal: Generate a softmax kernel for float16 with shape [32, 4096], applied
-        along the last axis so each row sums to 1.
-      guided: 'Generate a softmax kernel for float16, shape [32, 4096] ONLY. Use asc2.softmax()
-        on a block of full rows. Distribute rows across cores: block_size = ceildiv(num_rows,
-        CORE_NUM), start_row = block_idx * block_size. Do NOT test additional shapes.
-        For reference, compute numpy softmax: shifted = x - x.max(axis=1, keepdims=True);
-        e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True). Do NOT use
-        scipy. Verify: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32),
-        atol=5e-2, rtol=5e-2). Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16).'
+      minimal: 'Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1). Input shapes: [32, 4096] (full-row regime only). Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes — split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 32
       - 4096
@@ -379,10 +377,7 @@ operations:
 - name: matmul
   tier: advanced
   asc2_api: asc2.matmul(a, b) or `a @ b`
-  note: Matmul uses the cube unit and requires the Ascend950PR_9599 simulator. Inputs
-    must be torch.Tensor (numpy arrays produce zeros on the simulator). Result tile
-    dtype is always float32 (cube accumulator). Load A to L0A and B to L0B before
-    computing.
+  note: Matmul uses the cube unit and requires the Ascend950PR_9599 simulator. Inputs must be torch.Tensor (numpy arrays produce zeros on the simulator). Result tile dtype is always float32 (cube accumulator). Load A to L0A and B to L0B before computing.
   cells:
   - dtype: float16
     platform: Ascend950PR_9599
@@ -402,30 +397,26 @@ operations:
     - bl1_full
     - al1_full
     - abl1_full
-    prompt: Help me develop a tiled matrix multiplication operator (asc2 API) for
-      float16 inputs producing float32 output. Use small fixed shapes such as M=K=N=16
-      or (M=32, K=16, N=32). The kernel must use torch.Tensor (NOT numpy) for host-side
-      data and torch.testing.assert_close for verification. Load A to asc2.TileLocation.L0A
-      and B to asc2.TileLocation.L0B, then use `a @ b` (or asc2.matmul) and asc2.store
-      the float32 result. Target the Ascend950PR_9599 simulator (pass -v Ascend950PR_9599).
-      Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2) where
-      c_ref = a.to(torch.float32) @ b.to(torch.float32).
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.
     prompt_variants:
-      minimal: Generate a matrix multiplication kernel for float16 inputs producing
-        float32 output. Shapes M=K=N=16 and (M=32, K=16, N=32).
-      guided: 'Generate a tiled matmul kernel for float16 inputs (float32 output)
-        using the asc2 API. Reference golden/kernels/matmul_f16.py for the proven
-        pattern. Requirements: (1) Use torch.Tensor for host inputs (a, b dtype=torch.float16)
-        and a torch.float32 zero-initialized output buffer c. The simulator silently
-        produces zeros for matmul with numpy arrays, so torch is mandatory. (2) Inside
-        @asc2.jit: asc2.tensor for a/b/c, asc2.load with location=asc2.TileLocation.L0A
-        for the left operand and L0B for the right operand, then `a_tile @ b_tile`,
-        then asc2.store the float32 result. (3) Use small shapes that fit L0A/L0B
-        (each ≤ 64 KiB): start with m=k=n=16, core_num=1, m_tile=n_tile=16. Tile sizes
-        must be multiples of 16. (4) Set platform="Ascend950PR_9599" in argparse default.
-        matmul requires the cube unit on Ascend950PR_9599 (the only CI platform).
-        (5) Verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)
-        where c_ref = a.to(torch.float32) @ b.to(torch.float32).'
+      minimal: 'Operator: matrix multiplication c = a @ b (float16 inputs, float32 output). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output.'
+      guided: 'Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each ≤ 64 KiB) — start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only — shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each ≤ 64 KiB) — start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only — shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: Reference golden/kernels/matmul_f16.py as the proven pattern. The golden encodes the precise asc2.load placement (L0A / L0B), the zero-initialization of the float32 output buffer, the argparse defaults (platform="Ascend950PR_9599", core_num=1, m=k=n=16), and the exact torch.testing.assert_close invocation needed for the C310 cube path. Cells producing a kernel that diverges from the golden''s structural choices have historically failed verification.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: true
+          golden_docs: false
+          external_web: false
+          human_hints: true
     shapes:
     - - 16
       - 16
@@ -444,14 +435,7 @@ operations:
 - name: rms_norm
   tier: advanced
   asc2_api: two-kernel + host dispatcher (full_row, split_d)
-  note: C310 (Ascend950PR_9599) host-side dispatch between full_row and split_d kernels,
-    mirroring CANN KernelRmsNormRegBase (tiling key 5000) and KernelRmsNormRegBaseSplitD
-    (tiling key 2001) in opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp.
-    Inputs are torch.Tensor (numpy is silently zeroed on the C310 simulator path).
-    The dispatcher picks full_row when num_cols * dtype_bytes fits a conservative
-    UB budget (and num_cols % 8 == 0), otherwise streams along D in tile_cols=64 tiles
-    with host-side zero padding. Both shape regimes are exercised in a single verification
-    call.
+  note: C310 (Ascend950PR_9599) host-side dispatch between full_row and split_d kernels, mirroring CANN KernelRmsNormRegBase (tiling key 5000) and KernelRmsNormRegBaseSplitD (tiling key 2001) in opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp. Inputs are torch.Tensor (numpy is silently zeroed on the C310 simulator path). The dispatcher picks full_row when num_cols * dtype_bytes fits a conservative UB budget (and num_cols % 8 == 0), otherwise streams along D in tile_cols=64 tiles with host-side zero padding. Both shape regimes are exercised in a single verification call.
   cells:
   - dtype: float16
     platform: Ascend950PR_9599
@@ -466,32 +450,27 @@ operations:
     unsupported_regimes:
     - dynamic_num_cols_not_8_aligned_in_full_row
     - num_cols_below_split_d_tile_threshold
-    dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row when num_cols *
-      dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d.
-    prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
-      must utilize all available AI Cores by processing the data along the first or
-      last dimension.
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d.
+    prompt: 'Create an RMSNorm capability for float16 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).'
     prompt_variants:
-      minimal: Generate an RMSNorm kernel for float16. Apply RMS normalization with
-        a learnable gamma vector and an epsilon. Shapes (8, 256) and (8, 1055).
-      guided: 'CRITICAL PLATFORM REQUIREMENT: this kernel runs on C310 (Ascend950PR_9599);
-        all kernel inputs and outputs MUST be torch.Tensor — numpy buffers are silently
-        zeroed by the C310 simulator path and will surface as `0., 0., 0.` tail bands
-        in any downstream comparison. Build an asc2 RMSNorm capability for float16
-        on C310. Provide TWO @asc2.jit kernels mirroring CANN arch35: a full_row kernel
-        (KernelRmsNormRegBase analogue) where num_cols is asc.ConstExpr[int] and the
-        row tile fits in UB, and a split_d kernel (KernelRmsNormRegBaseSplitD analogue)
-        where both num_rows and num_cols are runtime int and the kernel streams along
-        D in tile_cols=64 tiles with host-side zero padding. Both kernels distribute
-        rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`.
-        Cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq
-        via asc2.reduce_sum; cast back via `.to(x.dtype)` before asc2.store. Seed
-        sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1,
-        tile_cols], 0.0, dtype=asc.float32))`. Provide a host-side dispatcher rms_norm_launch(x,
-        gamma, eps) that picks full_row when num_cols * dtype_bytes <= 64KB and num_cols
-        % 8 == 0, otherwise split_d. Verify both regimes in one run with atol=2e-2,
-        rtol=2e-2 (full_row, shape (8, 256)) and atol=5e-2, rtol=5e-2 (split_d, shape
-        (8, 1055)) against a torch reference.'
+      minimal: 'Operator: RMSNorm (y = x * gamma * rsqrt(mean(x²) + eps), per row); host-side dispatcher between full_row and split_d kernels. Input shapes: (8, 256) and (8, 1055). Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: RMSNorm: y = x * gamma * rsqrt(mean(x², axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher — provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher — full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor — numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: RMSNorm: y = x * gamma * rsqrt(mean(x², axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher — provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher — full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor — numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: The two kernels mirror the CANN arch35 reference: the full_row kernel corresponds to KernelRmsNormRegBase (tiling key 5000) and the split_d kernel corresponds to KernelRmsNormRegBaseSplitD (tiling key 2001) in opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp. Tracking the upstream names makes it easier to lift further optimizations from the C++ reference when needed.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: true
+          human_hints: true
     shapes:
     - - 8
       - 256
@@ -519,30 +498,27 @@ operations:
     unsupported_regimes:
     - dynamic_num_cols_not_8_aligned_in_full_row
     - num_cols_below_split_d_tile_threshold
-    dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row when num_cols *
-      dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d.
-    prompt: Create an RMSNorm kernel capable of handling dynamic string lengths. It
-      must utilize all available AI Cores by processing the data along the first or
-      last dimension. Use float32 inputs.
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0, otherwise split_d.
+    prompt: 'Create an RMSNorm capability for float32 on Ascend950PR_9599 (C310) that handles dynamic string lengths via a host-side dispatcher: a full_row kernel for short aligned rows and a split_d kernel that streams along D for everything else. Shapes (8, 256) and (8, 1055).'
     prompt_variants:
-      minimal: Generate an RMSNorm kernel for float32. Apply RMS normalization with
-        a learnable gamma vector and an epsilon. Shapes (8, 256) and (8, 1055).
-      guided: 'CRITICAL PLATFORM REQUIREMENT: this kernel runs on C310 (Ascend950PR_9599);
-        all kernel inputs and outputs MUST be torch.Tensor — numpy buffers are silently
-        zeroed by the C310 simulator path and will surface as `0., 0., 0.` tail bands
-        in any downstream comparison. Build an asc2 RMSNorm capability for float32
-        on C310. Provide TWO @asc2.jit kernels mirroring CANN arch35: a full_row kernel
-        (KernelRmsNormRegBase analogue) where num_cols is asc.ConstExpr[int] and the
-        row tile fits in UB, and a split_d kernel (KernelRmsNormRegBaseSplitD analogue)
-        where both num_rows and num_cols are runtime int and the kernel streams along
-        D in tile_cols=64 tiles with host-side zero padding. Both kernels distribute
-        rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`.
-        Use asc2.reduce_sum for sum_sq accumulation. Seed sum_sq in split_d with a
-        PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0,
-        dtype=asc.float32))`. Provide a host-side dispatcher rms_norm_launch(x, gamma,
-        eps) that picks full_row when num_cols * dtype_bytes <= 64KB and num_cols
-        % 8 == 0, otherwise split_d. Verify both regimes in one run with atol=1e-4,
-        rtol=1e-4 against a torch reference at shapes (8, 256) and (8, 1055).'
+      minimal: 'Operator: RMSNorm (y = x * gamma * rsqrt(mean(x²) + eps), per row); host-side dispatcher between full_row and split_d kernels. Input shapes: (8, 256) and (8, 1055). Output shape: same_as_input. Dtype: float32.'
+      guided: 'Operator: RMSNorm: y = x * gamma * rsqrt(mean(x², axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float32 (gamma is float32 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher — provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; use asc2.reduce_sum for sum_sq accumulation; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher — full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (matches dtype). Tolerance: atol=1e-4, rtol=1e-4 for both regimes ((8, 256) and (8, 1055)) against a torch reference; host inputs MUST be torch.Tensor — numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: RMSNorm: y = x * gamma * rsqrt(mean(x², axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float32 (gamma is float32 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher — provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; use asc2.reduce_sum for sum_sq accumulation; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher — full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (matches dtype). Tolerance: atol=1e-4, rtol=1e-4 for both regimes ((8, 256) and (8, 1055)) against a torch reference; host inputs MUST be torch.Tensor — numpy buffers are silently zeroed by the C310 simulator path. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: The two kernels mirror the CANN arch35 reference: the full_row kernel corresponds to KernelRmsNormRegBase (tiling key 5000) and the split_d kernel corresponds to KernelRmsNormRegBaseSplitD (tiling key 2001) in opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp. Tracking the upstream names makes it easier to lift further optimizations from the C++ reference when needed.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: true
+          human_hints: true
     shapes:
     - - 8
       - 256

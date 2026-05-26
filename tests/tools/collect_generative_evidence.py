@@ -164,7 +164,15 @@ def load_prompt_from_capabilities(op: str, dtype: str,
         return None
     if variant:
         variants = cell.get("prompt_variants", {})
-        return variants.get(variant)
+        val = variants.get(variant)
+        # Phase 2 Stage 2.3: oracle_guided may be a mapping with
+        # ``prompt`` + ``examples_policy``. Normalize to the prompt
+        # string here; the policy is reported by check_capabilities.py
+        # and is consumed by the harness at allowed_context resolution
+        # time, not by the agent runtime.
+        if isinstance(val, dict):
+            return val.get("prompt")
+        return val
     return cell.get("prompt")
 
 

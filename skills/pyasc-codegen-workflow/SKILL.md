@@ -20,6 +20,49 @@ description: pyasc kernel development standard workflow using the asc2 tile-base
 
 ---
 
+## Prompt methodology
+
+Every cell in [`capabilities.yaml`](../../capabilities.yaml) writes its
+prompts under one canonical structure. When the agent reads a prompt
+during code-gen, or when a human authors a new prompt for a new cell,
+both follow the same template and the same vocabulary so the
+protocol-axis dashboard can compare them honestly.
+
+- **Canonical slot order**: 13 slots, positional and labeled. See
+  [`docs/prompt-template.md`](../../docs/prompt-template.md). Slots
+  6 (axis), 7 (tiling), 8 (tail/padding), and 9 (accumulator dtype) mirror
+  the Phase 1 metadata fields on the cell; drift between the prompt slot
+  and the metadata is rejected by
+  [`tests/tools/check_capabilities.py`](../../tests/tools/check_capabilities.py).
+- **Vocabulary**: [`docs/glossary.md`](../../docs/glossary.md) is the
+  single source of truth for terms like `shape_regime`, `tail_behavior`,
+  `tile_per_core`, `row_per_core`, `host_dispatcher`. Re-using these
+  exact words in a new prompt is mandatory — otherwise the per-cell
+  metadata check flags the inconsistency.
+- **Variant labeling**: `minimal` (slots 1-4 only) — used by the P2 leg.
+  `guided` (all 13 slots, no oracle) — used by the P3/P4/P6 legs.
+  `oracle_guided` — used by the diagnostic P7 leg and never silently
+  rolled into `guided`. The four cells that currently carry workarounds
+  (`gelu/float32`, `matmul/float16`, `rms_norm/{float16,float32}`) split
+  their oracle content into the `oracle_guided` variant per the
+  [`evaluation-methodology.md` §"Prompt-variant labeling rules"](../../docs/evaluation-methodology.md#prompt-variant-labeling-rules).
+- **Examples policy**: each cell declares `examples_policy` — a
+  six-field mapping (`task_prompt`, `glossary`, `golden_kernels`,
+  `golden_docs`, `external_web`, `human_hints`) that says what the
+  agent is allowed to read for a P2/P3/P4/P6 run. The agent MUST NOT
+  open files outside the policy; doing so silently lifts the run into
+  the P7 oracle-guided diagnostic class, not an autonomous score.
+
+If you find yourself re-prompting an agent mid-run because the initial
+prompt was incomplete, classify the re-prompt: a workaround clue is
+`oracle_guided` content (or `human_assisted` if it's a one-off human
+intervention), and must NOT be silently merged into the `guided`
+prompt. Mis-classifying inflates `P3 − P2` (prompt value) and shrinks
+`P6 − P4` (skill value) — see
+[`docs/evaluation-methodology.md` §"Comparisons of interest"](../../docs/evaluation-methodology.md#comparisons-of-interest).
+
+---
+
 > **Forced Workflow**: Phase 0 -> Phase 1 -> Phase 2 -> Phase 3
 >
 > **Forbidden**: Write code directly, skip design, skip acceptance review

@@ -386,11 +386,94 @@ def _check_cell_metadata(
         )
 
 
+# =============================================================================
+# Phase 2 Stage 2.3: examples_policy enforcement.
+#
+# Every cell declares an ``examples_policy`` mapping with six boolean
+# slots. The mapping is the per-cell policy the harness must respect at
+# P2/P3/P4/P6 (the ``allowed_context`` block in the evidence file).
+# Cells with an ``oracle_guided`` prompt variant may override individual
+# slots inside ``prompt_variants.oracle_guided.examples_policy`` — only
+# the oracle variant sees the override; the cell-level defaults still
+# apply to ``minimal`` / ``guided``.
+# =============================================================================
+
+_EXAMPLES_POLICY_KEYS: set[str] = {
+    "task_prompt",
+    "glossary",
+    "golden_kernels",
+    "golden_docs",
+    "external_web",
+    "human_hints",
+}
+
+# Slots that are always true (the harness cannot opt the agent out of
+# reading its own task prompt or the canonical glossary).
+_EXAMPLES_POLICY_FORCED_TRUE: set[str] = {"task_prompt", "glossary"}
+
+
+def _check_examples_policy_dict(
+    policy: object, label: str, result: CellResult, *, strict: bool,
+) -> None:
+    """Validate a single examples_policy mapping (cell-level or per-variant)."""
+    fail = result.fail if strict else result.warn
+    if not isinstance(policy, dict):
+        fail(
+            f"{label} must be a mapping with keys {sorted(_EXAMPLES_POLICY_KEYS)}; "
+            f"got {type(policy).__name__}"
+        )
+        return
+    keys = set(policy.keys())
+    missing = _EXAMPLES_POLICY_KEYS - keys
+    extra = keys - _EXAMPLES_POLICY_KEYS
+    if missing:
+        fail(f"{label} missing required keys {sorted(missing)}")
+    if extra:
+        fail(
+            f"{label} contains unknown keys {sorted(extra)}; "
+            f"allowed: {sorted(_EXAMPLES_POLICY_KEYS)}"
+        )
+    for k in _EXAMPLES_POLICY_KEYS & keys:
+        if not isinstance(policy[k], bool):
+            fail(
+                f"{label}.{k} must be a bool, got "
+                f"{type(policy[k]).__name__!s}={policy[k]!r}"
+            )
+    for k in _EXAMPLES_POLICY_FORCED_TRUE & keys:
+        if policy.get(k) is False:
+            fail(
+                f"{label}.{k} must be true (task_prompt and glossary are "
+                "always allowed; see docs/prompt-template.md and "
+                "docs/evaluation-methodology.md \"Baseline validity\")"
+            )
+
+
+def _check_examples_policy(
+    cell: dict, result: CellResult, *, strict: bool,
+) -> None:
+    """Validate that the cell declares an examples_policy mapping."""
+    if "examples_policy" not in cell:
+        (result.fail if strict else result.warn)(
+            "missing examples_policy (Phase 2 Stage 2.3; see "
+            "docs/prompt-template.md \"Cross-references\")"
+        )
+        return
+    _check_examples_policy_dict(
+        cell["examples_policy"], "examples_policy", result, strict=strict,
+    )
+
+
 def _check_prompt_variants(cell: dict, result: CellResult) -> None:
     """Enforce Phase 0 protocol-axis requirement: every cell must define
     both ``prompt_variants.minimal`` and ``prompt_variants.guided`` so
     the collector can drive P2 (minimal+skills_off) and P3/P4/P6 (guided)
     legs without falling back to the legacy primary ``prompt``.
+
+    ``prompt_variants.oracle_guided`` (Phase 2 Stage 2.3) may be either a
+    bare prompt string OR a mapping with ``prompt`` (string) and an
+    optional per-variant ``examples_policy`` override. The collector
+    normalizes both shapes to a string before sending to the agent (see
+    ``tests/tools/collect_generative_evidence.py``::``_variant_prompt``).
     """
     variants = cell.get("prompt_variants") or {}
     if not isinstance(variants, dict):
@@ -409,6 +492,42 @@ def _check_prompt_variants(cell: dict, result: CellResult) -> None:
             "missing prompt_variants.guided "
             "(required for P3/P4/P6 legs; see docs/evaluation-methodology.md "
             "\"Protocol-axis CI mapping (Phase 0)\")"
+        )
+
+    og = variants.get("oracle_guided")
+    if og is None:
+        return
+    if isinstance(og, str):
+        if not og.strip():
+            result.fail(
+                "prompt_variants.oracle_guided is an empty string; either "
+                "drop the variant or populate it (see docs/prompt-template.md)"
+            )
+        return
+    if not isinstance(og, dict):
+        result.fail(
+            "prompt_variants.oracle_guided must be a string or a mapping "
+            "(see docs/prompt-template.md \"oracle_guided\")"
+        )
+        return
+    og_prompt = og.get("prompt")
+    if not (isinstance(og_prompt, str) and og_prompt.strip()):
+        result.fail(
+            "prompt_variants.oracle_guided.prompt missing or empty (dict form)"
+        )
+    og_policy = og.get("examples_policy")
+    if og_policy is not None:
+        _check_examples_policy_dict(
+            og_policy,
+            "prompt_variants.oracle_guided.examples_policy",
+            result,
+            strict=True,
+        )
+    og_extra = set(og.keys()) - {"prompt", "examples_policy"}
+    if og_extra:
+        result.fail(
+            f"prompt_variants.oracle_guided has unknown keys "
+            f"{sorted(og_extra)}; allowed: prompt, examples_policy"
         )
 
 
@@ -565,6 +684,9 @@ def main() -> None:
             _check_cell_metadata(
                 cell, op_name, op_tier, result,
                 strict=args.strict_metadata,
+            )
+            _check_examples_policy(
+                cell, result, strict=args.strict_metadata,
             )
             _check_golden(cell, result)
             _check_generative(cell, result, soft_runtime=args.soft_runtime)
