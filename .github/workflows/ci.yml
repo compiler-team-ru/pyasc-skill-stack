@@ -206,7 +206,7 @@ jobs:
             echo "=== Generative evidence: $op / $dtype (protocol_id=$PROTOCOL_ID) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --timeout 420 \
+                --runtime --runtime-backend auto --timeout 420 \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \
@@ -407,7 +407,7 @@ jobs:
             echo "=== Generative evidence: $op / $dtype ($PROFILE, skills_mode=$SKILLS_MODE) ==="
             if python3.10 tests/tools/collect_generative_evidence.py \
                 --op "$op" --dtype "$dtype" \
-                --runtime --timeout 1200 \
+                --runtime --runtime-backend auto --timeout 1200 \
                 --docker-timeout "$DOCKER_TO" \
                 --archive-dir generative-archive \
                 --ci-run-url "$CI_RUN_URL" \

@@ -453,6 +453,161 @@ def check_op_semantics(kernel_path: Path, op: str) -> dict:
     return {"passed": passed, "detail": detail, "markers_found": found}
 
 
+RUNTIME_BACKEND_CHOICES = ("auto", "host", "docker")
+
+
+def host_runtime_available(platform: str = "Ascend950PR_9599") -> tuple[bool, str]:
+    """Probe whether the host has a usable CANN simulator install.
+
+    Returns ``(ok, reason)`` where ``reason`` is a short human-readable
+    explanation suitable for logging when host runtime is unavailable.
+
+    The probe matches the conditions ``run_and_verify._simulator_env``
+    relies on: ``ASCEND_HOME_PATH`` set, the platform-specific lib dir
+    present (``$ASCEND_HOME_PATH/tools/simulator/<platform>/lib``), and
+    the ``asc`` Python package importable by the current interpreter.
+    Kept cheap so it can be called once per ``--runtime-backend=auto``
+    invocation.
+    """
+    ascend = os.environ.get("ASCEND_HOME_PATH")
+    if not ascend:
+        return False, "ASCEND_HOME_PATH is not set"
+    sim_lib = os.path.join(ascend, "tools", "simulator", platform, "lib")
+    if not os.path.isdir(sim_lib):
+        return False, f"simulator lib dir missing: {sim_lib}"
+    try:
+        probe = subprocess.run(
+            [sys.executable, "-c", "import asc"],
+            capture_output=True, text=True, timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return False, "`import asc` probe timed out"
+    except FileNotFoundError:
+        return False, f"interpreter not found: {sys.executable}"
+    if probe.returncode != 0:
+        snippet = (probe.stderr or probe.stdout or "").strip()[-200:]
+        return False, f"`import asc` failed: {snippet}"
+    return True, "host CANN runtime available"
+
+
+def resolve_runtime_backend(
+    backend: str, platform: str = "Ascend950PR_9599",
+) -> str:
+    """Resolve ``--runtime-backend`` to a concrete backend.
+
+    ``auto`` picks ``host`` when :func:`host_runtime_available` succeeds
+    and falls back to ``docker`` otherwise. ``host`` and ``docker`` are
+    pass-through. Unknown values raise ``ValueError``.
+    """
+    if backend not in RUNTIME_BACKEND_CHOICES:
+        raise ValueError(
+            f"unknown runtime backend {backend!r}; "
+            f"choices: {RUNTIME_BACKEND_CHOICES}"
+        )
+    if backend == "host":
+        return "host"
+    if backend == "docker":
+        return "docker"
+    ok, reason = host_runtime_available(platform)
+    if ok:
+        return "host"
+    print(
+        f"  runtime-backend=auto: host unavailable ({reason}); using docker",
+        file=sys.stderr,
+    )
+    return "docker"
+
+
+def run_host_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
+                    platform: str = "Ascend950PR_9599") -> dict:
+    """Run simulator verification directly on the host via run_and_verify.py.
+
+    Mirrors :func:`run_docker_verify` but invokes ``run_and_verify.py``
+    in the current Python interpreter so the host's editable
+    ``asc``/``asc2`` packages and the CANN simulator libs (resolved
+    via ``ASCEND_HOME_PATH`` + ``_simulator_env``) are used directly —
+    no Docker. Pattern copied from
+    :func:`tests.tools.collect_evidence.collect_runtime`.
+
+    Returns the same evidence-block shape as ``run_docker_verify`` so
+    callers don't need to special-case the backend.
+
+    ``project_dir`` is accepted (and ignored) for parity with
+    ``run_docker_verify``; the host path can read the kernel via its
+    absolute path without any bind mounts.
+    """
+    _ = project_dir
+    inner_timeout = max(60, timeout - 30)
+    cmd = [
+        sys.executable,
+        str(RUN_VERIFY_SCRIPT),
+        str(kernel_path),
+        "--mode", "simulator",
+        "--backend", "Model",
+        "--platform", platform,
+        "--timeout", str(inner_timeout),
+        "--json",
+    ]
+    code, out, err = _run(cmd, timeout=timeout)
+    result = {
+        "mode": "simulator", "backend": "Model", "platform": platform,
+    }
+    if code == 0:
+        result["status"] = "pass"
+    elif code == 2:
+        result["status"] = "skip"
+    else:
+        result["status"] = "fail"
+
+    try:
+        parsed = json.loads(out)
+        result["detail"] = parsed.get("detail", "")
+        result["shapes_verified"] = parsed.get("shapes_verified", [])
+    except (json.JSONDecodeError, TypeError):
+        raw = err or out
+        traceback_line = ""
+        for line in reversed(raw.splitlines()):
+            stripped = line.strip()
+            if stripped and not stripped.startswith("^") and not stripped.startswith("~"):
+                traceback_line = stripped
+                break
+        detail = raw[-1000:] if len(raw) > 1000 else raw
+        if traceback_line and traceback_line not in detail:
+            detail = f"... {traceback_line}\n{detail}"
+        result["detail"] = detail
+        result["shapes_verified"] = []
+
+    return result
+
+
+def invoke_runtime_verify(
+    *,
+    backend: str,
+    kernel_path: Path,
+    project_dir: Path,
+    timeout: int,
+    platform: str,
+) -> dict:
+    """Dispatch a runtime verification to the chosen backend.
+
+    ``backend`` must already be resolved (``host`` or ``docker``);
+    callers that pass ``auto`` should first run it through
+    :func:`resolve_runtime_backend`.
+    """
+    if backend == "host":
+        return run_host_verify(
+            kernel_path, project_dir, timeout=timeout, platform=platform,
+        )
+    if backend == "docker":
+        return run_docker_verify(
+            kernel_path, project_dir, timeout=timeout, platform=platform,
+        )
+    raise ValueError(
+        f"invoke_runtime_verify: unresolved backend {backend!r} "
+        f"(must be 'host' or 'docker'; resolve 'auto' first)"
+    )
+
+
 def run_docker_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
                       platform: str = "Ascend950PR_9599") -> dict:
     """Run simulator verification inside the Docker container.
@@ -683,6 +838,7 @@ def run_one_attempt(
     dtype: str,
     timeout: int,
     runtime: bool,
+    runtime_backend: str,
     docker_timeout: int,
     skills_mode: str,
     profile: str,
@@ -742,7 +898,8 @@ def run_one_attempt(
             return _finalize_attempt(
                 attempt_num=attempt_num, elapsed=elapsed, exit_code=124,
                 project=project, op=op, dtype=dtype,
-                runtime=runtime, docker_timeout=docker_timeout,
+                runtime=runtime, runtime_backend=runtime_backend,
+                docker_timeout=docker_timeout,
                 agent_output_path=agent_output, agent_completed=False,
                 keep_project=keep_project, archive_dir=archive_dir,
                 skills_mode=skills_mode, profile=profile,
@@ -761,7 +918,8 @@ def run_one_attempt(
     return _finalize_attempt(
         attempt_num=attempt_num, elapsed=elapsed, exit_code=exit_code,
         project=project, op=op, dtype=dtype,
-        runtime=runtime, docker_timeout=docker_timeout,
+        runtime=runtime, runtime_backend=runtime_backend,
+        docker_timeout=docker_timeout,
         agent_output_path=agent_output, agent_completed=agent_completed,
         keep_project=keep_project, archive_dir=archive_dir,
         skills_mode=skills_mode, profile=profile,
@@ -777,6 +935,7 @@ def _finalize_attempt(
     op: str,
     dtype: str,
     runtime: bool,
+    runtime_backend: str,
     docker_timeout: int,
     agent_output_path: Path,
     agent_completed: bool,
@@ -814,10 +973,17 @@ def _finalize_attempt(
         }
         if runtime:
             platform = load_platform_from_capabilities(op, dtype)
+            resolved_backend = resolve_runtime_backend(
+                runtime_backend, platform=platform,
+            )
             print(f"  [attempt {attempt_num}] running simulator "
-                  f"(platform={platform})...")
-            verification = run_docker_verify(
-                kernel, project, timeout=docker_timeout, platform=platform,
+                  f"(platform={platform}, backend={resolved_backend})...")
+            verification = invoke_runtime_verify(
+                backend=resolved_backend,
+                kernel_path=kernel,
+                project_dir=project,
+                timeout=docker_timeout,
+                platform=platform,
             )
             print(f"  [attempt {attempt_num}] runtime={verification['status']}")
     else:
@@ -891,9 +1057,18 @@ def main() -> None:
     parser.add_argument("--timeout", type=int, default=300,
                         help="Agent timeout in seconds (default: 300)")
     parser.add_argument("--runtime", action="store_true",
-                        help="Run simulator verification in Docker after generation")
+                        help="Run simulator verification after generation")
+    parser.add_argument("--runtime-backend",
+                        choices=list(RUNTIME_BACKEND_CHOICES), default="auto",
+                        help="Where to run simulator verify: 'host' invokes "
+                             "run_and_verify.py directly using the local CANN "
+                             "install (requires ASCEND_HOME_PATH and "
+                             "`import asc`); 'docker' spawns a container from "
+                             "the pyasc-sim image; 'auto' (default) prefers "
+                             "host when available, otherwise docker.")
     parser.add_argument("--docker-timeout", type=int, default=300,
-                        help="Docker verify timeout in seconds (default: 300)")
+                        help="Runtime verify timeout in seconds, applies to "
+                             "both docker and host backends (default: 300)")
     parser.add_argument("--notes", default="", help="Optional notes")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print JSON to stdout, don't write file")
@@ -1058,6 +1233,7 @@ def main() -> None:
             dtype=args.dtype,
             timeout=args.timeout,
             runtime=args.runtime,
+            runtime_backend=args.runtime_backend,
             docker_timeout=args.docker_timeout,
             skills_mode=args.skills_mode,
             profile=args.model_profile,

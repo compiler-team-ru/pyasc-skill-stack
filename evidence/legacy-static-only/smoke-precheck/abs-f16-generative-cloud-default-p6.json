@@ -5,10 +5,10 @@
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-26T18:01:19Z",
+  "date": "2026-05-26T15:38:49Z",
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
+    "timeout_s": 300,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
@@ -21,24 +21,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 63465,
-    "output": 4106,
-    "cache_read": 308145,
-    "total": 67571
+    "input": 101769,
+    "output": 5539,
+    "cache_read": 407283,
+    "total": 107308
   },
-  "elapsed_total_s": 240.02,
+  "elapsed_total_s": 300.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.02,
+      "elapsed_s": 300.01,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 63465,
-        "output": 4106,
-        "cache_read": 308145,
-        "total": 67571,
+        "input": 101769,
+        "output": 5539,
+        "cache_read": 407283,
+        "total": 107308,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -48,11 +48,8 @@
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -134,7 +131,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage A.6 smoke: host runtime backend verification",
+  "notes": "Phase 0 DoD item (d): abs/f16 4-protocol evidence; cloud-default; dashscope/glm-5",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
