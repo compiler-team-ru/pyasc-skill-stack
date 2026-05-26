@@ -1,13 +1,38 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: gelu_f16 kernel (asc2 API)
+"""Golden kernel: gelu/float16
+
 GELU activation composed from erf, mul, add -- no single asc2.gelu builtin.
   gelu(x) = 0.5 * x * (1 + erf(x / sqrt(2)))
 Verified on CANN simulator with Ascend950PR_9599 platform.
 
-Test sizes intentionally start at 8192 (= TILE_SIZE * CORE_NUM * 4) -- C310
-enforces stricter MTE GDMA burst alignment than 910B1 and silently errors
-on inputs smaller than TILE_SIZE * CORE_NUM.
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: null
+  - output_shape: same_as_input
+  - accumulator_dtype: null
+  - identity: null
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: tile_per_core
+  - unsupported_regimes: []
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: input ``size`` must be a multiple of
+    ``TILE_SIZE * CORE_NUM = 128 * 16 = 2048``; smaller inputs trip
+    C310's stricter MTE GDMA burst alignment check (test sizes
+    start at 8192 = ``TILE_SIZE * CORE_NUM * 4``).
+  - UB/L1/L0 placement: every per-tile op (``asc2.erf``, the two
+    multiplies, the add) runs in UB.  No L0 / cube involvement.
+  - Padding: none.
+  - Tail behavior: aligned_only — the kernel does not handle
+    partial tiles.
+  - Accumulator dtype: null. The composition is purely elementwise
+    in float16 throughout.
+  - Numerical note: ``asc2.erf`` on float16 is exercised here. On
+    float32 it has up to ~4.7 absolute error vs ``math.erf`` and is
+    forbidden — see ``gelu_f32.py``, which uses the tanh/Padé form.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    numpy buffers are safe for this elementwise UB-only path.
 """
 
 import logging

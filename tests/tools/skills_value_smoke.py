@@ -35,6 +35,10 @@ Covers:
 10. ``tests/tools/generate_dashboard.py`` — the produced HTML carries
     the inlined summary keys for both verdict branches, the new
     failure-mode chip helpers, and the CI hint helper.
+11. Phase 0 protocol-axis aggregator: a P2 + P3 + P4 + P6 fixture
+    produces ``by_protocol`` and ``deltas_pp`` on the per-profile
+    summary, with the expected P3-P2 / P4-P3 / P6-P4 deltas and a
+    ``None`` for the deferred P5-P2 entry.
 """
 
 from __future__ import annotations
@@ -65,7 +69,8 @@ def _ev_template(*, mode, op, dtype, model, tokens_total, artifacts,
                  verification_mode="simulator",
                  attempts=None,
                  date="2026-05-19T00:00:00Z",
-                 profile="cloud-default") -> dict:
+                 profile="cloud-default",
+                 protocol_id=None) -> dict:
     """Build a schema-v3 evidence-shaped dict for testing.
 
     All fields documented in collect_generative_evidence.py's output
@@ -85,7 +90,7 @@ def _ev_template(*, mode, op, dtype, model, tokens_total, artifacts,
             }]
         else:
             attempts = []
-    return {
+    out = {
         "schema_version": "3",
         "kind": "generative",
         "operation": op,
@@ -125,6 +130,20 @@ def _ev_template(*, mode, op, dtype, model, tokens_total, artifacts,
         "ci_run_url": "",
         "history": [],
     }
+    if protocol_id:
+        out["protocol"] = {
+            "id": protocol_id,
+            "name": f"opencode-{protocol_id}-test",
+            "prompt_variant": "minimal" if protocol_id == "P2" else "guided",
+            "skills_enabled": protocol_id == "P6",
+            "allowed_context": {
+                "task_prompt": True,
+                "agents_md": protocol_id == "P4",
+                "skills": protocol_id == "P6",
+                "golden_kernels": False,
+            },
+        }
+    return out
 
 
 def _write_ev(d: Path, name: str, ev: dict) -> None:
@@ -633,7 +652,7 @@ def smoke_detect_partial_run() -> None:
 
 
 def smoke_dashboard_payload() -> None:
-    print("[10/10] dashboard inlines the new explainability/efficiency keys...")
+    print("[10/11] dashboard inlines the new explainability/efficiency keys...")
     original = (REPO / "evidence" / "skills-value-summary.json").read_text()
     try:
         synth = {
@@ -727,10 +746,105 @@ def smoke_dashboard_payload() -> None:
         "failureModes",
         "attemptsToPass",
         "passRateCi",
+        # Phase 0 protocol-axis decomposition panel.
+        "Skill stack value decomposition",
+        "renderProtocolDecomp",
+        "PDP_DELTA_LABELS",
+        "protocol-decomp-panel",
     ]
     for needle in expects_static:
         assert needle in h, f"missing template symbol: {needle!r}"
         print(f"  [OK] template carries {needle!r}")
+
+
+def smoke_protocol_axis() -> None:
+    print("[11/11] aggregator emits by_protocol + deltas_pp for "
+          "P2+P3+P4+P6 fixture; dashboard renders the decomposition panel...")
+    with tempfile.TemporaryDirectory() as tmp:
+        d = Path(tmp)
+        # Build 4 cells × 4 protocols. Pass-rates engineered to be
+        # P2=0.0, P3=0.5, P4=0.75, P6=1.0 → P3-P2 = +50pp,
+        # P4-P3 = +25pp, P6-P4 = +25pp. Tokens engineered to grow
+        # monotonically so tokens_pct deltas are predictable.
+        cells = ["abs:float16", "add:float16", "gelu:float16", "leaky_relu:float16"]
+        protocols = {
+            "P2": {"pass_pattern": [False, False, False, False],
+                   "tokens": 10000},
+            "P3": {"pass_pattern": [True, True, False, False],
+                   "tokens": 20000},
+            "P4": {"pass_pattern": [True, True, True, False],
+                   "tokens": 21000},
+            "P6": {"pass_pattern": [True, True, True, True],
+                   "tokens": 26000},
+        }
+        for pid, meta in protocols.items():
+            mode = "on" if pid == "P6" else "off"
+            for i, cell in enumerate(cells):
+                op, dtype = cell.split(":")
+                passed = meta["pass_pattern"][i]
+                attempts = [{
+                    "n": 1, "outcome": "pass" if passed else "fail",
+                    "kernel_found": True, "runtime_status": "pass",
+                    "prompt_label": "primary",
+                }]
+                ev = _ev_template(
+                    mode=mode, op=op, dtype=dtype,
+                    model="dashscope/glm-5",
+                    tokens_total=meta["tokens"],
+                    artifacts=["kernel.py"] if passed else ["kernel.py"],
+                    kernel_path=f"teams/{op}/kernel.py",
+                    verification_status="pass" if passed else "fail",
+                    score_accepted=passed, semantic_passed=passed,
+                    static_verify="pass" if passed else "fail",
+                    attempts=attempts,
+                    protocol_id=pid,
+                )
+                dtype_short = "f16" if dtype == "float16" else "f32"
+                pid_lower = pid.lower()
+                fn = f"{op}-{dtype_short}-generative-cloud-default-{pid_lower}.json"
+                _write_ev(d, fn, ev)
+        summary, _ = _run_aggregator(d)
+        p = summary["by_profile"]["cloud-default"]
+        bp = p["by_protocol"]
+        assert set(bp) == {"P2", "P3", "P4", "P6"}, sorted(bp)
+        assert bp["P2"]["pass_rate"] == 0.0
+        assert bp["P3"]["pass_rate"] == 0.5
+        assert bp["P4"]["pass_rate"] == 0.75
+        assert bp["P6"]["pass_rate"] == 1.0
+        for pid in ("P2", "P3", "P4", "P6"):
+            assert bp[pid]["n_cells"] == 4
+            assert bp[pid]["n_clean"] == 4
+            assert bp[pid]["tokens_mean"] == protocols[pid]["tokens"]
+        deltas = p["deltas_pp"]
+        assert deltas["P3-P2"]["pass_pp"] == 50.0
+        assert deltas["P4-P3"]["pass_pp"] == 25.0
+        assert deltas["P6-P4"]["pass_pp"] == 25.0
+        assert deltas["P5-P2"] is None, deltas["P5-P2"]
+        assert deltas["P3-P2"]["tokens_pct"] == 100.0
+        assert deltas["P6-P4"]["tokens_pct"] is not None
+        # Dashboard: regenerate against this synthetic summary and
+        # confirm the inlined data carries the new fields. The
+        # render-side keys are already asserted by smoke_dashboard_payload.
+        original = (REPO / "evidence" / "skills-value-summary.json").read_text()
+        try:
+            (REPO / "evidence" / "skills-value-summary.json").write_text(
+                Path(d / "skills-value-summary.json").read_text()
+            )
+            out = Path(tempfile.mkdtemp())
+            try:
+                subprocess.run([
+                    sys.executable, str(TOOLS / "generate_dashboard.py"),
+                    "--output-dir", str(out),
+                ], check=True, capture_output=True, text=True)
+                h = (out / "index.html").read_text()
+                assert '"by_protocol"' in h, "by_protocol missing in HTML data"
+                assert '"deltas_pp"' in h, "deltas_pp missing in HTML data"
+                assert '"P6-P4"' in h, "P6-P4 entry missing"
+            finally:
+                shutil.rmtree(out, ignore_errors=True)
+        finally:
+            (REPO / "evidence" / "skills-value-summary.json").write_text(original)
+        print("  protocol-axis aggregator + dashboard panel: PASSED")
 
 
 def main() -> int:
@@ -744,6 +858,7 @@ def main() -> int:
     smoke_merge_helper(); print()
     smoke_detect_partial_run(); print()
     smoke_dashboard_payload(); print()
+    smoke_protocol_axis(); print()
     print("ALL SMOKE TESTS PASSED")
     return 0
 

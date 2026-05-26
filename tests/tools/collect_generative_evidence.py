@@ -52,7 +52,48 @@ VERIFY_SCRIPT = SCRIPT_DIR / "verify_kernel.py"
 SCORE_SCRIPT = SCRIPT_DIR / "score_kernel.py"
 RUN_VERIFY_SCRIPT = SCRIPT_DIR / "run_and_verify.py"
 CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
+DEFAULT_AGENTS_MD = REPO_ROOT / "docs" / "baseline" / "pyasc-fork-AGENTS.md"
 PYTHON = "python3.10"
+
+
+# Phase 0 protocol-axis mapping. Single source of truth for what each
+# protocol id resolves to. See docs/evaluation-methodology.md
+# "Protocol-axis CI mapping (Phase 0)" for the full contract.
+PROTOCOL_TABLE: dict[str, dict] = {
+    "P2": {
+        "name": "opencode-skills-off-minimal",
+        "skills_mode": "off",
+        "prompt_variant": "minimal",
+        "agents_md": False,
+    },
+    "P3": {
+        "name": "opencode-skills-off-guided",
+        "skills_mode": "off",
+        "prompt_variant": "guided",
+        "agents_md": False,
+    },
+    "P4": {
+        "name": "opencode-skills-off-agents-md",
+        "skills_mode": "off",
+        "prompt_variant": "guided",
+        "agents_md": True,
+    },
+    "P6": {
+        "name": "opencode-skills-on-guided",
+        "skills_mode": "on",
+        "prompt_variant": "guided",
+        "agents_md": False,
+    },
+}
+
+
+def derive_protocol(protocol_id: str) -> dict:
+    """Return the resolved knobs for ``protocol_id`` (Phase 0).
+
+    Raises ``KeyError`` for unknown ids. Callers that want a graceful
+    error should validate against ``PROTOCOL_TABLE.keys()`` first.
+    """
+    return dict(PROTOCOL_TABLE[protocol_id])
 
 DOCKER_IMAGE = os.environ.get(
     "PYASC_SIM_IMAGE", "ghcr.io/aloschilov/pyasc-sim:py3.11"
@@ -220,16 +261,26 @@ def create_test_project(
     skills_mode: str = "on",
     profile: str = "cloud-default",
     opencode_config_override: str | None = None,
+    agents_md_path: Path | None = None,
 ) -> Path:
     """Create a fresh isolated project directory for one agent run.
 
     Layout depends on ``skills_mode``:
       * ``"on"`` — symlink ``skills/`` and ``golden/``; copy ``teams/``
-        (which contains ``AGENTS.md`` that activates the skill workflow).
+        (which contains the skill-stack ``AGENTS.md`` that activates
+        the skill workflow).
       * ``"off"`` — symlink only ``golden/`` (kept as reference data so
         the input surface is comparable); do not copy ``teams/`` or link
         ``skills/``. The resulting workspace has no ``AGENTS.md`` and no
         ``SKILL.md`` files visible to the agent.
+
+    When ``agents_md_path`` is given (Phase 0 ``P4`` protocol layout),
+    that file is copied to ``<project>/AGENTS.md`` *after* the layout
+    work above. The caller is responsible for refusing the conflicting
+    combination of ``skills_mode='on'`` + ``agents_md_path is not None``
+    (which would mount two different AGENTS.md files and conflate the
+    skill-stack AGENTS.md value with the baseline AGENTS.md value); see
+    ``docs/evaluation-methodology.md`` "Protocol-axis CI mapping".
 
     The on-disk ``opencode.json`` is generated from the chosen profile
     template (resolved via ``resolve_opencode_config``) with the skill
@@ -265,6 +316,14 @@ def create_test_project(
         src = REPO_ROOT / "golden"
         if src.exists():
             (tmp / "golden").symlink_to(src)
+
+    if agents_md_path is not None:
+        src = Path(agents_md_path)
+        if not src.exists():
+            raise FileNotFoundError(
+                f"--agents-md-source not found: {src}"
+            )
+        shutil.copy2(src, tmp / "AGENTS.md")
 
     cfg = build_opencode_json(profile, skills_mode, opencode_config_override)
     (tmp / "opencode.json").write_text(json.dumps(cfg, indent=2) + "\n")
@@ -623,6 +682,7 @@ def run_one_attempt(
     archive_dir: str | None,
     keep_project: bool,
     agent_format: str = "json",
+    agents_md_path: Path | None = None,
 ) -> dict:
     """Run a single agent attempt end-to-end and return a result dict.
 
@@ -636,6 +696,7 @@ def run_one_attempt(
         skills_mode=skills_mode,
         profile=profile,
         opencode_config_override=opencode_config_override,
+        agents_md_path=agents_md_path,
     )
     agent_output = project / "agent-output.txt"
     agent_completed = False
@@ -838,9 +899,12 @@ def main() -> None:
                         help="Named variant from prompt_variants in capabilities.yaml")
     parser.add_argument("--output-suffix", default=None,
                         help="Suffix appended to evidence filename (e.g. 'minimal' -> abs-f16-generative-minimal.json)")
-    parser.add_argument("--skills-mode", choices=["on", "off"], default="on",
+    parser.add_argument("--skills-mode", choices=["on", "off"], default=None,
                         help="Whether to install skills/AGENTS.md into the "
-                             "test project (default: on)")
+                             "test project. When --protocol-id is given the "
+                             "value is derived from the protocol table and "
+                             "any conflicting --skills-mode is rejected. "
+                             "(default: on when neither flag is given)")
     parser.add_argument("--model-profile", default="cloud-default",
                         help="Named opencode profile (default: cloud-default). "
                              "Templates live in docker/opencode-profiles/")
@@ -857,7 +921,79 @@ def main() -> None:
                         default="json",
                         help="opencode --format mode (default: json so tokens "
                              "can be extracted)")
+    parser.add_argument("--protocol-id", choices=sorted(PROTOCOL_TABLE.keys()),
+                        default=None,
+                        help="Phase 0 protocol id (P2/P3/P4/P6). Derives "
+                             "--skills-mode, --prompt-variant, and whether "
+                             "the baseline AGENTS.md is mounted; see "
+                             "docs/evaluation-methodology.md \"Protocol-axis "
+                             "CI mapping\". Conflicting explicit flags exit 1.")
+    parser.add_argument("--agents-md-source", default=str(DEFAULT_AGENTS_MD),
+                        help="Path to a baseline AGENTS.md to copy into the "
+                             "test project under the P4 layout. Defaults to "
+                             "docs/baseline/pyasc-fork-AGENTS.md (vendored).")
+    parser.add_argument("--no-agents-md", action="store_true",
+                        help="Suppress mounting the baseline AGENTS.md even "
+                             "when the resolved protocol asks for it. Useful "
+                             "for local ablations.")
     args = parser.parse_args()
+
+    protocol_resolved: dict | None = None
+    if args.protocol_id:
+        protocol_resolved = derive_protocol(args.protocol_id)
+        derived_mode = protocol_resolved["skills_mode"]
+        derived_variant = protocol_resolved["prompt_variant"]
+        if args.skills_mode is not None and args.skills_mode != derived_mode:
+            print(
+                f"ERROR: --skills-mode={args.skills_mode!r} contradicts "
+                f"--protocol-id={args.protocol_id} (expected "
+                f"skills_mode={derived_mode!r}). See "
+                f"docs/evaluation-methodology.md \"Protocol-axis CI "
+                f"mapping\".",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if args.prompt_variant is not None and args.prompt_variant != derived_variant:
+            print(
+                f"ERROR: --prompt-variant={args.prompt_variant!r} "
+                f"contradicts --protocol-id={args.protocol_id} (expected "
+                f"prompt_variant={derived_variant!r}).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        args.skills_mode = derived_mode
+        args.prompt_variant = derived_variant
+        if args.protocol_id == "P4" and args.skills_mode == "on":
+            print(
+                "ERROR: --protocol-id P4 with skills enabled is not allowed: "
+                "it would mount both the baseline AGENTS.md and the "
+                "skill-stack AGENTS.md and conflate the two.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        if args.skills_mode is None:
+            args.skills_mode = "on"
+
+    if args.protocol_id == "P6" and not args.no_agents_md \
+            and Path(args.agents_md_source) != DEFAULT_AGENTS_MD:
+        # Defensive guard: P6 does not mount the baseline AGENTS.md by
+        # design. If a caller explicitly pointed --agents-md-source at
+        # something non-default under P6, refuse — they probably meant
+        # P4.
+        print(
+            "ERROR: --protocol-id P6 explicitly received an --agents-md-source "
+            "override. P6 does not mount the baseline AGENTS.md; the "
+            "skill-stack AGENTS.md is already part of the skills mount. "
+            "Use --protocol-id P4 if you want the baseline AGENTS.md.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    agents_md_path: Path | None = None
+    if protocol_resolved is not None:
+        if protocol_resolved["agents_md"] and not args.no_agents_md:
+            agents_md_path = Path(args.agents_md_source)
 
     primary_prompt = args.prompt
     if not primary_prompt:
@@ -884,6 +1020,13 @@ def main() -> None:
 
     print(f"  Generative evidence for {args.op}/{args.dtype}")
     print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
+    if args.protocol_id:
+        print(
+            f"  Protocol: {args.protocol_id} "
+            f"({protocol_resolved['name']}) — "
+            f"prompt_variant={args.prompt_variant}, "
+            f"agents_md={bool(agents_md_path)}"
+        )
     print(f"  Prompt: {primary_prompt[:80]}...")
     if fallback_prompt:
         print(f"  Fallback ({args.fallback_variant}): {fallback_prompt[:60]}...")
@@ -914,6 +1057,7 @@ def main() -> None:
             archive_dir=args.archive_dir,
             keep_project=args.keep_project,
             agent_format=args.agent_format,
+            agents_md_path=agents_md_path,
         )
         rec["prompt_label"] = label
         attempts.append(rec)
@@ -992,11 +1136,34 @@ def main() -> None:
     if args.ci_run_url:
         evidence["ci_run_url"] = args.ci_run_url
 
+    if protocol_resolved is not None:
+        evidence["protocol"] = {
+            "id": args.protocol_id,
+            "name": protocol_resolved["name"],
+            "prompt_variant": args.prompt_variant,
+            "skills_enabled": args.skills_mode == "on",
+            "allowed_context": {
+                "task_prompt": True,
+                "agents_md": bool(agents_md_path),
+                "skills": args.skills_mode == "on",
+                "golden_kernels": False,
+            },
+        }
+
     dtype_short = args.dtype.replace("float", "f")
     suffix = f"-{args.output_suffix}" if args.output_suffix else ""
-    # Legacy filename preserved for the (cloud-default, on) cell so the
-    # dashboard and history continue to read from the same file.
-    if args.model_profile == "cloud-default" and args.skills_mode == "on":
+    # Filename selection (Phase 0):
+    #   * --protocol-id given: <op>-<dtype>-generative-<profile>-<pid_lower>.json
+    #     (legacy short name is no longer used in this code path).
+    #   * --protocol-id absent: today's behavior unchanged — the legacy
+    #     short name for (cloud-default, on), and <profile>-<mode>.json
+    #     otherwise.
+    if args.protocol_id:
+        out_name = (
+            f"{args.op}-{dtype_short}-generative"
+            f"-{args.model_profile}-{args.protocol_id.lower()}{suffix}.json"
+        )
+    elif args.model_profile == "cloud-default" and args.skills_mode == "on":
         out_name = f"{args.op}-{dtype_short}-generative{suffix}.json"
     else:
         out_name = (

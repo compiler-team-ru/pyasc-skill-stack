@@ -56,12 +56,34 @@ def main() -> None:
 
     evidence_map: dict[str, bool] = {}
     if args.evidence_dir.exists():
+        # Phase 0: P6 evidence (skills on + guided) is authoritative for
+        # generative_status updates; other protocols are reporting-only.
+        # Read the legacy ``<op>-<dtype>-generative.json`` alias first
+        # so older runs continue to drive the status, then fall back to
+        # the per-protocol P6 file
+        # (``<op>-<dtype>-generative-<profile>-p6.json``) when a Phase 0
+        # nightly hasn't yet rewritten the legacy short name.
         for ev_path in sorted(args.evidence_dir.glob("*-generative.json")):
             try:
                 with open(ev_path) as f:
                     ev = json.load(f)
                 key = f"{ev.get('operation', '')}:{ev.get('dtype', '')}"
                 evidence_map[key] = _evidence_pass(ev)
+            except (json.JSONDecodeError, OSError):
+                continue
+        for ev_path in sorted(
+            args.evidence_dir.glob("*-generative-*-p6.json")
+        ):
+            try:
+                with open(ev_path) as f:
+                    ev = json.load(f)
+                key = f"{ev.get('operation', '')}:{ev.get('dtype', '')}"
+                # Only override if we haven't already recorded the
+                # legacy short-name evidence for this op/dtype — the
+                # legacy file is the historical authority during the
+                # rollout. Future cleanups can flip the precedence
+                # once every cell has a P6 file in the evidence dir.
+                evidence_map.setdefault(key, _evidence_pass(ev))
             except (json.JSONDecodeError, OSError):
                 continue
 

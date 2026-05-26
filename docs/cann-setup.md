@@ -11,6 +11,32 @@
 | numpy | < 2.0 | Required by pyasc |
 | torch | any | For tensor management and verification |
 
+## Architecture support
+
+The stack is verified on Ubuntu 22.04 on both `x86_64` and `aarch64`. CANN
+ships a separate installer per architecture; pick the one matching
+`uname -m`:
+
+- `Ascend-cann-toolkit_<version>_linux-x86_64.run`
+- `Ascend-cann-toolkit_<version>_linux-aarch64.run`
+
+Both installers lay out the same directory tree under the install prefix,
+so every command in this guide is arch-agnostic once `CANN_HOME` is set.
+The `Ascend910B1` / `Ascend950PR_9599` simulator libraries are part of the
+toolkit and ship pre-compiled for the matching arch — no extra step is
+needed.
+
+Quick consistency check after a fresh install:
+
+```bash
+arch                                              # x86_64 or aarch64
+file "$ASCEND_HOME_PATH/tools/simulator/Ascend950PR_9599/lib/libpem_davinci.so" | head -1
+```
+
+The reported ELF class should match the host: `ELF 64-bit LSB shared
+object, x86-64, …` on x86_64 hosts and `ELF 64-bit LSB shared object,
+ARM aarch64, …` on aarch64 hosts.
+
 ## Locating your CANN install
 
 CANN can be installed in several places depending on how you obtained it. This guide uses a `CANN_HOME` environment variable so the commands below work regardless of where CANN lives on your machine. Common locations:
@@ -100,6 +126,22 @@ If the simulator initializes ("PEM MODEL Init Success!") but produces ISA errors
 1. `LD_LIBRARY_PATH` includes the correct simulator path
 2. `source set_env.sh` was run in the current shell
 3. The `-v Ascend950PR_9599` platform flag is specified (not `-v Ascend950PR`)
+
+### `Too many open files` during simulator run (Docker only)
+
+If running inside Docker and you see many lines like:
+
+```
+[ERROR] pem_log.cc:... Failed opening file /tmp/pyasc_camodel_*/core*.dump for writing: Too many open files
+```
+
+the CANN simulator is being throttled by the container's default `nofile`
+limit. Restart the container with a higher limit:
+
+```bash
+docker run --rm -it --ulimit nofile=1048576:1048576 \
+    -v "$(pwd)":/workspace -w /workspace pyasc-sim:latest
+```
 
 ### pytest collection errors
 

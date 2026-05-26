@@ -1,20 +1,51 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: matmul_f16 kernel (asc2 API)
+"""Golden kernel: matmul/float16
+
 Tiled matrix multiplication for float16 inputs, float32 output.
 
-Pattern derived from `python/test/asc2/kernels/test_matmul_mnblock.py` in the
-pyasc v2 reference implementation, which was verified to pass on the
-Ascend950PR_9599 simulator.
+Pattern derived from ``python/test/asc2/kernels/test_matmul_mnblock.py``
+in the pyasc v2 reference implementation, which was verified to pass on
+the Ascend950PR_9599 simulator.
 
-Notes
------
-* asc2.matmul / `@` require torch.Tensor inputs on the simulator.
-  numpy arrays are silently lowered to zero, so torch is mandatory here.
-* Platform must be Ascend950PR_9599 (the only platform the stack
-  targets). asc2.matmul requires the cube unit exposed by C310.
-* Memory hierarchy: GM -> L0A (left) / L0B (right) -> MAC (cube) -> GM.
-* Result tile dtype is always float32 (cube accumulator).
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: -1               # K is the reduction axis
+  - output_shape: [M, N]
+  - accumulator_dtype: float32    # cube accumulator is always f32
+  - identity: "0"
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: block_grid
+  - unsupported_regimes:
+      [non_16_multiple_shapes, k_tiled, bl1_full, al1_full, abl1_full]
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: ``m``, ``k``, ``n`` and the cube tiles
+    (``m_tile``, ``n_tile``) MUST all be multiples of 16
+    (``non_16_multiple_shapes`` is an unsupported regime). The
+    current goldens use ``m=k=n=16`` and ``m=32,k=16,n=32``.
+  - UB/L1/L0 placement: A is loaded directly into L0A via
+    ``asc2.load(..., location=asc2.TileLocation.L0A)``; B is loaded
+    into L0B (``location=asc2.TileLocation.L0B``); the cube reads
+    both and writes the result back to GM. L1 is not used (the
+    ``al1_full`` / ``bl1_full`` / ``abl1_full`` variants are future
+    work — see capabilities.yaml ``unsupported_regimes``).
+  - Padding: none. Out-of-range tile shapes are rejected by the
+    cube unit, not silently padded.
+  - Tail behavior: aligned_only. K-tiling is an unsupported regime
+    (``k_tiled``), so the entire K dimension is loaded into one
+    cube tile.
+  - Accumulator dtype: ``float32`` (cube accumulator is always
+    fp32); the output buffer ``c`` must be allocated as
+    ``torch.float32``.
+  - CRITICAL platform assumption: ``Ascend950PR_9599`` (C310) is the
+    ONLY platform with the cube unit exposed; matmul will not run
+    on other platforms.
+  - CRITICAL host buffer rule: inputs ``a`` / ``b`` MUST be
+    ``torch.Tensor`` (``dtype=torch.float16``) and the output ``c``
+    MUST be a ``torch.float32`` zero-initialised tensor. The C310
+    simulator silently lowers numpy arrays to zero on the matmul
+    path, so numpy is forbidden here.
 """
 
 import logging

@@ -1,9 +1,47 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: softmax_f16 kernel (asc2 API)
-Row-wise softmax using the asc2.softmax builtin for float16 tensors.
+"""Golden kernel: softmax/float16
+
+Row-wise softmax using the ``asc2.softmax`` builtin for float16 tensors.
 Each row is independently normalized so that it sums to 1.
 Verified on CANN simulator with Ascend950PR_9599 platform.
+
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: -1
+  - output_shape: same_as_input
+  - accumulator_dtype: float32   # max stage + sum stage both use f32
+  - identity: null               # softmax has no single identity
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: row_per_core
+  - unsupported_regimes: [split_row, long_rows_exceeding_UB]
+  - regime_note: full-row path only — row fits in UB and
+    asc2.softmax handles the full row in one call. Split-row is
+    a separate capability cell, deferred to Phase 5/8.
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: ``num_rows`` and ``num_cols`` are both compile-time
+    constants for the verified shape ``[32, 4096]``;
+    ``num_rows % CORE_NUM == 0`` is enforced by the block_size
+    computation (``ceildiv(num_rows, CORE_NUM)`` — 32 / 16 = 2).
+  - UB/L1/L0 placement: a block of ``block_size`` full rows is
+    loaded into UB; ``asc2.softmax`` runs on the entire block
+    in-place (the builtin internally computes max -> exp -> sum
+    -> divide).
+  - Padding: none.
+  - Tail behavior: aligned_only. Rows that do not fit in UB
+    (``long_rows_exceeding_UB``) and split-row variants
+    (``split_row``) are out of scope — both are deferred to a
+    future capability cell.
+  - Accumulator dtype: ``float32`` (max + sum stages inside
+    ``asc2.softmax`` use f32 accumulators); the input/output
+    storage is float16.
+  - Identity: ``null``. Softmax has two reductions (max with
+    identity ``-inf`` and sum with identity ``0``); the cell
+    records ``null`` rather than picking one.
+  - Reduction axis: -1.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    numpy is safe here for the input/output buffers.
 """
 
 import logging

@@ -200,6 +200,218 @@ def _check_golden(cell: dict, result: CellResult) -> None:
         result.warn(f"golden blocked: {notes}")
 
 
+# =============================================================================
+# Phase 1: capability-cell metadata enforcement.
+#
+# The metadata fields are additive on schema_version "3" (see
+# docs/glossary.md §6 and docs/evaluation-methodology.md "Capability cell
+# metadata schema (Phase 1)"). They are reporting-only — no prompt rewrite,
+# no kernel behavior change. The checker enforces:
+#   (a) presence of every required field on every cell,
+#   (b) enum membership for every enum field,
+#   (c) cross-field consistency between (reduce_axis, accumulator_dtype),
+#       (tail_behavior, partitioning), and tier ↔ reduce_axis,
+#   (d) typo-guarding on unsupported_regimes slugs.
+#
+# Two-phase rollout via --strict-metadata. Stage 1.2 of the plan has
+# already populated every cell, so the default is strict (hard-fail).
+# Pass --no-strict-metadata to demote drift to warnings during partial
+# pushes.
+# =============================================================================
+
+_METADATA_FIELDS: tuple[str, ...] = (
+    "shape_regime",
+    "reduce_axis",
+    "output_shape",
+    "accumulator_dtype",
+    "identity",
+    "tail_behavior",
+    "padding",
+    "partitioning",
+    "unsupported_regimes",
+)
+
+_ALLOWED_SHAPE_REGIME: set[str] = {"fixed", "runtime_size_only", "dynamic"}
+_ALLOWED_TAIL_BEHAVIOR: set[str] = {
+    "aligned_only",
+    "host_pad",
+    "mask",
+    "real_shape",
+    "host_dispatcher",
+    "unsupported",
+}
+_ALLOWED_PARTITIONING: set[str] = {
+    "row_per_core",
+    "tile_per_core",
+    "block_grid",
+    "host_dispatcher",
+}
+_ALLOWED_ACCUMULATOR_DTYPE: set[str | None] = {"float16", "float32", None}
+_ALLOWED_IDENTITY: set[str | None] = {"0", "1", "-inf", "+inf", None}
+
+# Tiers whose ops are never reducing (cells must have reduce_axis=null +
+# accumulator_dtype=null). ``composed`` is excluded because it could in
+# principle host a composed reduction; today its cells are non-reducing
+# but the checker treats this as a per-cell invariant rather than a
+# per-tier one.
+_NON_REDUCING_TIERS: set[str] = {"elementwise"}
+_REDUCING_TIERS: set[str] = {"reduction"}
+
+# Standard ``unsupported_regimes`` slugs documented in docs/glossary.md §6.
+# Cells that need a new slug must add it here at the same PR so the gate
+# remains a typo guard.
+_KNOWN_UNSUPPORTED_REGIMES: set[str] = {
+    "abl1_full",
+    "al1_full",
+    "bl1_full",
+    "dynamic_num_cols",
+    "dynamic_num_cols_not_8_aligned_in_full_row",
+    "dynamic_num_rows",
+    "k_tiled",
+    "long_rows_exceeding_UB",
+    "multi_axis_reduction",
+    "non_16_multiple_shapes",
+    "non_last_axis",
+    "num_cols_below_split_d_tile_threshold",
+    "split_row",
+}
+
+
+def _check_cell_metadata(
+    cell: dict, op_name: str, tier: str, result: CellResult,
+    *, strict: bool,
+) -> None:
+    """Validate Phase 1 metadata fields on one capability cell.
+
+    With ``strict=True`` (the default and the post-Stage-1.2 contract),
+    every issue is a hard fail. With ``strict=False`` everything is
+    demoted to a warning — useful for partial pushes during the
+    Stage 1.2 rollout cycle.
+    """
+    fail = result.fail if strict else result.warn
+    record = lambda msg: fail(f"metadata: {msg}")
+
+    missing = [field for field in _METADATA_FIELDS if field not in cell]
+    if missing:
+        record(f"missing required fields {missing}")
+        # The remaining checks read fields that may be missing — bail out.
+        return
+
+    shape_regime = cell.get("shape_regime")
+    if shape_regime not in _ALLOWED_SHAPE_REGIME:
+        record(
+            f"shape_regime={shape_regime!r} not in {sorted(_ALLOWED_SHAPE_REGIME)}"
+        )
+
+    tail_behavior = cell.get("tail_behavior")
+    if tail_behavior not in _ALLOWED_TAIL_BEHAVIOR:
+        record(
+            f"tail_behavior={tail_behavior!r} not in {sorted(_ALLOWED_TAIL_BEHAVIOR)}"
+        )
+
+    partitioning = cell.get("partitioning")
+    if partitioning not in _ALLOWED_PARTITIONING:
+        record(
+            f"partitioning={partitioning!r} not in {sorted(_ALLOWED_PARTITIONING)}"
+        )
+
+    accumulator_dtype = cell.get("accumulator_dtype")
+    if accumulator_dtype not in _ALLOWED_ACCUMULATOR_DTYPE:
+        record(
+            f"accumulator_dtype={accumulator_dtype!r} not in {sorted(str(x) for x in _ALLOWED_ACCUMULATOR_DTYPE)}"
+        )
+
+    identity = cell.get("identity")
+    if identity not in _ALLOWED_IDENTITY:
+        record(
+            f"identity={identity!r} not in {sorted(str(x) for x in _ALLOWED_IDENTITY)} "
+            f"(store as string, not bare float / int)"
+        )
+
+    reduce_axis = cell.get("reduce_axis")
+    if reduce_axis is not None and not isinstance(reduce_axis, int):
+        record(
+            f"reduce_axis={reduce_axis!r} must be an int or null"
+        )
+
+    output_shape = cell.get("output_shape")
+    if not (output_shape == "same_as_input" or isinstance(output_shape, list)):
+        record(
+            f"output_shape={output_shape!r} must be 'same_as_input' or a list"
+        )
+
+    padding = cell.get("padding")
+    if padding is not None and not isinstance(padding, int):
+        record(f"padding={padding!r} must be an int (element count) or null")
+
+    unsupported_regimes = cell.get("unsupported_regimes")
+    if not isinstance(unsupported_regimes, list):
+        record(
+            f"unsupported_regimes={unsupported_regimes!r} must be a list of slugs"
+        )
+        unsupported_regimes = []
+    unknown_slugs = [
+        slug for slug in unsupported_regimes
+        if slug not in _KNOWN_UNSUPPORTED_REGIMES
+    ]
+    if unknown_slugs:
+        record(
+            f"unsupported_regimes contains unknown slug(s) {unknown_slugs}; "
+            "add to docs/glossary.md §6 and _KNOWN_UNSUPPORTED_REGIMES in "
+            "check_capabilities.py if intentional"
+        )
+
+    if (reduce_axis is None) != (accumulator_dtype is None):
+        record(
+            f"reduce_axis ({reduce_axis!r}) and accumulator_dtype "
+            f"({accumulator_dtype!r}) must both be null or both be set "
+            "(a reducing op has both; a non-reducing op has neither)"
+        )
+
+    if tier in _NON_REDUCING_TIERS and reduce_axis is not None:
+        record(
+            f"tier={tier!r} is non-reducing but reduce_axis={reduce_axis!r}; "
+            f"set reduce_axis=null for {op_name}"
+        )
+    if tier in _REDUCING_TIERS and reduce_axis is None:
+        record(
+            f"tier={tier!r} is reducing but reduce_axis is null; "
+            f"set reduce_axis=-1 (last axis) for {op_name}"
+        )
+
+    if (tail_behavior == "host_dispatcher") != (partitioning == "host_dispatcher"):
+        record(
+            "tail_behavior=host_dispatcher implies partitioning=host_dispatcher "
+            f"(got tail_behavior={tail_behavior!r}, partitioning={partitioning!r})"
+        )
+
+
+def _check_prompt_variants(cell: dict, result: CellResult) -> None:
+    """Enforce Phase 0 protocol-axis requirement: every cell must define
+    both ``prompt_variants.minimal`` and ``prompt_variants.guided`` so
+    the collector can drive P2 (minimal+skills_off) and P3/P4/P6 (guided)
+    legs without falling back to the legacy primary ``prompt``.
+    """
+    variants = cell.get("prompt_variants") or {}
+    if not isinstance(variants, dict):
+        result.fail("prompt_variants must be a mapping when present")
+        return
+    minimal = variants.get("minimal")
+    guided = variants.get("guided")
+    if not (isinstance(minimal, str) and minimal.strip()):
+        result.fail(
+            "missing prompt_variants.minimal "
+            "(required for P2 leg; see docs/evaluation-methodology.md "
+            "\"Protocol-axis CI mapping (Phase 0)\")"
+        )
+    if not (isinstance(guided, str) and guided.strip()):
+        result.fail(
+            "missing prompt_variants.guided "
+            "(required for P3/P4/P6 legs; see docs/evaluation-methodology.md "
+            "\"Protocol-axis CI mapping (Phase 0)\")"
+        )
+
+
 def _check_generative(cell: dict, result: CellResult, soft_runtime: bool = False) -> None:
     status = cell.get("generative_status", "untested")
 
@@ -287,6 +499,28 @@ def main() -> None:
             " strict variant."
         ),
     )
+    parser.add_argument(
+        "--strict-metadata",
+        dest="strict_metadata",
+        action="store_true",
+        default=True,
+        help=(
+            "Hard-fail on missing or invalid Phase 1 capability-cell metadata"
+            " fields (shape_regime, reduce_axis, output_shape,"
+            " accumulator_dtype, identity, tail_behavior, padding,"
+            " partitioning, unsupported_regimes). This is the default after"
+            " Stage 1.2 lands. See docs/glossary.md §6 for the allowed values."
+        ),
+    )
+    parser.add_argument(
+        "--no-strict-metadata",
+        dest="strict_metadata",
+        action="store_false",
+        help=(
+            "Demote Phase 1 metadata violations from FAIL to WARN. Use while"
+            " a partial-rollout branch is in flight."
+        ),
+    )
     args = parser.parse_args()
 
     if not CAPABILITIES_FILE.exists():
@@ -327,6 +561,11 @@ def main() -> None:
         for cell in op.get("cells", []):
             dtype = cell.get("dtype", "unknown")
             result = CellResult(op_name, dtype, op_tier)
+            _check_prompt_variants(cell, result)
+            _check_cell_metadata(
+                cell, op_name, op_tier, result,
+                strict=args.strict_metadata,
+            )
             _check_golden(cell, result)
             _check_generative(cell, result, soft_runtime=args.soft_runtime)
             results.append(result)

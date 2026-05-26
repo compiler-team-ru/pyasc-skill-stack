@@ -9,15 +9,18 @@
 # overwriting freshly-written rows.
 #
 # Each artifact directory is named `evidence-<leg>` where `<leg>` is
-# either `cloud-on` / `cloud-off` (for the cloud `nightly-gate`
-# matrix) or `<profile>-<mode>` (for the `local-stability-gate`
-# matrix). We `cp -f` only the filenames that leg legitimately writes,
-# so even if an upload step regresses to "the whole `evidence/`
-# directory", the merge still cannot cross-clobber another leg's
-# fresh evidence with a stale checkout copy.
+# either `cloud-P{2,3,4,6}` (Phase 0 `nightly-gate` matrix), legacy
+# `cloud-on` / `cloud-off` (pre-Phase 0 cloud `nightly-gate` matrix —
+# still accepted so a partial-rollback works), or `<profile>-<mode>`
+# (for the `local-stability-gate` matrix). We `cp -f` only the
+# filenames that leg legitimately writes, so even if an upload step
+# regresses to "the whole `evidence/` directory", the merge still
+# cannot cross-clobber another leg's fresh evidence with a stale
+# checkout copy.
 #
 # Filename conventions (from `collect_generative_evidence.py`):
-#   cloud-default + on  : <op>-<dtype>-generative.json     (legacy)
+#   cloud-default + Pn  : <op>-<dtype>-generative-cloud-default-p{2,3,4,6}.json
+#   cloud-default + on  : <op>-<dtype>-generative.json     (legacy, pre-Phase 0)
 #   cloud-default + off : <op>-<dtype>-generative-cloud-default-off.json
 #   <profile>     + <m> : <op>-<dtype>-generative-<profile>-<m>.json
 #
@@ -42,6 +45,12 @@ for d in "$ARTIFACTS_ROOT"/evidence-*; do
   leg=${d##*/evidence-}
   echo "Merging from $d (leg=$leg)"
   case "$leg" in
+    cloud-P[0-9]*)
+      # Phase 0 protocol-axis legs: evidence-cloud-P2, ..., evidence-cloud-P6.
+      pid=${leg##cloud-}
+      pid_lower=$(echo "$pid" | tr '[:upper:]' '[:lower:]')
+      cp -f "$d"/*-generative-cloud-default-"$pid_lower".json "$EVIDENCE_OUT"/ 2>/dev/null || true
+      ;;
     cloud-on)
       cp -f "$d"/*-generative.json "$EVIDENCE_OUT"/ 2>/dev/null || true
       ;;

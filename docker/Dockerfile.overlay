@@ -3,15 +3,24 @@
 #
 # WHEN TO USE THIS VARIANT
 #   Use this Dockerfile if you already have a working pyasc build on the host
-#   (matching the image's Python ABI, e.g. cpython-311-x86_64-linux-gnu) and
-#   want to reuse those artifacts without rebuilding pyasc from source inside
-#   the image. The overlay under ./pyasc-overlay/ must be produced ahead of
-#   time from your pyasc source tree and kept ABI-compatible with the base
-#   image.
+#   (matching the image's Python ABI, i.e. cpython-311-x86_64-linux-gnu or
+#   cpython-311-aarch64-linux-gnu) and want to reuse those artifacts without
+#   rebuilding pyasc from source inside the image. The overlay under
+#   ./pyasc-overlay/ must be produced ahead of time from your pyasc source
+#   tree and kept ABI-compatible with the base image.
 #
 #   For a clean machine (no local pyasc build), prefer the default
 #   self-contained docker/Dockerfile, which clones and builds pyasc v2 inside
 #   the image and does not require any overlay.
+#
+# Architecture support:
+#   The overlay native extension is per-arch. Drop the host-built `.so` into:
+#       pyasc-overlay/asc_C/x86_64/libpyasc.cpython-311-x86_64-linux-gnu.so
+#     or
+#       pyasc-overlay/asc_C/aarch64/libpyasc.cpython-311-aarch64-linux-gnu.so
+#   This Dockerfile picks the matching directory at build time via `uname -m`.
+#   Cross-arch builds are out of scope: build the overlay image on the same
+#   architecture the `.so` was produced on.
 #
 # Build:
 #   docker build -f docker/Dockerfile.overlay -t pyasc-sim:overlay docker/
@@ -41,13 +50,25 @@ RUN pip install --no-cache-dir \
 # The native extension must also be replaced with the dev build that includes
 # TileLocation and other asc2 IR types.
 ARG SITE_PKG=/usr/local/python3.11.15/lib/python3.11/site-packages
-COPY pyasc-overlay/asc_C/libpyasc.cpython-311-x86_64-linux-gnu.so ${SITE_PKG}/asc/_C/libpyasc.cpython-311-x86_64-linux-gnu.so
+COPY pyasc-overlay/asc_C/ /tmp/asc_C_overlay/
 COPY pyasc-overlay/asc2/ ${SITE_PKG}/asc2/
 COPY pyasc-overlay/asc_language_tile/ ${SITE_PKG}/asc/language/tile/
 COPY pyasc-overlay/asc_changed/codegen/ ${SITE_PKG}/asc/codegen/
 COPY pyasc-overlay/asc_changed/language/core/ ${SITE_PKG}/asc/language/core/
 COPY pyasc-overlay/asc_changed/lib/runtime/ ${SITE_PKG}/asc/lib/runtime/
 COPY pyasc-overlay/asc_changed/runtime/ ${SITE_PKG}/asc/runtime/
+
+RUN set -eux ; \
+    ARCH="$(uname -m)" ; \
+    SRC_SO="$(ls /tmp/asc_C_overlay/${ARCH}/libpyasc.cpython-311-*-linux-gnu.so 2>/dev/null | head -n1)" ; \
+    if [ -z "${SRC_SO}" ]; then \
+        echo "ERROR: no overlay .so for arch ${ARCH} under pyasc-overlay/asc_C/${ARCH}/" >&2 ; \
+        echo "       drop a host-built libpyasc.cpython-311-${ARCH}-linux-gnu.so there" >&2 ; \
+        exit 1 ; \
+    fi ; \
+    mkdir -p "${SITE_PKG}/asc/_C" ; \
+    cp "${SRC_SO}" "${SITE_PKG}/asc/_C/$(basename "${SRC_SO}")" ; \
+    rm -rf /tmp/asc_C_overlay
 
 RUN python3 -c "import numpy; print(f'numpy: {numpy.__version__}')" && \
     python3 -c "import asc2; print('asc2: OK')" || \

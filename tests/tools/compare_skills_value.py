@@ -64,41 +64,59 @@ EVIDENCE_DIR = REPO_ROOT / "evidence"
 
 _FILENAME_PATTERN = re.compile(
     r"^(?P<op>[a-z_]+)-(?P<dtype>f16|f32)-generative"
-    r"(?:-(?P<profile>[a-z0-9.\-]+)-(?P<mode>on|off))?"
+    r"(?:-(?P<profile>[a-z0-9.\-]+)-(?P<leg>on|off|p[0-9]+))?"
     r"(?:-(?P<suffix>[a-zA-Z0-9.\-]+))?"
     r"\.json$"
 )
 
 
+# Phase 0 fallback mapping. When evidence carries no explicit
+# ``protocol.id`` (legacy or local-stability-gate output), the
+# aggregator treats today's ``on`` files as P6 and today's ``off`` files
+# as P3, so a Phase-0 nightly run alongside a pre-Phase-0 nightly run
+# is comparable.
+_LEGACY_MODE_TO_PROTOCOL = {"on": "P6", "off": "P3"}
+_PROTOCOL_TO_LEGACY_MODE = {"P2": "off", "P3": "off", "P4": "off", "P6": "on"}
+
+
 def _parse_filename(name: str) -> dict | None:
-    """Return ``(op, dtype, profile, mode)`` for an evidence filename.
+    """Return parsed components for an evidence filename.
 
     Returns ``None`` for non-comparison files (e.g. ``*-golden.json``).
     The legacy ``<op>-<dtype>-generative.json`` filename maps to
-    ``(cloud-default, on)`` by convention.
+    ``(cloud-default, on, P6)`` by convention.
 
     The pattern is split so that:
       * trailing ``-minimal`` / ``-guided`` suffixes (existing
         ``--output-suffix`` outputs) are ignored and don't show up as
         spurious comparison cells.
       * profile names include dots and dashes (``local-llama-3.1-8b``).
+      * the leg can be ``on``/``off`` (pre-Phase-0) or
+        ``p2``/``p3``/``p4``/``p6`` (Phase 0 per-protocol files).
     """
     m = _FILENAME_PATTERN.match(name)
     if not m:
         return None
     profile = m.group("profile") or "cloud-default"
-    mode = m.group("mode") or "on"
+    leg = m.group("leg") or "on"
     suffix = m.group("suffix") or ""
     if suffix and suffix != "":
         # Skip prompt-variant or ad-hoc archive files — they aren't a
         # canonical comparison cell.
         return None
     dtype_long = "float16" if m.group("dtype") == "f16" else "float32"
+    if leg.startswith("p"):
+        protocol_id = leg.upper()
+        mode = _PROTOCOL_TO_LEGACY_MODE.get(protocol_id, "off")
+    else:
+        mode = leg
+        protocol_id = _LEGACY_MODE_TO_PROTOCOL.get(leg)
     return {
         "op": m.group("op"),
         "dtype": dtype_long,
         "profile": profile,
         "mode": mode,
+        "protocol_id": protocol_id,
     }
 
 
@@ -269,7 +287,7 @@ def _wilson_ci(passes: int, n: int, z: float = 1.96) -> tuple[float, float] | No
     return (max(0.0, center - half), min(1.0, center + half))
 
 
-def _extract_metrics(ev: dict) -> dict:
+def _extract_metrics(ev: dict, protocol_id: str | None = None) -> dict:
     """Pull the fields we care about out of an evidence document."""
     tokens = ev.get("tokens", {}) or {}
     return {
@@ -291,12 +309,36 @@ def _extract_metrics(ev: dict) -> dict:
         "model": ev.get("model"),
         "score": ev.get("score", {}).get("value", 0),
         "date": ev.get("date", ""),
+        "protocol_id": protocol_id,
     }
 
 
-def load_evidence(evidence_dir: Path) -> dict[tuple[str, str, str, str], dict]:
-    """Build a ``{(op, dtype, profile, mode): metrics}`` table."""
-    table: dict[tuple[str, str, str, str], dict] = {}
+def load_evidence(
+    evidence_dir: Path,
+) -> tuple[
+    dict[tuple[str, str, str, str], dict],
+    dict[tuple[str, str, str, str], dict],
+]:
+    """Build the evidence tables.
+
+    Returns ``(table_by_mode, table_by_protocol)`` where:
+
+    * ``table_by_mode`` is keyed by ``(op, dtype, profile, mode)`` with
+      ``mode in {"on", "off"}``. Used by the pre-Phase-0 paired
+      aggregator. A Phase 0 ``P2`` or ``P4`` evidence file is NOT
+      placed in this table — only P3 (slot=off) and P6 (slot=on) are,
+      so the on/off pair-based aggregator remains comparable when a
+      Phase 0 nightly partially populates the matrix.
+    * ``table_by_protocol`` is keyed by ``(op, dtype, profile, protocol_id)``
+      where ``protocol_id in {"P2", "P3", "P4", "P6"}`` (or any future
+      ``P<n>`` once added). Powers the per-protocol aggregator.
+
+    The evidence document's own ``protocol.id`` (Phase 0 schema) wins
+    over what the filename implies; legacy files inherit the fallback
+    mapping ``on -> P6``, ``off -> P3``.
+    """
+    table_by_mode: dict[tuple[str, str, str, str], dict] = {}
+    table_by_protocol: dict[tuple[str, str, str, str], dict] = {}
     for path in sorted(evidence_dir.glob("*-generative*.json")):
         parsed = _parse_filename(path.name)
         if parsed is None:
@@ -308,14 +350,37 @@ def load_evidence(evidence_dir: Path) -> dict[tuple[str, str, str, str], dict]:
             continue
         if ev.get("kind") != "generative":
             continue
-        key = (parsed["op"], parsed["dtype"], parsed["profile"], parsed["mode"])
         # Prefer the on-document fields when present (newer schema_version=3),
         # otherwise fall back to filename inference for legacy files.
         profile = ev.get("model_profile", parsed["profile"])
-        mode = ev.get("skills_mode", parsed["mode"])
-        actual_key = (parsed["op"], parsed["dtype"], profile, mode)
-        table[actual_key] = _extract_metrics(ev)
-    return table
+        protocol_obj = ev.get("protocol") or {}
+        doc_protocol_id = (
+            protocol_obj.get("id") if isinstance(protocol_obj, dict) else None
+        )
+        protocol_id = doc_protocol_id or parsed.get("protocol_id")
+        # Resolve the legacy on/off slot for the paired aggregator. The
+        # document's skills_mode wins when present; otherwise we derive
+        # from the protocol id, otherwise the filename's leg field.
+        doc_mode = ev.get("skills_mode")
+        if isinstance(doc_mode, str) and doc_mode in {"on", "off"}:
+            mode = doc_mode
+        elif protocol_id and protocol_id in _PROTOCOL_TO_LEGACY_MODE:
+            mode = _PROTOCOL_TO_LEGACY_MODE[protocol_id]
+        else:
+            mode = parsed["mode"]
+        metrics = _extract_metrics(ev, protocol_id=protocol_id)
+        # Per-protocol table always populated when we know the protocol.
+        if protocol_id:
+            table_by_protocol[
+                (parsed["op"], parsed["dtype"], profile, protocol_id)
+            ] = metrics
+        # Legacy on/off table: only P3/P6 (or legacy on/off without a
+        # protocol id) participate. P2 and P4 would collide with P3 on
+        # ``slot=off`` so we omit them — they show up only in the
+        # protocol-axis table.
+        if protocol_id in (None, "P3", "P6"):
+            table_by_mode[(parsed["op"], parsed["dtype"], profile, mode)] = metrics
+    return table_by_mode, table_by_protocol
 
 
 def compute_cell_deltas(
@@ -780,6 +845,108 @@ def render_markdown(rows: list[dict], by_profile: dict[str, dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+_PROTOCOL_DELTAS = ("P3-P2", "P4-P3", "P6-P4", "P5-P2")
+
+
+def _pct_change(a: float | None, b: float | None) -> float | None:
+    """``round((a - b) / b * 100, 1)``; ``None`` when ``b in {None, 0}``."""
+    if a is None or b in (None, 0):
+        return None
+    return round((a - b) / b * 100.0, 1)
+
+
+def aggregate_by_protocol(
+    table_by_protocol: dict[tuple[str, str, str, str], dict],
+) -> dict[str, dict]:
+    """Per-(profile, protocol_id) aggregate of pass-rate / tokens /
+    attempts, plus the Phase 0 delta table (``deltas_pp``).
+
+    The output shape matches the contract in
+    ``docs/evaluation-methodology.md`` §"Protocol-axis CI mapping
+    (Phase 0)":
+
+    ```python
+    {
+      profile: {
+        "by_protocol": {
+          "P2": {pass_rate, attempts_to_pass_mean, tokens_mean,
+                 n_cells, n_clean},
+          ...
+        },
+        "deltas_pp": {
+          "P3-P2": {pass_pp, tokens_pct, attempts_delta},
+          ...
+          "P5-P2": None,  # protocol not yet run
+        },
+      }
+    }
+    ```
+    """
+    grouped: dict[tuple[str, str], list[dict]] = {}
+    for (op, dtype, profile, protocol_id), metric in table_by_protocol.items():
+        grouped.setdefault((profile, protocol_id), []).append(metric)
+    profiles = sorted({profile for (profile, _pid) in grouped})
+
+    out: dict[str, dict] = {}
+    for profile in profiles:
+        by_protocol: dict[str, dict] = {}
+        for pid in ("P2", "P3", "P4", "P5", "P6"):
+            metrics = grouped.get((profile, pid))
+            if not metrics:
+                continue
+            n_cells = len(metrics)
+            n_clean = sum(1 for m in metrics if m.get("validity") == "ok")
+            pass_count = sum(1 for m in metrics if m.get("pass"))
+            tokens_vals = [int(m.get("tokens_total", 0) or 0) for m in metrics]
+            tokens_mean = (
+                round(sum(tokens_vals) / len(tokens_vals), 1)
+                if tokens_vals else None
+            )
+            attempts_vals = [
+                m["attempts_to_pass"] for m in metrics
+                if isinstance(m.get("attempts_to_pass"), int)
+            ]
+            attempts_mean = (
+                round(sum(attempts_vals) / len(attempts_vals), 2)
+                if attempts_vals else None
+            )
+            by_protocol[pid] = {
+                "pass_rate": round(pass_count / n_cells, 3) if n_cells else None,
+                "attempts_to_pass_mean": attempts_mean,
+                "tokens_mean": tokens_mean,
+                "n_cells": n_cells,
+                "n_clean": n_clean,
+            }
+
+        deltas_pp: dict[str, dict | None] = {}
+        for spec in _PROTOCOL_DELTAS:
+            a_id, b_id = spec.split("-")
+            a = by_protocol.get(a_id)
+            b = by_protocol.get(b_id)
+            if not (a and b):
+                deltas_pp[spec] = None
+                continue
+            pass_pp = (
+                round((a["pass_rate"] - b["pass_rate"]) * 100, 1)
+                if a["pass_rate"] is not None and b["pass_rate"] is not None
+                else None
+            )
+            tokens_pct = _pct_change(a["tokens_mean"], b["tokens_mean"])
+            attempts_delta = (
+                round(a["attempts_to_pass_mean"] - b["attempts_to_pass_mean"], 2)
+                if a["attempts_to_pass_mean"] is not None
+                and b["attempts_to_pass_mean"] is not None
+                else None
+            )
+            deltas_pp[spec] = {
+                "pass_pp": pass_pp,
+                "tokens_pct": tokens_pct,
+                "attempts_delta": attempts_delta,
+            }
+        out[profile] = {"by_protocol": by_protocol, "deltas_pp": deltas_pp}
+    return out
+
+
 def build_summary(
     rows: list[dict],
     by_profile: dict[str, dict],
@@ -868,9 +1035,32 @@ def main() -> int:
                 file=sys.stderr,
             )
 
-    table = load_evidence(evidence_dir)
-    rows = compute_cell_deltas(table)
+    table_by_mode, table_by_protocol = load_evidence(evidence_dir)
+    rows = compute_cell_deltas(table_by_mode)
     by_profile = aggregate_by_profile(rows)
+
+    # Phase 0 protocol-axis decomposition. Merge into each profile's
+    # entry so older readers can ignore the new keys safely. Profiles
+    # with no per-protocol evidence emit empty by_protocol /
+    # all-null deltas_pp dicts (additive contract).
+    protocol_view = aggregate_by_protocol(table_by_protocol)
+    for profile, agg in by_profile.items():
+        view = protocol_view.get(profile) or {
+            "by_protocol": {},
+            "deltas_pp": {spec: None for spec in _PROTOCOL_DELTAS},
+        }
+        agg["by_protocol"] = view["by_protocol"]
+        agg["deltas_pp"] = view["deltas_pp"]
+    # Profiles that exist only in the protocol-axis view (no on/off
+    # pair, e.g. a future P2/P4-only profile) still get rendered.
+    for profile, view in protocol_view.items():
+        if profile not in by_profile:
+            by_profile[profile] = {
+                "cells_total": 0,
+                "cells_compared": 0,
+                "by_protocol": view["by_protocol"],
+                "deltas_pp": view["deltas_pp"],
+            }
 
     summary = build_summary(
         rows, by_profile,

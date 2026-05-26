@@ -524,3 +524,174 @@ contract they will conform to.
   `failure_category` is documented but not auto-filled).
 - Render matrix view C (model/profile capability) on the dashboard.
 - Performance-layer fields and runtime measurements.
+
+## Protocol-axis CI mapping (Phase 0)
+
+Phase 0 of the quarterly roadmap promotes the protocol axis to a
+first-class CI concept. The collector
+([`tests/tools/collect_generative_evidence.py`](../tests/tools/collect_generative_evidence.py))
+takes a single `--protocol-id` flag that resolves the existing
+`skills_mode` / `prompt_variant` / `agents_md` knobs in one shot.
+
+### Mapping table
+
+The mapping is the single source of truth for what each protocol id
+means in CI. The collector enforces it; user-supplied `--skills-mode`
+or `--prompt-variant` that contradict the derived values exit 1.
+
+| Protocol id | name                              | `skills_mode` | `prompt_variant` | `agents_md` |
+|-------------|-----------------------------------|---------------|------------------|-------------|
+| `P2`        | `opencode-skills-off-minimal`     | `off`         | `minimal`        | `false`     |
+| `P3`        | `opencode-skills-off-guided`      | `off`         | `guided`         | `false`     |
+| `P4`        | `opencode-skills-off-agents-md`   | `off`         | `guided`         | `true`      |
+| `P6`        | `opencode-skills-on-guided`       | `on`          | `guided`         | `false`     |
+
+`agents_md=true` means the baseline AGENTS.md vendored at
+[`docs/baseline/pyasc-fork-AGENTS.md`](baseline/pyasc-fork-AGENTS.md)
+is copied into the test project as `AGENTS.md`. This is the **baseline**
+AGENTS.md from the upstream pyasc-fork checkout, *not* the skill-stack
+AGENTS.md at [`teams/pyasc-kernel-dev-team/AGENTS.md`](../teams/pyasc-kernel-dev-team/AGENTS.md)
+(which is mounted only under `skills_mode=on`). Mixing the two would
+conflate "skill value" with "baseline-AGENTS.md value", so the
+collector refuses `--protocol-id P4 --skills-mode on` and
+`--protocol-id P6 --agents-md ...`.
+
+P5 (skills on + minimal prompt) and P7/P8 (oracle / human-assisted)
+are documented above but not yet wired into the CI matrix — the
+aggregator emits `P5-P2: null` until a future sprint adds the leg.
+
+### Evidence filename scheme
+
+Today's legacy `evidence/<op>-<dtype>-generative.json` is preserved as
+a back-compat alias for the (cloud-default + P6) leg. The aggregator
+continues to read it.
+
+New per-protocol evidence files are written to:
+
+```
+evidence/<op>-<dtype>-generative-<profile>-<protocol_id_lower>.json
+```
+
+For example: `evidence/abs-f16-generative-cloud-default-p2.json`.
+
+The existing `<op>-<dtype>-generative-<profile>-{on,off}.json` files
+for local profiles are preserved; the aggregator treats `on` as P6
+and `off` as P3 when no protocol-id file exists for that cell.
+
+### Additive evidence-document fields
+
+Schema version stays `"3"` — the `protocol` object is additive and
+optional, so older readers ignore it safely. The collector populates
+it from the derivation table:
+
+```json
+{
+  "protocol": {
+    "id": "P6",
+    "name": "opencode-skills-on-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": true,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": true,
+      "golden_kernels": false
+    }
+  }
+}
+```
+
+The `agents_md` flag in `allowed_context` reflects whether the
+baseline AGENTS.md was mounted into the project; `skills` reflects
+the skill-stack mount. The existing top-level `skills_mode`,
+`model_profile`, `prompt`, and `model` fields continue to be written
+for back-compat with v3 readers that don't yet know about `protocol`.
+
+### Aggregator summary fields
+
+[`tests/tools/compare_skills_value.py`](../tests/tools/compare_skills_value.py)
+groups by `(profile, protocol_id)` when `protocol.id` is present in
+the evidence, and falls back to `(profile, skills_mode)` for legacy
+files (`on` → P6, `off` → P3). It emits two additive blocks on the
+existing `schema_version: "2"` summary:
+
+```yaml
+by_profile:
+  cloud-default:
+    # ... existing v2 fields ...
+    by_protocol:
+      P2: { pass_rate: 0.0,  attempts_to_pass_mean: null, tokens_mean: 12000, n_cells: 12, n_clean: 12 }
+      P3: { pass_rate: 0.4,  attempts_to_pass_mean: 1.3,  tokens_mean: 25000, n_cells: 12, n_clean: 11 }
+      P4: { pass_rate: 0.6,  attempts_to_pass_mean: 1.2,  tokens_mean: 26000, n_cells: 12, n_clean: 12 }
+      P6: { pass_rate: 0.92, attempts_to_pass_mean: 1.1,  tokens_mean: 32000, n_cells: 12, n_clean: 12 }
+    deltas_pp:
+      "P3-P2": { pass_pp:  40, tokens_pct: 108, attempts_delta:  0.3 }
+      "P4-P3": { pass_pp:  20, tokens_pct:   4, attempts_delta: -0.1 }
+      "P6-P4": { pass_pp:  32, tokens_pct:  23, attempts_delta: -0.1 }
+      "P5-P2": null  # P5 not yet run
+```
+
+[`tests/tools/sync_capabilities.py`](../tests/tools/sync_capabilities.py)
+treats `P6` evidence (or the legacy alias) as authoritative for
+`generative_status` updates; P2/P3/P4 are reporting-only.
+
+## Capability cell metadata schema (Phase 1)
+
+Phase 1 of the quarterly roadmap promotes each capability cell from
+"prompt + shapes + status" to "prompt + shapes + status + a structured
+self-description of what the cell claims to prove". The fields are
+additive on `schema_version: "3"` — no schema bump, no prompt rewrite,
+no kernel behavior change. Today's consumers
+([check_capabilities.py](../tests/tools/check_capabilities.py),
+[capabilities.yaml](../capabilities.yaml)) read them; downstream
+dashboard / aggregator panels will land in Phase 2/3.
+
+[docs/glossary.md](glossary.md) is the single source of truth for the
+terminology used by these fields and for the standard pyasc / asc2 /
+CANN vocabulary. The same file documents the ReLU scope decision
+(`relu` is covered by pattern under the `abs` op's
+`representative_of` list; see [docs/glossary.md §7](glossary.md#7-operator-coverage-notes)).
+
+### Required fields per cell
+
+| Field                 | Type / domain                                          | Notes                                                                  |
+|-----------------------|--------------------------------------------------------|------------------------------------------------------------------------|
+| `shape_regime`        | `fixed` / `runtime_size_only` / `dynamic`              | How the kernel handles input-shape variability.                        |
+| `reduce_axis`         | `int` or `null`                                        | `-1` for last-axis reductions; `null` for non-reducing ops.            |
+| `output_shape`        | `same_as_input` or `list`                              | Output shape descriptor; `[M, N]` placeholders allowed for matmul.     |
+| `accumulator_dtype`   | `float16` / `float32` / `null`                         | Accumulator dtype; `null` iff the op does no accumulation.             |
+| `identity`            | `"0"` / `"1"` / `"-inf"` / `"+inf"` / `null` (string!) | Stored as a string so YAML does not coerce `0` or `-inf`.              |
+| `tail_behavior`       | `aligned_only` / `host_pad` / `mask` / `real_shape` / `host_dispatcher` / `unsupported` | How partial tiles are handled. |
+| `padding`             | `int` (element count) or `null`                        | E.g. `OUT_PAD=8` for `reduce_sum/f32`.                                 |
+| `partitioning`        | `row_per_core` / `tile_per_core` / `block_grid` / `host_dispatcher` | How work is distributed across cores.                       |
+| `unsupported_regimes` | `list[str]`                                            | Free-form slugs; typo-guarded against the set in `check_capabilities.py`. |
+
+Allowed values for the enum fields and the canonical
+`unsupported_regimes` slug list are documented in
+[docs/glossary.md §6](glossary.md#6-cell-metadata-enums).
+
+### Cross-field consistency
+
+[`check_capabilities.py`](../tests/tools/check_capabilities.py)
+enforces the following invariants (hard-fail by default, demote to
+warnings with `--no-strict-metadata`):
+
+- `reduce_axis` is `null` iff `accumulator_dtype` is `null` — a
+  reducing op has both, a non-reducing op has neither.
+- Tier `elementwise` ⇒ `reduce_axis` must be `null`.
+- Tier `reduction` ⇒ `reduce_axis` must be set.
+- `tail_behavior == host_dispatcher` ⇔ `partitioning == host_dispatcher`.
+- Every `unsupported_regimes` entry must be in the canonical set
+  documented in [docs/glossary.md §6](glossary.md#6-cell-metadata-enums).
+
+### Golden-header ↔ capabilities.yaml mirroring
+
+Every golden under [golden/kernels/](../golden/kernels/) carries a
+"Cell metadata (mirrors capabilities.yaml; do not drift)" block in
+its top-of-file docstring. The
+[tests/unit/tools/test-golden-header.sh](../tests/unit/tools/test-golden-header.sh)
+PR-gate test greps each golden's docstring for the cell's
+`shape_regime`, `tail_behavior`, and `partitioning` strings and fails
+if either source has drifted from the other. Reporting and prompt
+work that consumes these fields lands in Phase 2; until then the
+metadata is read by `check_capabilities.py` only.

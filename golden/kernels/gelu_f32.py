@@ -1,26 +1,52 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: gelu_f32 kernel (asc2 API)
+"""Golden kernel: gelu/float32
 
 GELU activation, tanh / Padé approximation form (PyTorch's
 ``gelu(approximate='tanh')`` / TensorFlow's ``gelu(approximate=True)``):
 
     gelu(x) = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
 
-The original ``erf`` form was numerically too noisy on the CANN simulator
-for float32 (``asc2.erf`` exhibits up to ~4.7 absolute error vs the host
-``math.erf`` reference, requiring atol=2.0; even then the cell flaked
-2-of-3 nightlies). The tanh form sidesteps simulator erf entirely and
-is bit-exact against numpy with TILE_SIZE=64.
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: null
+  - output_shape: same_as_input
+  - accumulator_dtype: null
+  - identity: null
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: tile_per_core
+  - unsupported_regimes: []
+  - regime_note: tanh/Padé approximation form; do not use asc2.erf
+    on float32 (simulator erf is too noisy).
 
-Tile width: 64 elements (conservative single-lane width; C310 has wider
-lanes — leaving it at 64 keeps correctness while the perf retune is filed
-as a follow-up).
-
-Verified on the CANN 9.0.0 simulator (Ascend950PR_9599) at sizes 8192
-and 131072 with ``atol=rtol=1e-2``. Sizes below TILE_SIZE * CORE_NUM
-trip C310's stricter MTE GDMA burst alignment check, so size=128 is
-no longer in the test set.
+Non-obvious constraints (Phase 1.5):
+  - Numerical: the original ``erf`` form was too noisy on the CANN
+    simulator (``asc2.erf`` exhibits up to ~4.7 absolute error vs
+    the host ``math.erf`` on float32 and flaked 2-of-3 nightlies
+    even with atol=2.0). The tanh/Padé form sidesteps simulator
+    erf entirely and is bit-exact against numpy at TILE_SIZE=64.
+  - Tile width: ``TILE_SIZE = 64`` (conservative single-lane width
+    for C310). Wider tiles can hit a lowering bug that only writes
+    the first 64 elements — leaving the tile at 64 keeps the
+    correctness contract while the perf retune is filed as a
+    follow-up.
+  - Alignment: input ``size`` must be a multiple of
+    ``TILE_SIZE * CORE_NUM = 64 * 16 = 1024``; smaller inputs trip
+    C310's stricter MTE GDMA burst alignment check (size=128 is
+    excluded from the test set for this reason).
+  - UB/L1/L0 placement: every op (``asc2.tanh``, the multiplies,
+    the additions) runs in UB. No L0 / cube involvement.
+  - Padding: none.
+  - Tail behavior: aligned_only.
+  - Accumulator dtype: null. Composition is elementwise in float32
+    throughout.
+  - CRITICAL ordering rule: inside the ``@asc2.jit`` body, every
+    scalar-times-Tile multiplication MUST put the Tile on the left
+    (``x * GELU_K``, NOT ``GELU_K * x``). The asc2 Tile class lacks
+    ``__rmul__``, so scalar-on-left fails at codegen with
+    ``AttributeError: 'Tile' object has no attribute '__rmul__'``.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    numpy buffers are safe for this elementwise UB-only path.
 """
 
 import logging

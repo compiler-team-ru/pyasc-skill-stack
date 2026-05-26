@@ -1,6 +1,5 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: rms_norm_f16 kernel (asc2 API).
+"""Golden kernel: rms_norm/float16
 
 Two-variant float16 RMSNorm with a host-side dispatcher, mirroring the
 CANN arch35 (C310) ``rms_norm`` op layout (see ``rms_norm_f32.py`` for
@@ -13,6 +12,56 @@ kernels with two adaptations:
   - The output is cast back to float16 via ``.to(x.dtype)`` before
     ``asc2.store`` (matches the ``DTYPE_X`` template parameter on
     CANN's ``KernelRmsNormRegBase`` / ``KernelRmsNormRegBaseSplitD``).
+
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: dynamic         # full_row vs split_d via dispatcher
+  - reduce_axis: -1
+  - output_shape: same_as_input
+  - accumulator_dtype: float32
+  - identity: "0"
+  - tail_behavior: host_dispatcher
+  - padding: null                 # split_d uses host zero-pad to 64
+  - partitioning: host_dispatcher
+  - unsupported_regimes:
+      [dynamic_num_cols_not_8_aligned_in_full_row,
+       num_cols_below_split_d_tile_threshold]
+  - dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row
+    when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0,
+    otherwise split_d.
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: full_row requires ``num_cols % 8 == 0``; split_d
+    pads ``num_cols`` up to a multiple of ``tile_cols = 64`` on
+    the host (with zeros) and slices the output back. The
+    sum-of-squares divides by REAL ``num_cols`` so the padding
+    zeros do not bias the mean-square.
+  - UB/L1/L0 placement: every load lives in UB (no L0 / cube
+    involvement). ``full_row`` loads ``[1, num_cols]`` per row at
+    once; ``split_d`` loads ``[1, tile_cols=64]`` per inner-loop
+    iteration.
+  - UB budget: full_row chosen iff
+    ``num_cols * dtype_bytes <= 64 KiB`` (``UB_BUDGET_BYTES = 65536``).
+  - Padding: null at the cell level. split_d's host zero-padding
+    is documented under ``tail_behavior=host_dispatcher`` — i.e.
+    the dispatcher itself is the tail mechanism.
+  - Tail behavior: ``host_dispatcher``. The dispatcher chooses
+    full_row when the row fits in UB and is 8-aligned, otherwise
+    split_d (which streams along D in 64-element tiles with host
+    zero-padding).
+  - Accumulator dtype: ``float32`` for both branches. The float16
+    cell casts ``x``/``gamma`` to float32 in-kernel before the
+    reduce_sum and the output multiply, and casts back to float16
+    only before the final ``asc2.store``.
+  - Reduction axis: -1. The reduction is the row-wise mean-square.
+  - Identity: ``"0"`` — the sum-of-squares accumulator starts at
+    zero (``asc2.full([1, tile_cols], 0.0, dtype=asc.float32)``).
+  - Dispatcher choice (rms_norm only): full_row when
+    ``num_cols * dtype_bytes <= UB_BUDGET_BYTES`` AND
+    ``num_cols % 8 == 0``; otherwise split_d.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    inputs MUST be ``torch.Tensor`` — numpy buffers are silently
+    zeroed by the C310 simulator path and will surface as
+    ``0., 0., 0.`` tail bands in any downstream comparison.
 
 Test shapes (both verified in a single ``run_kernel`` call):
   - (8, 256)  exercises full_row.

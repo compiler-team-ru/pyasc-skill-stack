@@ -1,9 +1,8 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: rms_norm_f32 kernel (asc2 API).
+"""Golden kernel: rms_norm/float32
 
 Two-variant RMSNorm with a host-side dispatcher, mirroring the CANN
-arch35 (C310) `rms_norm` op layout in
+arch35 (C310) ``rms_norm`` op layout in
 ``opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/rms_norm/rms_norm.cpp``:
 
   - ``KernelRmsNormRegBase``      (tiling key 5000) -> full_row branch
@@ -13,6 +12,54 @@ Both kernels run on ``Ascend950PR_9599`` (compilation arch C310) and use
 ``torch.Tensor`` inputs. The dispatcher picks one kernel based on
 ``num_cols * dtype_bytes`` against a conservative UB budget; this
 matches CANN's ``TILING_KEY_IS`` switch in spirit but in pure Python.
+
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: dynamic         # full_row vs split_d via dispatcher
+  - reduce_axis: -1
+  - output_shape: same_as_input
+  - accumulator_dtype: float32
+  - identity: "0"
+  - tail_behavior: host_dispatcher
+  - padding: null                 # split_d uses host zero-pad to 64
+  - partitioning: host_dispatcher
+  - unsupported_regimes:
+      [dynamic_num_cols_not_8_aligned_in_full_row,
+       num_cols_below_split_d_tile_threshold]
+  - dispatcher_note: rms_norm_launch(x, gamma, eps) picks full_row
+    when num_cols * dtype_bytes <= 64KB and num_cols % 8 == 0,
+    otherwise split_d.
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: full_row requires ``num_cols % 8 == 0``; split_d
+    pads ``num_cols`` up to a multiple of ``tile_cols = 64`` on
+    the host (with zeros) and slices the output back. The
+    sum-of-squares divides by REAL ``num_cols`` so the padding
+    zeros do not bias the mean-square.
+  - UB/L1/L0 placement: every load lives in UB (no L0 / cube
+    involvement). ``full_row`` loads ``[1, num_cols]`` per row at
+    once; ``split_d`` loads ``[1, tile_cols=64]`` per inner-loop
+    iteration.
+  - UB budget: full_row chosen iff
+    ``num_cols * dtype_bytes <= 64 KiB`` (``UB_BUDGET_BYTES = 65536``);
+    e.g. ``256 * 4 = 1024 B`` fits comfortably, ``1055 * 4 ≈ 4 KiB``
+    also fits in bytes terms but the 8-alignment guard routes it
+    to split_d.
+  - Padding: null at the cell level. split_d's host zero-padding
+    is documented under ``tail_behavior=host_dispatcher`` — i.e.
+    the dispatcher itself is the tail mechanism.
+  - Tail behavior: ``host_dispatcher``. The dispatcher chooses
+    full_row when the row fits in UB and is 8-aligned, otherwise
+    split_d (which streams along D in 64-element tiles with host
+    zero-padding).
+  - Accumulator dtype: ``float32``.
+  - Reduction axis: -1.
+  - Identity: ``"0"``.
+  - Dispatcher choice (rms_norm only): full_row when
+    ``num_cols * dtype_bytes <= UB_BUDGET_BYTES`` AND
+    ``num_cols % 8 == 0``; otherwise split_d.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    inputs MUST be ``torch.Tensor`` — numpy buffers are silently
+    zeroed by the C310 simulator path.
 
 Test shapes (both verified in a single ``run_kernel`` call):
   - (8, 256)  exercises full_row (row tile fits in UB).

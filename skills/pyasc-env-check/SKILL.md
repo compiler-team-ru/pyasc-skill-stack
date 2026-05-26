@@ -58,7 +58,7 @@ bash scripts/check_env.sh
 | v1.1.0 | CANN 8.1.0 |
 | v1.2.0+ | CANN 9.0.0 |
 
-This project is verified against **CANN 9.0.0** (`ascendai/cann:9.0.0-beta.2-910b-ubuntu22.04-py3.11`).
+This project is verified against **CANN 9.0.0** (`ascendai/cann:9.0.0-beta.2-910b-ubuntu22.04-py3.11`). The base image is multi-arch and runs on both x86_64 and aarch64 Linux hosts.
 
 ## Backend availability
 

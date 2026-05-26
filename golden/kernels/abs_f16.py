@@ -1,13 +1,43 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: abs_f16 kernel (asc2 API)
+"""Golden kernel: abs/float16
+
 Element-wise absolute value for float16 tensors.
 Verified on CANN simulator with Ascend950PR_9599 platform.
 
-Test sizes intentionally start at 8192 (= TILE_SIZE * CORE_NUM * 4) -- C310
-enforces stricter MTE GDMA burst alignment than 910B1 and silently errors
-on inputs smaller than TILE_SIZE * CORE_NUM (the cores receive empty tiles
-that fail the alignment check).
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: null
+  - output_shape: same_as_input
+  - accumulator_dtype: null
+  - identity: null
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: tile_per_core
+  - unsupported_regimes: []
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: input ``size`` must be a multiple of
+    ``TILE_SIZE * CORE_NUM = 128 * 16 = 2048``; smaller inputs trip
+    C310's stricter MTE GDMA burst alignment check and silently
+    return zeros. Test sizes start at 8192 (= ``TILE_SIZE * CORE_NUM
+    * 4``) for that reason.
+  - UB/L1/L0 placement: each tile is loaded into UB (default
+    location of ``asc2.load`` with no ``location=`` arg); the abs
+    is computed in-place in UB and stored straight back to GM. No
+    L0 / cube involvement.
+  - Padding: none. ``tail_behavior=aligned_only`` — the kernel
+    does not handle partial tiles; the dispatch shape (``size``)
+    must be an exact multiple of ``TILE_SIZE * CORE_NUM``.
+  - Tail behavior: aligned_only. Non-multiple shapes are out of
+    scope (see ``unsupported_regimes=[]`` — i.e. no opt-in regime
+    extends this cell).
+  - Accumulator dtype: null. ``asc2.abs`` is a pure elementwise op
+    with no accumulation.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    numpy ``np.empty_like`` for the output is fine here because
+    this is an elementwise op without cube/matmul involvement
+    (the numpy-zeroing hazard documented in matmul/rms_norm does
+    not apply to elementwise UB-only kernels).
 """
 
 import logging

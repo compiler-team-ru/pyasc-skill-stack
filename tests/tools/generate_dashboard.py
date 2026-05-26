@@ -573,6 +573,56 @@ h1 { font-size: 24px; margin-bottom: 4px; }
   border: 5px solid transparent;
   border-top-color: var(--fg);
 }
+.protocol-decomp-panel {
+  display: none;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.protocol-decomp-panel.has-data { display: block; }
+.protocol-decomp-panel .pdp-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: var(--fg);
+}
+.protocol-decomp-panel .pdp-subtitle {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-bottom: 14px;
+  max-width: 820px;
+}
+.protocol-decomp-panel .pdp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.protocol-decomp-panel .pdp-table th,
+.protocol-decomp-panel .pdp-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.protocol-decomp-panel .pdp-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+.protocol-decomp-panel .pdp-pp {
+  font-weight: 600;
+}
+.protocol-decomp-panel .pdp-pp.good { color: var(--confirmed); }
+.protocol-decomp-panel .pdp-pp.bad { color: var(--blocked); }
+.protocol-decomp-panel .pdp-pp.neutral { color: var(--fg-muted); }
+.protocol-decomp-panel .pdp-unavailable {
+  color: var(--fg-muted);
+  font-style: italic;
+}
 .tier-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -874,6 +924,8 @@ footer a { color: var(--fg-muted); }
 
 <div class="skills-value-banner" id="skills-value-banner"></div>
 
+<div class="protocol-decomp-panel" id="protocol-decomp-panel"></div>
+
 <div class="tier-cards" id="tier-cards"></div>
 
 <div class="controls">
@@ -938,6 +990,7 @@ function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
   renderRuntimeBanner();
   renderSkillsValueBanner();
+  renderProtocolDecomp();
   renderTierCards();
   populateTierFilter();
   renderTable();
@@ -1162,6 +1215,127 @@ function fmtAgo(iso) {
 function fmtIsoDay(iso) {
   if (!iso) return "";
   return String(iso).slice(0, 10);
+}
+
+// Phase 0 "Skill stack value decomposition" panel. Renders the four
+// P3-P2 / P4-P3 / P6-P4 / P5-P2 deltas for the cloud-default profile,
+// with the unavailable P5-P2 row labelled "protocol P5 unavailable".
+// All inputs come from skills_value.by_profile[profile].deltas_pp /
+// by_protocol, populated by compare_skills_value.aggregate_by_protocol.
+var PDP_DELTA_LABELS = {
+  "P3-P2": {label: "P3 \u2212 P2", caption: "Value of guided prompting"},
+  "P4-P3": {label: "P4 \u2212 P3", caption: "Value of docs / AGENTS.md"},
+  "P6-P4": {label: "P6 \u2212 P4", caption: "Pure skill-stack value"},
+  "P5-P2": {label: "P5 \u2212 P2", caption: "Pure skill-stack value (minimal prompt)"},
+};
+
+function _pdpPpClass(v) {
+  if (v == null || v === 0) return "pdp-pp neutral";
+  return v > 0 ? "pdp-pp good" : "pdp-pp bad";
+}
+
+function _pdpFmtPp(v) {
+  if (v == null) return "\u2014";
+  if (v === 0) return "0";
+  var sign = v > 0 ? "+" : "\u2212";
+  return sign + Math.abs(v).toFixed(1) + " pp";
+}
+
+function _pdpFmtPct(v) {
+  if (v == null) return "\u2014";
+  if (v === 0) return "0%";
+  var sign = v > 0 ? "+" : "\u2212";
+  return sign + Math.abs(v).toFixed(0) + "%";
+}
+
+function _pdpFmtAttempts(v) {
+  if (v == null) return "\u2014";
+  if (v === 0) return "0";
+  var sign = v > 0 ? "+" : "\u2212";
+  return sign + Math.abs(v).toFixed(1);
+}
+
+function renderProtocolDecomp() {
+  var sv = DATA.skills_value;
+  var el = document.getElementById("protocol-decomp-panel");
+  if (!sv || !sv.by_profile) return;
+  // The decomposition view is anchored on cloud-default. Local profiles
+  // stay on the legacy pair view until Phase 6 doubles their matrix.
+  var profile = "cloud-default";
+  var p = sv.by_profile[profile];
+  if (!p) return;
+  var byProtocol = p.by_protocol || {};
+  var deltas = p.deltas_pp || {};
+  // Hide the panel entirely when no protocol-axis evidence exists yet
+  // (e.g. a pre-Phase-0 nightly that only wrote on/off legs).
+  var anyProtocol = Object.keys(byProtocol).length > 0;
+  if (!anyProtocol) return;
+  el.classList.add("has-data");
+
+  var html = '<div class="pdp-title">Skill stack value decomposition '
+    + svbHelp("Phase 0 protocol-axis breakdown. Each row isolates one "
+      + "intervention on the same OpenCode harness/model/budget: P3 "
+      + "vs P2 isolates guided-prompt value, P4 vs P3 isolates "
+      + "docs/AGENTS.md value, P6 vs P4 isolates the pyasc skill stack "
+      + "itself. P5 vs P2 (minimal prompt + skills) is deferred to a "
+      + "future sprint. See docs/evaluation-methodology.md "
+      + "\u00a7\"Protocol-axis CI mapping (Phase 0)\".")
+    + '</div>'
+    + '<div class="pdp-subtitle">Profile <code>' + profile + '</code>. '
+    + 'Bars show the marginal effect of each protocol-axis change, '
+    + 'holding all other variables constant.</div>'
+    + '<table class="pdp-table">'
+    + '<thead><tr>'
+    + '<th>Comparison</th>'
+    + '<th>Pass-rate \u0394 (pp)</th>'
+    + '<th>Tokens \u0394 (%)</th>'
+    + '<th>Attempts-to-pass \u0394</th>'
+    + '<th>Sample (n_clean / n_cells)</th>'
+    + '<th>Interpretation</th>'
+    + '</tr></thead><tbody>';
+
+  var specs = ["P3-P2", "P4-P3", "P6-P4", "P5-P2"];
+  specs.forEach(function (spec) {
+    var meta = PDP_DELTA_LABELS[spec] || {label: spec, caption: ""};
+    var d = deltas[spec];
+    var a = spec.split("-")[0];
+    var b = spec.split("-")[1];
+    var rowA = byProtocol[a];
+    var rowB = byProtocol[b];
+    var sampleHtml;
+    if (rowA && rowB) {
+      sampleHtml = a + ': ' + (rowA.n_clean || 0) + '/' + (rowA.n_cells || 0)
+        + ' \u00b7 ' + b + ': ' + (rowB.n_clean || 0) + '/' + (rowB.n_cells || 0);
+    } else if (!rowA && !rowB) {
+      sampleHtml = '<span class="pdp-unavailable">'
+        + 'protocol ' + a + ' and ' + b + ' unavailable</span>';
+    } else if (!rowA) {
+      sampleHtml = '<span class="pdp-unavailable">protocol ' + a
+        + ' unavailable</span>';
+    } else {
+      sampleHtml = '<span class="pdp-unavailable">protocol ' + b
+        + ' unavailable</span>';
+    }
+    if (!d) {
+      html += '<tr>'
+        + '<td><strong>' + meta.label + '</strong></td>'
+        + '<td colspan="3" class="pdp-unavailable">' + sampleHtml + '</td>'
+        + '<td></td>'
+        + '<td>' + meta.caption + '</td>'
+        + '</tr>';
+      return;
+    }
+    html += '<tr>'
+      + '<td><strong>' + meta.label + '</strong></td>'
+      + '<td class="' + _pdpPpClass(d.pass_pp) + '">' + _pdpFmtPp(d.pass_pp) + '</td>'
+      + '<td>' + _pdpFmtPct(d.tokens_pct) + '</td>'
+      + '<td>' + _pdpFmtAttempts(d.attempts_delta) + '</td>'
+      + '<td>' + sampleHtml + '</td>'
+      + '<td>' + meta.caption + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
 function renderSkillsValueBanner() {

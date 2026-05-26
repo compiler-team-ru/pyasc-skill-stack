@@ -1,12 +1,33 @@
 #!/usr/bin/env python3.10
-"""
-Golden reference: leaky_relu_f16 kernel (asc2 API)
-Conditional operation using asc2.where: out = where(x >= 0, x, alpha * x).
-Verified on CANN simulator with Ascend950PR_9599 platform.
+"""Golden kernel: leaky_relu/float16
 
-Test sizes intentionally start at 8192 (= TILE_SIZE * CORE_NUM * 4) -- C310
-enforces stricter MTE GDMA burst alignment than 910B1 and silently errors
-on inputs smaller than TILE_SIZE * CORE_NUM.
+Conditional operation using ``asc2.where``: ``out = where(x >= 0, x,
+alpha * x)``. Verified on CANN simulator with Ascend950PR_9599 platform.
+
+Cell metadata (mirrors capabilities.yaml; do not drift):
+  - shape_regime: fixed
+  - reduce_axis: null
+  - output_shape: same_as_input
+  - accumulator_dtype: null
+  - identity: null
+  - tail_behavior: aligned_only
+  - padding: null
+  - partitioning: tile_per_core
+  - unsupported_regimes: []
+
+Non-obvious constraints (Phase 1.5):
+  - Alignment: input ``size`` must be a multiple of
+    ``TILE_SIZE * CORE_NUM = 128 * 16 = 2048``; smaller inputs trip
+    C310's stricter MTE GDMA burst alignment check (test sizes
+    start at 8192 = ``TILE_SIZE * CORE_NUM * 4``).
+  - UB/L1/L0 placement: the input tile, the comparison ``x >= 0``,
+    the scaled branch ``x * alpha``, and the ``asc2.where`` selector
+    all live in UB. No L0 / cube involvement.
+  - Padding: none.
+  - Tail behavior: aligned_only.
+  - Accumulator dtype: null — this is a purely elementwise op.
+  - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
+    numpy buffers are safe for this elementwise UB-only path.
 """
 
 import logging

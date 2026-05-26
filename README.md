@@ -23,12 +23,28 @@ These must be available on the host before starting:
 
 > **Note on `asc2`.** The `asc2` tile-based API is not yet published to PyPI — the PyPI `pyasc` wheel ships only the `asc` v1 API. To get `asc2` you currently need either the Docker image (Option A) or a build from the `v2` branch of the `pyasc` source (Option B).
 
+> **Architecture support.** Tested on Ubuntu 22.04 on both `x86_64` and `aarch64`. The Docker image (Option A) is multi-arch and auto-selects the right LLVM prebuilt at build time. For Option B (local build), use the LLVM archive matching `uname -m` (the snippet below does this for you). CANN itself must be installed from its arch-specific installer (`linux-x86_64.run` vs `linux-aarch64.run`); see [docs/cann-setup.md](docs/cann-setup.md).
+
 ### Step 1. Clone the repository
 
 ```bash
 git clone git@github.com:aloschilov/pyasc-skill-stack.git
 cd pyasc-skill-stack
 ```
+
+### Step 1b. Install host prerequisites (Ubuntu, optional)
+
+If you're starting from a clean Ubuntu 22.04 / 24.04 host (x86_64 or aarch64), the repo ships a small idempotent helper that checks for and offers to install everything needed for Options A and B:
+
+```bash
+bash scripts/install-host-deps.sh                              # interactive: shows plan, asks once
+bash scripts/install-host-deps.sh --yes                        # non-interactive (CI)
+bash scripts/install-host-deps.sh --skip-docker --skip-opencode  # apt packages only
+```
+
+Covers: apt packages (`build-essential`, `git`, `curl`, `ccache`, `clang`, `lld`, `python3.10`, `python3.10-venv`, `python3-pip`), Docker Engine via the official `download.docker.com` repo, and the `opencode` CLI via the upstream installer.
+
+Out of scope for the script: the CANN Toolkit itself (see [docs/cann-setup.md](docs/cann-setup.md)) and any pyenv-managed Python.
 
 ### Step 2. Configure paths (once per shell)
 
@@ -57,11 +73,14 @@ The default `docker/Dockerfile` builds `pyasc` from the `v2` source inside the i
 ```bash
 docker build -f docker/Dockerfile -t pyasc-sim:latest docker/
 docker run --rm -it \
+  --ulimit nofile=1048576:1048576 \
   -v "$(pwd)":/workspace -w /workspace \
   pyasc-sim:latest
 ```
 
-All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**. Inside the container, `CANN_HOME` is already set to `/usr/local/Ascend/ascend-toolkit/latest`.
+> The `--ulimit nofile=1048576` is required: the CANN simulator opens hundreds of dump files per core (16 cores × tens of files), and the default Docker `nofile` limit of 1024 causes runtime errors like `Failed opening file ... Too many open files`.
+
+All remaining steps (sourcing CANN, running `opencode`, running kernels) happen **inside the container**. Inside the container, `CANN_HOME` is preset (CANN 9.0.0-beta.2 lives under `/usr/local/Ascend/cann-9.0.0-beta.2`; the install also exposes `/usr/local/Ascend/ascend-toolkit/latest` as a symlink, and sourcing `set_env.sh` updates `$ASCEND_HOME_PATH` accordingly).
 
 An advanced overlay-based variant is also provided for developers who want to graft their local `pyasc` build onto a prebuilt CANN image:
 
@@ -82,11 +101,20 @@ git clone https://gitcode.com/cann/pyasc.git "$PYASC_SRC"
 python3.10 -m venv .venv
 source .venv/bin/activate
 
-export LLVM_INSTALL_PREFIX=/path/to/prebuilt-llvm   # see note below
+LLVM_ARCHIVE_BASE=https://oaitriton.blob.core.windows.net/public/llvm-builds
+case "$(uname -m)" in
+    x86_64)  LLVM_URL="${LLVM_ARCHIVE_BASE}/llvm-86b69c31-ubuntu-x64.tar.gz"   ;;
+    aarch64) LLVM_URL="${LLVM_ARCHIVE_BASE}/llvm-86b69c31-ubuntu-arm64.tar.gz" ;;
+    *) echo "Unsupported arch: $(uname -m)" >&2 ; return 1 ;;
+esac
+mkdir -p "$HOME/.llvm"
+curl -fsSL "$LLVM_URL" | tar -xz --strip-components=1 -C "$HOME/.llvm"
+export LLVM_INSTALL_PREFIX="$HOME/.llvm"
+
 pip install "$PYASC_SRC"
 ```
 
-See the upstream [`pyasc` build-from-source guide](https://gitcode.com/cann/pyasc) (file `docs/installation/build-from-source.rst`) for prebuilt LLVM archive URLs and optional build flags (`PYASC_SETUP_CCACHE`, `PYASC_SETUP_CLANG_LLD`, etc.).
+See the upstream [`pyasc` build-from-source guide](https://gitcode.com/cann/pyasc) (file `docs/installation/build-from-source.rst`) for both prebuilt LLVM archive URLs and optional build flags (`PYASC_SETUP_CCACHE`, `PYASC_SETUP_CLANG_LLD`, etc.).
 
 #### Option C — Shortcut: existing system-wide `pyasc` dev install
 
