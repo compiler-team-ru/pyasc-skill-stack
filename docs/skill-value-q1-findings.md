@@ -202,6 +202,85 @@ nightly, no schedule split.**
   meaningless without `[−24.3, +24.3]`. The Stage 3.5 panel renders
   it; consumers of this report should always cite both.
 
+## Stability sweep (Phase 3 Stage 3.4)
+
+To put a noise bound on the single-night deltas above, the four
+"boundary" cells where the P3 → P4 transition lives — `abs/{f16,f32}`,
+`add/f16`, `gelu/f32` — were re-run twice more on the same evening
+under identical conditions. Three independent trials per
+(cell, protocol) cell, 4 cells × 4 protocols × 3 trials = 48 boundary
+observations. Re-run evidence files use the standard protocol-aware
+filename with a `-r2` / `-r3` suffix; they live alongside the
+trial-1 files (without suffix) in `evidence/` and are filtered out of
+the headline `aggregate_by_protocol` pass.
+
+Pass-rate per trial on the 4-cell boundary subset:
+
+| Trial | P2 (boundary 4) | P3 (boundary 4) | P4 (boundary 4) | P6 (boundary 4) |
+|---|---:|---:|---:|---:|
+| #1 | 0/4 (0%) | 0/4 (0%) | 4/4 (100%) | 4/4 (100%) |
+| #2 | 0/4 (0%) | 3/4 (75%) | 4/4 (100%) | 4/4 (100%) |
+| #3 | 0/4 (0%) | 1/4 (25%) | 4/4 (100%) | 4/4 (100%) |
+
+Per-trial deltas (4-cell sample):
+
+| Trial | P3 − P2 | P4 − P3 | P6 − P4 |
+|---|---:|---:|---:|
+| #1 | +0 pp | +100 pp | +0 pp |
+| #2 | +75 pp | +25 pp | +0 pp |
+| #3 | +25 pp | +75 pp | +0 pp |
+
+Per-cell flip count (out of 3 trials):
+
+| Cell | P2 flips | P3 flips | P4 flips | P6 flips | Classification |
+|---|---:|---:|---:|---:|---|
+| `abs/float16` | 0 | 1 (F→F→P) | 0 | 0 | **P3 noisy**, P4/P6 stable |
+| `abs/float32` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
+| `add/float16` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
+| `gelu/float32` | 0 | 1 (F→P→F) | 0 | 0 | **P3 noisy**, P4/P6 stable |
+
+### Findings from the stability sweep
+
+1. **All 4 flips concentrate on P3.** P2 reliably fails (no kernel),
+   P4 reliably passes (AGENTS.md provides enough structure), P6
+   reliably passes (skills don't lose ground vs AGENTS.md). The
+   P3 → P4 transition is the noisy boundary.
+2. **P3 − P2 single-night delta of +58.4 pp is undersampled.** On the
+   boundary cells alone, the per-trial P3 − P2 ranges from +0 pp to
+   +75 pp across 3 trials — a 75-pp swing. The full-matrix +58.4 pp
+   in Stage 3.3 is a single-trial sample of a noisy distribution.
+3. **P4 − P3 single-night delta of +33.3 pp is also undersampled.**
+   Boundary-cell P4 − P3 ranges from +25 pp to +100 pp across the 3
+   trials — also a 75-pp swing.
+4. **P6 − P4 = +0 pp is the robust headline.** Across all 3 trials,
+   P6 − P4 on the boundary cells stayed at exactly +0 pp (4/4 → 4/4
+   each time). The Stage 3.3 Newcombe CI of `[−24.3 pp, +24.3 pp]`
+   should be read as "the data does not rule out a small effect, but
+   3-trial replication shows the *measured* effect is consistently
+   zero, not noise-driven."
+5. **P3 alone is unfit for sprint-level decisions.** With a 75-pp
+   intra-night swing on a 4-cell subset, any sprint-level claim
+   about "guided-prompt value" derived from a single P3 measurement
+   will mislead the planning. Either (a) bump the per-cell trial
+   count from 1 to 3+ before publishing P3 deltas, or (b) drop P3 in
+   favor of P2 vs P4 / P2 vs P6 deltas, which the stability sweep
+   shows are anchored.
+
+### Caveat: same-evening vs day-over-day noise
+
+These three trials all ran on the same evening (2026-05-26, ~22:00-
+02:00 UTC+3, ~6 hours total). They measure intra-session model
+variance — temperature, sampling, agent-loop nondeterminism — at a
+single point in the underlying provider's traffic schedule. A true
+day-over-day noise floor still requires the nightly cron to run on
+3 consecutive days; the `deltas_pp_history` array in the aggregator
+is the seam for that follow-up.
+
+If day-over-day noise dominates intra-session noise (likely true for
+a large provider with dynamic batching), the published CIs here are
+LOWER bounds on the true uncertainty; the real-world delta CIs
+should be wider.
+
 ## Cross-references
 
 - Methodology: [`docs/evaluation-methodology.md` §"Comparisons of interest"](evaluation-methodology.md#comparisons-of-interest).

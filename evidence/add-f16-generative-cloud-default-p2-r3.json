@@ -1,0 +1,76 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "add",
+  "dtype": "float16",
+  "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
+  "kernel_path": "",
+  "date": "2026-05-26T16:45:42Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 300,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 2544,
+    "output": 301,
+    "cache_read": 38556,
+    "total": 2845
+  },
+  "elapsed_total_s": 28.31,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 28.31,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 2544,
+        "output": 301,
+        "cache_read": 38556,
+        "total": 2845,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Phase 3 Stage 3.4 \u2014 stability trial #3; add/float16 P2; cloud-default; dashscope/glm-5",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

@@ -1,0 +1,76 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "gelu",
+  "dtype": "float32",
+  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32.",
+  "kernel_path": "",
+  "date": "2026-05-26T16:52:16Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 300,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 21808,
+    "output": 2002,
+    "cache_read": 53060,
+    "total": 23810
+  },
+  "elapsed_total_s": 72.62,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 72.62,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21808,
+        "output": 2002,
+        "cache_read": 53060,
+        "total": 23810,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Phase 3 Stage 3.4 \u2014 stability trial #3; gelu/float32 P2; cloud-default; dashscope/glm-5",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}
