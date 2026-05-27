@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=8 (float32 \u2192 8 elements \u00d7 4 bytes = 32-byte alignment). Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-05-26T19:08:32Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum-float32-a1/kernel.py",
+  "date": "2026-05-27T09:00:47Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -13,33 +20,31 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md",
-      "verification.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 112971,
-    "output": 7543,
-    "cache_read": 340957,
-    "total": 120514
+    "input": 63194,
+    "output": 4579,
+    "cache_read": 244127,
+    "total": 67773
   },
-  "elapsed_total_s": 240.0,
+  "elapsed_total_s": 240.05,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.0,
+      "elapsed_s": 240.05,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 112971,
-        "output": 7543,
-        "cache_read": 340957,
-        "total": 120514,
+        "input": 63194,
+        "output": 4579,
+        "cache_read": 244127,
+        "total": 67773,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -136,7 +141,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T21:29:51Z",
+  "date": "2026-05-27T11:21:37Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,29 +25,65 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 27968,
-    "output": 3208,
-    "cache_read": 211139,
-    "total": 31176
+    "input": 111949,
+    "output": 14284,
+    "cache_read": 664069,
+    "total": 126233
   },
-  "elapsed_total_s": 240.1,
+  "elapsed_total_s": 605.94,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.1,
-      "exit": 124,
+      "elapsed_s": 125.89,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 27968,
-        "output": 3208,
-        "cache_read": 211139,
-        "total": 31176,
+        "input": 11211,
+        "output": 3144,
+        "cache_read": 152351,
+        "total": 14355,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.03,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 76220,
+        "output": 4804,
+        "cache_read": 427025,
+        "total": 81024,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 24518,
+        "output": 6336,
+        "cache_read": 84693,
+        "total": 30854,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
@@ -49,25 +92,24 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Exit code 1: ModuleNotFoundError: No module named 'tvm'\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a3.tr2li4r7/kernel.py\", line 10, in <module>\n    import tvm\nModuleNotFoundError: No module named 'tvm'\n",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.erf', 'gelu']",
+    "detail": "found ['gelu']",
     "markers_found": [
-      "asc2.erf",
       "gelu"
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 10.0,
     "threshold": 12,
-    "accepted": true,
+    "accepted": false,
     "checks": {
       "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
+        "passed": false,
+        "detail": "missing"
       },
       "no_return_value": {
         "passed": true,
@@ -78,28 +120,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
+        "passed": false,
+        "detail": "no range call in kernel"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -107,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "skipped (no --op or op not in arity table)"
       },
       "output_dtype": {
         "passed": true,
@@ -127,12 +169,12 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.erf', 'gelu']"
+        "detail": "found ['gelu']"
       }
     }
   },
-  "static_verify": "pass",
-  "notes": "Stage C stability trial 2 P3",
+  "static_verify": "fail",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

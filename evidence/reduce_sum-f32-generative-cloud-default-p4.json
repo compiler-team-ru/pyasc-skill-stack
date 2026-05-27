@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=8 (float32 \u2192 8 elements \u00d7 4 bytes = 32-byte alignment). Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T19:04:06Z",
+  "date": "2026-05-27T09:02:22Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,24 +25,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 11701,
-    "output": 1171,
-    "cache_read": 88770,
-    "total": 12872
+    "input": 55631,
+    "output": 2920,
+    "cache_read": 209654,
+    "total": 58551
   },
-  "elapsed_total_s": 63.94,
+  "elapsed_total_s": 344.93,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 63.94,
+      "elapsed_s": 240.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 31556,
+        "output": 1723,
+        "cache_read": 91022,
+        "total": 33279,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 104.91,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 11701,
-        "output": 1171,
-        "cache_read": 88770,
-        "total": 12872,
+        "input": 24075,
+        "output": 1197,
+        "cache_read": 118632,
+        "total": 25272,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -132,7 +157,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

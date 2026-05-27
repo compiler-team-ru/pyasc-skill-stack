@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float32",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float32/kernel.py",
-  "date": "2026-05-26T18:27:07Z",
+  "date": "2026-05-27T08:41:13Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -20,38 +27,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 73327,
-    "output": 6282,
-    "cache_read": 304338,
-    "total": 79609
+    "input": 323657,
+    "output": 15264,
+    "cache_read": 562844,
+    "total": 338921
   },
-  "elapsed_total_s": 240.01,
+  "elapsed_total_s": 720.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
+      "elapsed_s": 240.0,
       "exit": 124,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 73327,
-        "output": 6282,
-        "cache_read": 304338,
-        "total": 79609,
+        "input": 102149,
+        "output": 4681,
+        "cache_read": 194528,
+        "total": 106830,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 117776,
+        "output": 6562,
+        "cache_read": 199719,
+        "total": 124338,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 103732,
+        "output": 4021,
+        "cache_read": 168597,
+        "total": 107753,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:11:12:\n                               unroll_factor=2, parallel=True):\n        flat_offset = tile_idx * tile_size\n        row_idx = flat_offset // num_cols\n        col_idx = flat_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        out = asc2.abs(x)\n        asc2.store(out, out_gm, offsets=[row_idx, col_idx])\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -133,7 +176,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

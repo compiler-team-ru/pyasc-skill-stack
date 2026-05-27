@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs/kernel.py",
-  "date": "2026-05-26T18:16:04Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float16/kernel.py",
+  "date": "2026-05-27T08:22:47Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -13,46 +20,81 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 74730,
-    "output": 5446,
-    "cache_read": 259507,
-    "total": 80176
+    "input": 256284,
+    "output": 14949,
+    "cache_read": 502029,
+    "total": 271233
   },
-  "elapsed_total_s": 240.08,
+  "elapsed_total_s": 720.08,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.08,
+      "elapsed_s": 240.01,
       "exit": 124,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 74730,
-        "output": 5446,
-        "cache_read": 259507,
-        "total": 80176,
+        "input": 126135,
+        "output": 5466,
+        "cache_read": 157229,
+        "total": 131601,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.05,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 69959,
+        "output": 3967,
+        "cache_read": 164710,
+        "total": 73926,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 60190,
+        "output": 5516,
+        "cache_read": 180090,
+        "total": 65706,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n) from e\nasc.codegen.errors.CodegenError: at <source>:21:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        out = asc2.abs(x)\n        asc2.store(out, out_gm, offsets=[row_idx, col_idx])\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -134,7 +176,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
@@ -147,5 +189,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T07:58:26Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 115977,
+      "elapsed_s": 240.01
+    }
+  ]
 }

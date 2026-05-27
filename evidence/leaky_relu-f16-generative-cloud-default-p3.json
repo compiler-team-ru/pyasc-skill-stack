@@ -1,41 +1,86 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T19:50:08Z",
+  "date": "2026-05-27T09:59:40Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 2981,
-    "output": 862,
-    "cache_read": 21738,
-    "total": 3843
+    "input": 130361,
+    "output": 5920,
+    "cache_read": 543223,
+    "total": 136281
   },
-  "elapsed_total_s": 44.84,
+  "elapsed_total_s": 395.47,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 44.84,
+      "elapsed_s": 60.57,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 2981,
-        "output": 862,
-        "cache_read": 21738,
-        "total": 3843,
+        "input": 15369,
+        "output": 958,
+        "cache_read": 18384,
+        "total": 16327,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.07,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 94903,
+        "output": 2156,
+        "cache_read": 474980,
+        "total": 97059,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 94.83,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 20089,
+        "output": 2806,
+        "cache_read": 49859,
+        "total": 22895,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +94,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Kernel executed but verification unclear: \nTesting shape: (1, 128)\n  Input shape: (1, 128), dtype: float16\n  Output shape: (1, 128), dtype: float16\n  Reference computed successfully\n  Max absolute difference: 9.755859e-01\n  Max relative difference: 1.000000e+00\n  Tolerance check (atol=1e-3, rtol=1e-3): FAIL\n\nTesting shape: (4, 2048)\n  Input",
+    "detail": "Kernel executed but verification unclear: Building for variant: Ascend950PR_9599\nTesting shape: [1, 128]\n  Input shape: (1, 128), dtype: float16\n  Output shape: (1, 128), dtype: float16\n  Alpha: 0.01\n  Verification: Passed\n\nTesting shape: [4, 2048]\n  Input shape: (4, 2048), dtype: float16\n  Output shape: (4, 2048), dtype: float16\n  Alpha: 0",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -131,7 +176,7 @@
     }
   },
   "static_verify": "fail",
-  "notes": "Stage B re-run with simulator (host backend) P3",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

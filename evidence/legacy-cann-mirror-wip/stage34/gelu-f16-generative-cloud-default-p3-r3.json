@@ -1,0 +1,151 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "gelu",
+  "dtype": "float16",
+  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T22:25:33Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 240,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 6986,
+    "output": 2121,
+    "cache_read": 38154,
+    "total": 9107
+  },
+  "elapsed_total_s": 70.87,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 70.87,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 6986,
+        "output": 2121,
+        "cache_read": 38154,
+        "total": 9107,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: TypeError: tensor() got an unexpected keyword argument 'dtype'\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a1.4wle9y2o/kernel.py\", line 62, in <module>\n    test_kernel(shape, tile_size)\n  File \"/tmp/gen-gelu-float16-a1.4wle9y2o/kernel.py\", line 36, in test_kernel\n    x = asc2.tensor(shape, dtype=np.float16, name='x')\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: tensor() got an unexpected keyword argument 'dtype'\n",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.erf', 'gelu']",
+    "markers_found": [
+      "asc2.erf",
+      "gelu"
+    ]
+  },
+  "score": {
+    "value": 10.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {
+      "jit_decorator": {
+        "passed": false,
+        "detail": "missing"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": false,
+        "detail": "missing asc2.load/asc2.store"
+      },
+      "asc2_tensor": {
+        "passed": false,
+        "detail": "missing asc2.tensor"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": false,
+        "detail": "no launch pattern"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.erf', 'gelu']"
+      }
+    }
+  },
+  "static_verify": "fail",
+  "notes": "Stage C stability trial 3 P3",
+  "protocol": {
+    "id": "P3",
+    "name": "opencode-skills-off-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
   "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants outside the @asc2.jit body; use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float32/kernel.py",
-  "date": "2026-05-26T19:47:53Z",
+  "date": "2026-05-27T09:53:52Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -21,24 +28,60 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 66123,
-    "output": 6216,
-    "cache_read": 369316,
-    "total": 72339
+    "input": 231181,
+    "output": 15544,
+    "cache_read": 865113,
+    "total": 246725
   },
-  "elapsed_total_s": 240.04,
+  "elapsed_total_s": 720.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.04,
+      "elapsed_s": 240.01,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 66123,
-        "output": 6216,
-        "cache_read": 369316,
-        "total": 72339,
+        "input": 57682,
+        "output": 4819,
+        "cache_read": 231792,
+        "total": 62501,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 99989,
+        "output": 5283,
+        "cache_read": 380288,
+        "total": 105272,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 73510,
+        "output": 5442,
+        "cache_read": 253033,
+        "total": 78952,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -52,7 +95,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Timeout after 150s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -136,7 +179,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float32",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T18:21:23Z",
+  "date": "2026-05-27T08:29:06Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,38 +25,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 22343,
-    "output": 1597,
-    "cache_read": 99049,
-    "total": 23940
+    "input": 53113,
+    "output": 5636,
+    "cache_read": 468546,
+    "total": 58749
   },
-  "elapsed_total_s": 146.45,
+  "elapsed_total_s": 370.55,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 146.45,
+      "elapsed_s": 104.06,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 22343,
-        "output": 1597,
-        "cache_read": 99049,
-        "total": 23940,
+        "input": 20870,
+        "output": 1749,
+        "cache_read": 149976,
+        "total": 22619,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 130.5,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21294,
+        "output": 1910,
+        "cache_read": 179746,
+        "total": 23204,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 135.99,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 10949,
+        "output": 1977,
+        "cache_read": 138824,
+        "total": 12926,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n) from e\nasc.codegen.errors.CodegenError: at <source>:11:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        out = asc2.abs(x)\n        asc2.store(out, out_gm, offsets=[row_idx, col_idx])\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -131,7 +174,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

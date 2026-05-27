@@ -1,0 +1,149 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "softmax",
+  "dtype": "float16",
+  "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T20:07:55Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 240,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 22915,
+    "output": 1336,
+    "cache_read": 114590,
+    "total": 24251
+  },
+  "elapsed_total_s": 62.39,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 62.39,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 22915,
+        "output": 1336,
+        "cache_read": 114590,
+        "total": 24251,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.softmax', 'softmax']",
+    "markers_found": [
+      "asc2.softmax",
+      "softmax"
+    ]
+  },
+  "score": {
+    "value": 14.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": false,
+        "detail": "no range call in kernel"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.softmax', 'softmax']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Stage B re-run with simulator (host backend) P4",
+  "protocol": {
+    "id": "P4",
+    "name": "opencode-skills-off-agents-md",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": true,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

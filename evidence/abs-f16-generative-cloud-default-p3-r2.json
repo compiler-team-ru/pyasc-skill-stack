@@ -1,41 +1,86 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T21:13:29Z",
+  "date": "2026-05-27T10:45:42Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 10607,
-    "output": 1976,
-    "cache_read": 69094,
-    "total": 12583
+    "input": 28955,
+    "output": 4583,
+    "cache_read": 129444,
+    "total": 33538
   },
-  "elapsed_total_s": 96.14,
+  "elapsed_total_s": 206.3,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 96.14,
+      "elapsed_s": 53.34,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 10607,
-        "output": 1976,
-        "cache_read": 69094,
-        "total": 12583,
+        "input": 2890,
+        "output": 896,
+        "cache_read": 30537,
+        "total": 3786,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 62.37,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 12472,
+        "output": 828,
+        "cache_read": 32151,
+        "total": 13300,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 90.59,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 13593,
+        "output": 2859,
+        "cache_read": 66756,
+        "total": 16452,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +94,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'torch_npu'\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a1.xb_846r0/kernel.py\", line 2, in <module>\n    import torch_npu\nModuleNotFoundError: No module named 'torch_npu'\n",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a3.ufkew_zr/kernel.py\", line 82, in <module>\n    verify()\n  File \"/tmp/gen-abs-float16-a3.ufkew_zr/kernel.py\", line 51, in verify\n    x_npu = asc2.Tensor(x_np)\n            ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -131,7 +176,7 @@
     }
   },
   "static_verify": "fail",
-  "notes": "Stage C stability trial 2 P3",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

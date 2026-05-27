@@ -1,41 +1,86 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
   "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T18:38:54Z",
+  "date": "2026-05-27T08:51:09Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 49818,
-    "output": 2051,
-    "cache_read": 249009,
-    "total": 51869
+    "input": 119491,
+    "output": 9147,
+    "cache_read": 580115,
+    "total": 128638
   },
-  "elapsed_total_s": 141.33,
+  "elapsed_total_s": 589.64,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 141.33,
+      "elapsed_s": 136.39,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 49818,
-        "output": 2051,
-        "cache_read": 249009,
-        "total": 51869,
+        "input": 27220,
+        "output": 1896,
+        "cache_read": 92364,
+        "total": 29116,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 213.25,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 45802,
+        "output": 2866,
+        "cache_read": 224079,
+        "total": 48668,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 46469,
+        "output": 4385,
+        "cache_read": 263672,
+        "total": 50854,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +94,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\nrom e\nasc.codegen.errors.CodegenError: at <source>:12:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        y = asc2.load(y_gm, [tile_size], offsets=[row_idx, col_idx])\n        out = x + y\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -132,7 +177,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T21:14:02Z",
+  "date": "2026-05-27T10:55:24Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,47 +25,85 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 6930,
-    "output": 784,
-    "cache_read": 14486,
-    "total": 7714
+    "input": 42994,
+    "output": 4568,
+    "cache_read": 415639,
+    "total": 47562
   },
-  "elapsed_total_s": 32.11,
+  "elapsed_total_s": 415.65,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 32.11,
+      "elapsed_s": 105.17,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 6930,
-        "output": 784,
-        "cache_read": 14486,
-        "total": 7714,
+        "input": 9292,
+        "output": 1492,
+        "cache_read": 172636,
+        "total": 10784,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 24307,
+        "output": 1912,
+        "cache_read": 135548,
+        "total": 26219,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 70.47,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 9395,
+        "output": 1164,
+        "cache_read": 107455,
+        "total": 10559,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: RuntimeError: Operation not support this dtype: int32\n  raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:9:17:\n    num_tiles = asc.num_tiles(x_gm, axis=0, shape=[TILE_SIZE])\n    \n    for tile_idx in asc.range(asc.block_idx(), num_tiles, asc.block_num()):\n        x_tile = asc.load(x_gm, shape=[TILE_SIZE], tile_id=[tile_idx])\n                 ^\n        y_tile = asc.abs(x_tile)\n        asc.store(y_tile, y_gm, tile_id=[tile_idx])\nRuntimeError: Operation not support this dtype: int32\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": false,
-    "detail": "none of ['asc2.abs'] found in kernel source",
-    "markers_found": []
+    "passed": true,
+    "detail": "found ['asc2.abs']",
+    "markers_found": [
+      "asc2.abs"
+    ]
   },
   "score": {
-    "value": 14.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -95,8 +140,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -104,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 4"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -123,13 +168,13 @@
         "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
-        "passed": false,
-        "detail": "none of ['asc2.abs'] found in source"
+        "passed": true,
+        "detail": "found ['asc2.abs']"
       }
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 2 P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

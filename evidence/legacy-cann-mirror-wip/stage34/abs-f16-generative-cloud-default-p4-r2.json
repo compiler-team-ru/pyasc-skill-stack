@@ -1,0 +1,146 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "abs",
+  "dtype": "float16",
+  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T21:14:02Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 240,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 6930,
+    "output": 784,
+    "cache_read": 14486,
+    "total": 7714
+  },
+  "elapsed_total_s": 32.11,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 32.11,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 6930,
+        "output": 784,
+        "cache_read": 14486,
+        "total": 7714,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: RuntimeError: Operation not support this dtype: int32\n  raise CodegenError(node, self.src, f\"{e.__class__.__name__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:9:17:\n    num_tiles = asc.num_tiles(x_gm, axis=0, shape=[TILE_SIZE])\n    \n    for tile_idx in asc.range(asc.block_idx(), num_tiles, asc.block_num()):\n        x_tile = asc.load(x_gm, shape=[TILE_SIZE], tile_id=[tile_idx])\n                 ^\n        y_tile = asc.abs(x_tile)\n        asc.store(y_tile, y_gm, tile_id=[tile_idx])\nRuntimeError: Operation not support this dtype: int32\n",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "none of ['asc2.abs'] found in kernel source",
+    "markers_found": []
+  },
+  "score": {
+    "value": 14.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": false,
+        "detail": "missing GlobalAddress type"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 4"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": false,
+        "detail": "none of ['asc2.abs'] found in source"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Stage C stability trial 2 P4",
+  "protocol": {
+    "id": "P4",
+    "name": "opencode-skills-off-agents-md",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": true,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

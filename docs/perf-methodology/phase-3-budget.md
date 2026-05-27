@@ -80,36 +80,42 @@ The +463 K tokens / nightly delta is the price of the protocol-axis
 decomposition. The 4-leg matrix adds two new measurement legs (P2 +
 P4) for ~31 % more spend.
 
-## Realized (post Stage B re-run with simulator)
+## Realized (Q1 re-run on `pyasc-v2-eval @ 7b85554a`)
 
-After Stage A added the host CANN runtime backend
-([`tests/tools/collect_generative_evidence.run_host_verify`](../../tests/tools/collect_generative_evidence.py)),
-Stage B re-ran the full 12-cell × 4-protocol matrix with
-`--runtime --runtime-backend host` on `dashscope/glm-5`. Token spend
-tracked the abs/f16-basis projection within ~4 %; the new realized
-cost is **wall-clock** introduced by the simulator subprocess.
+After Stage A added the host CANN runtime backend and the Q1 plan
+re-pinned the harness from the stale `cann/pyasc#wip-matmul-sync-and-reduce-fuse`
+clone onto the canonical `compiler-team/pyasc#v2 @ 7b85554a` baseline,
+the full 12-cell × 4-protocol matrix and 4-cell × 4-protocol × 2-trial
+stability sweep were re-collected on 2026-05-27 (`--runtime
+--runtime-backend host`, `--parallel 2`, `--max-attempts 3`).
 
-| Metric | Projected (abs/f16-basis) | Realized (12-cell matrix, simulator) | Δ |
-|---|---:|---:|---:|
-| Σ tokens P2+P3+P4+P6 / cell (mean) | 163 948 | 169 290 | +3.3 % |
-| Σ tokens P3+P6 / cell (mean) | 125 329 | 119 673 | −4.5 % |
-| Σ tokens / nightly (12 cells) | 1.97 M | 2.03 M | +3.0 % |
-| Multiplier (4-leg / 2-leg) | 1.31× | 1.41× | +0.10× |
-| Wall-clock, simulator-pass cell | n/a | 200–450 s | new dimension |
-| Wall-clock, no-kernel cell (P2 fail-fast) | n/a | 25–140 s | — |
-| Stage B wall-clock (48 cells, parallelism=1) | n/a | 3 h 4 min | — |
-| Stage C wall-clock (32 stability trials, parallelism=1) | n/a | 2 h 3 min | — |
+| Metric | Projected (abs/f16, Stage 3.2) | Realized — wip tree | Realized — `v2-eval @ 7b85554a` | Δ (v2 − wip) |
+|---|---:|---:|---:|---:|
+| Σ tokens P2+P3+P4+P6 / cell (mean over 12) | 163 948 | 169 290 | **407 469** | +140.7 % |
+| Σ tokens P3+P6 / cell (mean over 12) | 125 329 | 119 673 | **255 152** | +113.2 % |
+| Σ tokens / nightly (12 cells, 4 legs) | 1.97 M | 2.03 M | **4.90 M** | +2.87 M |
+| Multiplier (4-leg / 2-leg) | 1.31× | 1.41× | **1.60×** | +0.19× |
+| Wall-clock, simulator-pass cell (mean) | n/a | 200–450 s | 240–820 s | longer plan/review loops |
+| Wall-clock, no-kernel cell (P2 fail-fast) | n/a | 25–140 s | 142–365 s | — |
+| Stage B wall-clock (48 cells, parallelism=2) | n/a | n/a | **3 h 0 min** | — |
+| Stage C wall-clock (32 stability trials, parallelism=2) | n/a | n/a | **2 h 0 min** + 50 min resume | — |
+| Total run (Stage B + C + resume) | n/a | n/a | **7 h 26 min** | — |
 
-**Decision still holds: 4 legs nightly, no schedule split.** Token
-multiplier is 1.41× (vs the 2.5× guardrail). The new cost is wall-
-clock: the host simulator adds 30 – 90 s per cell that produces a
-kernel (40 of 48 in Stage B). A 2-cell concurrency probe (two
-independent golden kernels through `run_and_verify --backend Model`
-simultaneously) succeeded cleanly; parallelism=2 would halve the
-Stage B wall-clock to ~1.5 h. The orchestrator defaults to
-parallelism=1 for forensic clarity but the CI nightly-gate already
-parallelizes across protocol-id matrix jobs, so the realized CI
-wall-clock should be even shorter.
+**Decision still holds: 4 legs nightly, no schedule split.** Multiplier
+on v2 is 1.60× vs the 2.5× guardrail; the new cost is concentrated in
+P6 where the skill stack burns ~177 k tokens / cell (vs 94 k on wip).
+The driver is `gelu/float16` P6 (drift cell that costs 371 k tokens
+to fail) and `abs/{f16,f32}` P6 (drift cells that cost 271 k / 338 k
+to fail). The Q1 findings file flags these for skill-stack rewrite +
+verify-tolerance audit (see "Anomalies" section there).
+
+The mid-run editable-install diversion to `pyasc-fork` lost 18
+Stage 3.4 trials at 11:30 UTC; the orchestrator was extended with a
+`--resume-from` flag and a `PYTHONPATH` pin (see
+[`tests/tools/run_matrix_v2_eval.py`](../../tests/tools/run_matrix_v2_eval.py))
+and the resume completed cleanly with all 18 trials passing or
+failing on a recorded SHA. Total wall (including resume) was
+**7 h 26 min**.
 
 ## Decision tree (per the Phase 3 plan)
 

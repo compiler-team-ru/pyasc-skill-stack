@@ -1,0 +1,151 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "leaky_relu",
+  "dtype": "float16",
+  "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu-float16/kernel.py",
+  "date": "2026-05-26T20:01:10Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 240,
+    "completed": false,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 80054,
+    "output": 5847,
+    "cache_read": 364389,
+    "total": 85901
+  },
+  "elapsed_total_s": 240.0,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 80054,
+        "output": 5847,
+        "cache_read": 364389,
+        "total": 85901,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: 0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n00%)\nMax absolute difference: 0.981\nMax relative difference: 0.99\n x: array([8.522e-03, 1.790e-03, 2.642e-04, 6.401e-03, 3.656e-03, 4.673e-03,\n       7.987e-04, 3.706e-03, 6.435e-03, 3.551e-03, 8.316e-03, 7.904e-03,\n       7.046e-03, 9.056e-03, 7.214e-03, 1.774e-03, 8.583e-03, 6.531e-03,...\n y: array([0.852   , 0.179   , 0.02641 , 0.64    , 0.3655  , 0.4673  ,\n       0.07983 , 0.3706  , 0.6436  , 0.355   , 0.831   , 0.7905  ,\n       0.7046  , 0.9053  , 0.721   , 0.1774  , 0.8584  , 0.653   ,...\n",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.where']",
+    "markers_found": [
+      "asc2.where"
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.where']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Stage B re-run with simulator (host backend) P6",
+  "protocol": {
+    "id": "P6",
+    "name": "opencode-skills-on-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": true,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": true,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
-  "date": "2026-05-26T22:41:46Z",
+  "date": "2026-05-27T11:46:30Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -21,24 +28,60 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 52912,
-    "output": 6339,
-    "cache_read": 255704,
-    "total": 59251
+    "input": 285401,
+    "output": 16830,
+    "cache_read": 607296,
+    "total": 302231
   },
-  "elapsed_total_s": 240.0,
+  "elapsed_total_s": 720.02,
   "attempts": [
     {
       "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 69597,
+        "output": 4569,
+        "cache_read": 200328,
+        "total": 74166,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
       "prompt_label": "guided",
       "elapsed_s": 240.0,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 52912,
-        "output": 6339,
-        "cache_read": 255704,
-        "total": 59251,
+        "input": 128128,
+        "output": 5322,
+        "cache_read": 181156,
+        "total": 133450,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 87676,
+        "output": 6939,
+        "cache_read": 225812,
+        "total": 94615,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -52,7 +95,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Exit code 1: AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'\ntmp/gen-gelu-float16-a3.k09imnym/teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py\", line 26, in <module>\n    K_SQRT_HALF = asc2.sqrt(0.5)\n                  ^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc-v2-eval/python/asc/language/tile/unary_ops.py\", line 196, in sqrt\n    return op_unary_impl(input, builder.create_math_SqrtOp, support_scalar=True)\n                                ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -135,7 +178,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 3 P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

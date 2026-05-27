@@ -1,44 +1,85 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
-  "date": "2026-05-26T21:19:33Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float16/kernel.py",
+  "date": "2026-05-27T11:08:58Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 41133,
-    "output": 5310,
-    "cache_read": 372649,
-    "total": 46443
+    "input": 285385,
+    "output": 15826,
+    "cache_read": 855685,
+    "total": 301211
   },
-  "elapsed_total_s": 240.06,
+  "elapsed_total_s": 720.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.06,
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 119653,
+        "output": 7367,
+        "cache_read": 304095,
+        "total": 127020,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 74092,
+        "output": 5493,
+        "cache_read": 409597,
+        "total": 79585,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 41133,
-        "output": 5310,
-        "cache_read": 372649,
-        "total": 46443,
+        "input": 91640,
+        "output": 2966,
+        "cache_read": 141993,
+        "total": 94606,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -134,7 +175,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 2 P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

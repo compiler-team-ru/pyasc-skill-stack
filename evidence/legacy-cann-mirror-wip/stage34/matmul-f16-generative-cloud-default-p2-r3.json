@@ -1,0 +1,76 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Operator: matrix multiplication c = a @ b (float16 inputs, float32 output). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output.",
+  "kernel_path": "",
+  "date": "2026-05-26T22:42:23Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 360,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 12347,
+    "output": 860,
+    "cache_read": 30355,
+    "total": 13207
+  },
+  "elapsed_total_s": 36.98,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 36.98,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 12347,
+        "output": 860,
+        "cache_read": 30355,
+        "total": 13207,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {}
+  },
+  "static_verify": "fail",
+  "notes": "Stage C stability trial 3 P2",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

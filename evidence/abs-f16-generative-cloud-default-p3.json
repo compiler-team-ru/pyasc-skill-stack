@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T18:05:37Z",
+  "date": "2026-05-27T08:14:38Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,38 +25,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 7254,
-    "output": 673,
-    "cache_read": 37548,
-    "total": 7927
+    "input": 57541,
+    "output": 6709,
+    "cache_read": 805025,
+    "total": 64250
   },
-  "elapsed_total_s": 49.52,
+  "elapsed_total_s": 616.43,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 49.52,
+      "elapsed_s": 240.08,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21082,
+        "output": 2034,
+        "cache_read": 348217,
+        "total": 23116,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 136.3,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7254,
-        "output": 673,
-        "cache_read": 37548,
-        "total": 7927,
+        "input": 10461,
+        "output": 2792,
+        "cache_read": 127710,
+        "total": 13253,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "fail",
       "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.05,
+      "exit": 124,
+      "outcome": "pass",
+      "tokens": {
+        "input": 25998,
+        "output": 1883,
+        "cache_read": 329098,
+        "total": 27881,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a1.9xepwt1g/kernel.py\", line 5, in <module>\n    class Model:\n  File \"/tmp/gen-abs-float16-a1.9xepwt1g/kernel.py\", line 9, in Model\n    def __call__(self, x: asc2.Tensor):\n                          ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -60,13 +103,13 @@
     ]
   },
   "score": {
-    "value": 9.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -77,28 +120,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
+        "passed": true,
+        "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -106,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -118,7 +161,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x0, shape loop=yes"
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -130,8 +173,8 @@
       }
     }
   },
-  "static_verify": "fail",
-  "notes": "Stage B re-run with simulator (host backend) P3",
+  "static_verify": "pass",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

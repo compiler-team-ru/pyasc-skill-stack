@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float16",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=16 (float16 \u2192 16 elements \u00d7 2 bytes = 32-byte alignment); generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: host_pad (padding=16 element scalar pad). Accumulator: float32 (mixed-precision reduce: accumulate in fp32). Tolerance: atol=2.0, rtol=5e-2 against np.sum(x.astype(np.float32), axis=1) (fp16 reductions accumulate larger error). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum-float16/kernel.py",
-  "date": "2026-05-26T18:58:55Z",
+  "date": "2026-05-27T09:09:15Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -13,32 +20,31 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 101958,
-    "output": 7467,
-    "cache_read": 205006,
-    "total": 109425
+    "input": 132516,
+    "output": 4670,
+    "cache_read": 188642,
+    "total": 137186
   },
-  "elapsed_total_s": 240.0,
+  "elapsed_total_s": 240.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.0,
+      "elapsed_s": 240.02,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 101958,
-        "output": 7467,
-        "cache_read": 205006,
-        "total": 109425,
+        "input": 132516,
+        "output": 4670,
+        "cache_read": 188642,
+        "total": 137186,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -64,7 +70,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -121,8 +127,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -135,7 +141,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

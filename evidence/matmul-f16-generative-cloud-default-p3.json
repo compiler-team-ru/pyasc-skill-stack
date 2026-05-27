@@ -1,14 +1,21 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T20:14:35Z",
+  "date": "2026-05-27T10:17:43Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 360,
+    "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -18,29 +25,65 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 7826,
-    "output": 922,
-    "cache_read": 19507,
-    "total": 8748
+    "input": 51855,
+    "output": 5272,
+    "cache_read": 224076,
+    "total": 57127
   },
-  "elapsed_total_s": 47.52,
+  "elapsed_total_s": 329.78,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 47.52,
+      "elapsed_s": 132.3,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7826,
-        "output": 922,
-        "cache_read": 19507,
-        "total": 8748,
+        "input": 7201,
+        "output": 1308,
+        "cache_read": 63761,
+        "total": 8509,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 107.38,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 9863,
+        "output": 2203,
+        "cache_read": 60030,
+        "total": 12066,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 90.1,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 34791,
+        "output": 1761,
+        "cache_read": 100285,
+        "total": 36552,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     }
   ],
@@ -49,25 +92,24 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Layout'\nt):\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 83, in <module>\n    main()\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 75, in main\n    run_matmul(M, K, N, m_tile, n_tile, k_tile)\n  File \"/tmp/gen-matmul-float16-a1.mu07pjrd/kernel.py\", line 54, in run_matmul\n    a_device = asc2.tensor(a.shape, dtype=a.dtype, layout=asc2.Layout.contiguous)\n                                                          ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Layout'\n",
+    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (16, 0) (up to 0.01 allowed)\n73, in run_kernel\n    torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1631, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 512 / 1024 (50.0%)\nGreatest absolute difference: 6.432650566101074 at index (24, 15) (up to 0.01 allowed)\nGreatest relative difference: 1.0 at index (16, 0) (up to 0.01 allowed)\n",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.matmul', '@ ']",
+    "detail": "found ['@ ']",
     "markers_found": [
-      "asc2.matmul",
       "@ "
     ]
   },
   "score": {
-    "value": 9.0,
+    "value": 15.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -78,28 +120,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -107,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=3 params, found 3"
       },
       "output_dtype": {
         "passed": true,
@@ -127,12 +169,12 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.matmul', '@ ']"
+        "detail": "found ['@ ']"
       }
     }
   },
-  "static_verify": "fail",
-  "notes": "Stage B re-run with simulator (host backend) P3",
+  "static_verify": "pass",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

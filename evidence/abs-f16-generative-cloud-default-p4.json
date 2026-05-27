@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T18:10:25Z",
+  "date": "2026-05-27T08:10:39Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,38 +25,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 8745,
-    "output": 1192,
-    "cache_read": 111491,
-    "total": 9937
+    "input": 57352,
+    "output": 3263,
+    "cache_read": 224767,
+    "total": 60615
   },
-  "elapsed_total_s": 64.11,
+  "elapsed_total_s": 210.14,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 64.11,
+      "elapsed_s": 73.01,
       "exit": 0,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 8745,
-        "output": 1192,
-        "cache_read": 111491,
-        "total": 9937,
+        "input": 10797,
+        "output": 1353,
+        "cache_read": 121140,
+        "total": 12150,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 80.87,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 33291,
+        "output": 1146,
+        "cache_read": 72441,
+        "total": 34437,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 56.26,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 13264,
+        "output": 764,
+        "cache_read": 31186,
+        "total": 14028,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: ValueError: Shape [1, 128] not divisible by tile size 256\nn-abs-float16-a3.pcvhaw0l/kernel.py\", line 97, in <module>\n    main()\n  File \"/tmp/gen-abs-float16-a3.pcvhaw0l/kernel.py\", line 92, in main\n    test_abs()\n  File \"/tmp/gen-abs-float16-a3.pcvhaw0l/kernel.py\", line 57, in test_abs\n    tile_size = get_tile_size()\n                ^^^^^^^^^^^^^^^\n  File \"/tmp/gen-abs-float16-a3.pcvhaw0l/kernel.py\", line 26, in get_tile_size\n    raise ValueError(f\"Shape {shape} not divisible by tile size 256\")\nValueError: Shape [1, 128] not divisible by tile size 256\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -60,7 +103,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -97,8 +140,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -106,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 4"
       },
       "output_dtype": {
         "passed": true,
@@ -131,7 +174,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

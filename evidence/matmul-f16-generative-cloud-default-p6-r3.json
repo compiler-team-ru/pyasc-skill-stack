@@ -1,14 +1,21 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
-  "date": "2026-05-26T22:55:57Z",
+  "date": "2026-05-27T12:03:41Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 360,
+    "timeout_s": 240,
     "completed": false,
     "artifacts_found": [
       "kernel.py",
@@ -21,38 +28,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 90758,
-    "output": 9840,
-    "cache_read": 875497,
-    "total": 100598
+    "input": 150887,
+    "output": 5951,
+    "cache_read": 294614,
+    "total": 156838
   },
-  "elapsed_total_s": 360.01,
+  "elapsed_total_s": 240.01,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 360.01,
+      "elapsed_s": 240.01,
       "exit": 124,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 90758,
-        "output": 9840,
-        "cache_read": 875497,
-        "total": 100598,
+        "input": 150887,
+        "output": 5951,
+        "cache_read": 294614,
+        "total": 156838,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (0, 0) (up to 0.01 allowed)\n113, in run_kernel\n    torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1631, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 256 / 256 (100.0%)\nGreatest absolute difference: 6.806647300720215 at index (10, 10) (up to 0.01 allowed)\nGreatest relative difference: 1.0 at index (0, 0) (up to 0.01 allowed)\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -63,7 +70,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -100,8 +107,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -109,7 +116,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=3 params, found 3"
+        "detail": "expected>=3 params, found 10"
       },
       "output_dtype": {
         "passed": true,
@@ -134,7 +141,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 3 P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",

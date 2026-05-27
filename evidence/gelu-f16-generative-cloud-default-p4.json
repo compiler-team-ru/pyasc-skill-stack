@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T19:26:23Z",
+  "date": "2026-05-27T09:26:58Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,27 +25,63 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 27878,
-    "output": 1485,
-    "cache_read": 117220,
-    "total": 29363
+    "input": 149107,
+    "output": 9156,
+    "cache_read": 893011,
+    "total": 158263
   },
-  "elapsed_total_s": 79.16,
+  "elapsed_total_s": 582.25,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 79.16,
+      "elapsed_s": 102.23,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 27878,
-        "output": 1485,
-        "cache_read": 117220,
-        "total": 29363,
+        "input": 17402,
+        "output": 1604,
+        "cache_read": 171435,
+        "total": 19006,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 82952,
+        "output": 5413,
+        "cache_read": 469673,
+        "total": 88365,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.02,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 48753,
+        "output": 2139,
+        "cache_read": 251903,
+        "total": 50892,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
@@ -49,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Timeout after 150s",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -132,7 +175,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

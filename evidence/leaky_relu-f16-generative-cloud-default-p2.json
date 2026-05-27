@@ -1,137 +1,108 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01 (out = x if x >= 0 else alpha * x). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
-  "kernel_path": "kernel.py",
-  "date": "2026-05-26T19:49:23Z",
+  "kernel_path": "",
+  "date": "2026-05-27T09:50:33Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 73309,
-    "output": 1466,
-    "cache_read": 235087,
-    "total": 74775
+    "input": 53183,
+    "output": 4572,
+    "cache_read": 137203,
+    "total": 57755
   },
-  "elapsed_total_s": 79.65,
+  "elapsed_total_s": 182.63,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 79.65,
+      "elapsed_s": 49.88,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 73309,
-        "output": 1466,
-        "cache_read": 235087,
-        "total": 74775,
+        "input": 22727,
+        "output": 1482,
+        "cache_read": 36566,
+        "total": 24209,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "minimal",
+      "elapsed_s": 60.89,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 11295,
+        "output": 1607,
+        "cache_read": 46900,
+        "total": 12902,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "minimal",
+      "elapsed_s": 71.86,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 19161,
+        "output": 1483,
+        "cache_read": 53737,
+        "total": 20644,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Exit code 1: 5.737305e-01, -5.805969e-03,  1.324219e+00,  1.162109e+00,...\n(46.9%)\nMax absolute difference: 1.9432526\nMax relative difference: 0.9900017\n x: array([[ 1.407623e-02, -1.284790e-02, -1.895142e-02,  5.596161e-03,\n        -5.382538e-03, -1.310349e-03, -1.681519e-02, -5.180359e-03,\n         5.737305e-03, -5.805969e-03,  1.324463e-02,  1.162720e-02,...\n y: array([[ 1.407227e+00, -1.284790e-02, -1.895142e-02,  5.595703e-01,\n        -5.382538e-03, -1.310349e-03, -1.681519e-02, -5.180359e-03,\n         5.737305e-01, -5.805969e-03,  1.324219e+00,  1.162109e+00,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['asc2.where']",
-    "markers_found": [
-      "asc2.where"
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 16.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=1 params, found 2"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['asc2.where']"
-      }
-    }
+    "accepted": false,
+    "checks": {}
   },
-  "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P2",
+  "static_verify": "fail",
+  "notes": "",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",

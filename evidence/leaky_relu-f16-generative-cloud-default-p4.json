@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "leaky_relu",
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T19:57:00Z",
+  "date": "2026-05-27T10:00:26Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -16,26 +23,62 @@
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
-  "model": "dashscope/glm-5",
+  "model": "glm-5",
   "tokens": {
-    "input": 7756,
-    "output": 1152,
-    "cache_read": 90507,
-    "total": 8908
+    "input": 73633,
+    "output": 4931,
+    "cache_read": 214115,
+    "total": 78564
   },
-  "elapsed_total_s": 81.77,
+  "elapsed_total_s": 386.4,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 81.77,
+      "elapsed_s": 178.09,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7756,
-        "output": 1152,
-        "cache_read": 90507,
-        "total": 8908,
+        "input": 36795,
+        "output": 1602,
+        "cache_read": 93343,
+        "total": 38397,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 164.18,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 25373,
+        "output": 2503,
+        "cache_read": 110403,
+        "total": 27876,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 44.13,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 11465,
+        "output": 826,
+        "cache_read": 10369,
+        "total": 12291,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Exit code 1: RuntimeError: Expected one of cpu, cuda, ipu, xpu, mkldnn, opengl, opencl, ideep, hip, ve, fpga, maia, xla, lazy, vulkan, mps, meta, hpu, mtia, privateuseone device type at start of device string: npu\nFile \"/tmp/gen-leaky_relu-float16-a3.7law_ugj/kernel.py\", line 86, in main\n    if not run_test(shape, tile_size):\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/gen-leaky_relu-float16-a3.7law_ugj/kernel.py\", line 47, in run_test\n    x_device = x_torch.to(\"npu\")\n               ^^^^^^^^^^^^^^^^^\nRuntimeError: Expected one of cpu, cuda, ipu, xpu, mkldnn, opengl, opencl, ideep, hip, ve, fpga, maia, xla, lazy, vulkan, mps, meta, hpu, mtia, privateuseone device type at start of device string: npu\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -60,7 +103,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -97,8 +140,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -106,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 4"
       },
       "output_dtype": {
         "passed": true,
@@ -131,7 +174,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

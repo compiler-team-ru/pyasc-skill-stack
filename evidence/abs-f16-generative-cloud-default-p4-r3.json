@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T22:16:07Z",
+  "date": "2026-05-27T10:58:04Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,24 +25,60 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 8593,
-    "output": 1084,
-    "cache_read": 46978,
-    "total": 9677
+    "input": 86693,
+    "output": 6282,
+    "cache_read": 801288,
+    "total": 92975
   },
-  "elapsed_total_s": 45.58,
+  "elapsed_total_s": 456.42,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 45.58,
+      "elapsed_s": 240.09,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 37335,
+        "output": 2413,
+        "cache_read": 380453,
+        "total": 39748,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 172.87,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 8593,
-        "output": 1084,
-        "cache_read": 46978,
-        "total": 9677,
+        "input": 45113,
+        "output": 3041,
+        "cache_read": 370152,
+        "total": 48154,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 43.46,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4245,
+        "output": 828,
+        "cache_read": 50683,
+        "total": 5073,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'ConstExpr'\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a1.knbo94v6/kernel.py\", line 20, in <module>\n    TILE_SIZE: asc2.ConstExpr[int],\n               ^^^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'ConstExpr'\n",
+    "detail": "Exit code 1: ImportError: cannot import name 'Tensor' from 'asc2' (/home/aloschilov/workspace/pyasc-v2-eval/python/asc2/__init__.py)\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a3.1ucl71rl/kernel.py\", line 22, in <module>\n    from asc2 import Tensor, Tile\nImportError: cannot import name 'Tensor' from 'asc2' (/home/aloschilov/workspace/pyasc-v2-eval/python/asc2/__init__.py)\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -60,7 +103,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 14.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -117,8 +160,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "passed": false,
+        "detail": "single verify call, no shape loop"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -131,7 +174,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 3 P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

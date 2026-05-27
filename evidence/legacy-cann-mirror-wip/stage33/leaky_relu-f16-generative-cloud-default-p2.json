@@ -1,0 +1,148 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "leaky_relu",
+  "dtype": "float16",
+  "prompt": "Operator: leaky_relu with alpha=0.01 (out = x if x >= 0 else alpha * x). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T19:49:23Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 240,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 73309,
+    "output": 1466,
+    "cache_read": 235087,
+    "total": 74775
+  },
+  "elapsed_total_s": 79.65,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "minimal",
+      "elapsed_s": 79.65,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 73309,
+        "output": 1466,
+        "cache_read": 235087,
+        "total": 74775,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "fail",
+    "detail": "Exit code 1: 5.737305e-01, -5.805969e-03,  1.324219e+00,  1.162109e+00,...\n(46.9%)\nMax absolute difference: 1.9432526\nMax relative difference: 0.9900017\n x: array([[ 1.407623e-02, -1.284790e-02, -1.895142e-02,  5.596161e-03,\n        -5.382538e-03, -1.310349e-03, -1.681519e-02, -5.180359e-03,\n         5.737305e-03, -5.805969e-03,  1.324463e-02,  1.162720e-02,...\n y: array([[ 1.407227e+00, -1.284790e-02, -1.895142e-02,  5.595703e-01,\n        -5.382538e-03, -1.310349e-03, -1.681519e-02, -5.180359e-03,\n         5.737305e-01, -5.805969e-03,  1.324219e+00,  1.162109e+00,...\n",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['asc2.where']",
+    "markers_found": [
+      "asc2.where"
+    ]
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['asc2.where']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Stage B re-run with simulator (host backend) P2",
+  "protocol": {
+    "id": "P2",
+    "name": "opencode-skills-off-minimal",
+    "prompt_variant": "minimal",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

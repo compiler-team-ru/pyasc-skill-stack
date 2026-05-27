@@ -1,39 +1,82 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-05-26T19:12:32Z",
+  "date": "2026-05-27T09:12:14Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": false,
+    "completed": true,
     "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 18128,
-    "output": 1898,
-    "cache_read": 397853,
-    "total": 20026
+    "input": 193342,
+    "output": 6693,
+    "cache_read": 624481,
+    "total": 200035
   },
-  "elapsed_total_s": 240.1,
+  "elapsed_total_s": 364.41,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 240.1,
+      "elapsed_s": 69.05,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 19826,
+        "output": 1660,
+        "cache_read": 81700,
+        "total": 21486,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "minimal",
+      "elapsed_s": 240.01,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 18128,
-        "output": 1898,
-        "cache_read": 397853,
-        "total": 20026,
+        "input": 159237,
+        "output": 3849,
+        "cache_read": 484009,
+        "total": 163086,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "minimal",
+      "elapsed_s": 55.35,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 14279,
+        "output": 1184,
+        "cache_read": 58772,
+        "total": 15463,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -59,7 +102,7 @@
     "checks": {}
   },
   "static_verify": "fail",
-  "notes": "Stage B re-run with simulator (host backend) P2",
+  "notes": "",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",

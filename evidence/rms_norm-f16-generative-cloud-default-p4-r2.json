@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T21:57:45Z",
+  "date": "2026-05-27T12:17:04Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 360,
-    "completed": true,
+    "timeout_s": 240,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,38 +25,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 27351,
-    "output": 5988,
-    "cache_read": 214457,
-    "total": 33339
+    "input": 52460,
+    "output": 4134,
+    "cache_read": 302142,
+    "total": 56594
   },
-  "elapsed_total_s": 251.65,
+  "elapsed_total_s": 240.06,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 251.65,
-      "exit": 0,
-      "outcome": "fail",
+      "elapsed_s": 240.06,
+      "exit": 124,
+      "outcome": "pass",
       "tokens": {
-        "input": 27351,
-        "output": 5988,
-        "cache_read": 214457,
-        "total": 33339,
+        "input": 52460,
+        "output": 4134,
+        "cache_read": 302142,
+        "total": 56594,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: TypeError: issubclass() arg 1 must be a class\n  File \"/home/aloschilov/workspace/pyasc/python/asc/runtime/jit.py\", line 210, in _run\n    runtime_args, constexprs = self.split_args(call_args, annotations)\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/aloschilov/workspace/pyasc/python/asc/codegen/function.py\", line 125, in split_args\n    if issubclass(get_origin(ann_type) or ann_type, ConstExpr):\n       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: issubclass() arg 1 must be a class\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -62,7 +69,7 @@
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -99,8 +106,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -133,7 +140,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 2 P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

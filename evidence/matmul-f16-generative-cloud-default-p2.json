@@ -1,137 +1,108 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Operator: matrix multiplication c = a @ b (float16 inputs, float32 output). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output.",
-  "kernel_path": "kernel.py",
-  "date": "2026-05-26T20:13:47Z",
+  "kernel_path": "",
+  "date": "2026-05-27T10:11:57Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 360,
+    "timeout_s": 240,
     "completed": true,
-    "artifacts_found": [
-      "kernel.py"
-    ]
+    "artifacts_found": []
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 23785,
-    "output": 1753,
-    "cache_read": 147055,
-    "total": 25538
+    "input": 54032,
+    "output": 4253,
+    "cache_read": 120620,
+    "total": 58285
   },
-  "elapsed_total_s": 69.18,
+  "elapsed_total_s": 219.21,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 69.18,
+      "elapsed_s": 70.75,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 23785,
-        "output": 1753,
-        "cache_read": 147055,
-        "total": 25538,
+        "input": 26602,
+        "output": 1978,
+        "cache_read": 41653,
+        "total": 28580,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "minimal",
+      "elapsed_s": 92.25,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 5694,
+        "output": 1298,
+        "cache_read": 58035,
+        "total": 6992,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "minimal",
+      "elapsed_s": 56.21,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21736,
+        "output": 977,
+        "cache_read": 20932,
+        "total": 22713,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
       "runtime_status": "fail"
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "fail",
-    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (0, 0) (up to 0.01 allowed)\n 86, in run_kernel\n    torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1631, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 256 / 256 (100.0%)\nGreatest absolute difference: 7.119482517242432 at index (12, 14) (up to 0.01 allowed)\nGreatest relative difference: 1.0 at index (0, 0) (up to 0.01 allowed)\n",
     "shapes_verified": []
   },
   "semantic_check": {
-    "passed": true,
-    "detail": "found ['@ ']",
-    "markers_found": [
-      "@ "
-    ]
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
   },
   "score": {
-    "value": 15.0,
+    "value": 0.0,
     "threshold": 12,
-    "accepted": true,
-    "checks": {
-      "jit_decorator": {
-        "passed": true,
-        "detail": "1 JIT function(s)"
-      },
-      "no_return_value": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
-      },
-      "asc2_load_store": {
-        "passed": true,
-        "detail": "load+store"
-      },
-      "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
-      },
-      "loop_range": {
-        "passed": true,
-        "detail": "range/asc2.range present"
-      },
-      "verification": {
-        "passed": true,
-        "detail": "verification call present"
-      },
-      "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
-      },
-      "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
-      },
-      "valid_python": {
-        "passed": true,
-        "detail": "parsed without errors"
-      },
-      "input_arity": {
-        "passed": true,
-        "detail": "expected>=3 params, found 3"
-      },
-      "output_dtype": {
-        "passed": true,
-        "detail": "found dtype ref"
-      },
-      "tiling_consistency": {
-        "passed": true,
-        "detail": "tiling logic found"
-      },
-      "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
-      },
-      "no_hardcoded_shapes": {
-        "passed": true,
-        "detail": "shapes parameterized"
-      },
-      "semantic_api_usage": {
-        "passed": true,
-        "detail": "found ['@ ']"
-      }
-    }
+    "accepted": false,
+    "checks": {}
   },
-  "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P2",
+  "static_verify": "fail",
+  "notes": "",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",

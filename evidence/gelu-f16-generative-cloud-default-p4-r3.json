@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T22:32:16Z",
+  "date": "2026-05-27T11:30:45Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,27 +25,63 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 18130,
-    "output": 1366,
-    "cache_read": 102291,
-    "total": 19496
+    "input": 61117,
+    "output": 6115,
+    "cache_read": 559427,
+    "total": 67232
   },
-  "elapsed_total_s": 72.13,
+  "elapsed_total_s": 534.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 72.13,
+      "elapsed_s": 101.56,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 18130,
-        "output": 1366,
-        "cache_read": 102291,
-        "total": 19496,
+        "input": 22846,
+        "output": 1748,
+        "cache_read": 120510,
+        "total": 24594,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 192.46,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 16418,
+        "output": 2406,
+        "cache_read": 292221,
+        "total": 18824,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21853,
+        "output": 1961,
+        "cache_read": 146696,
+        "total": 23814,
+        "cost_usd": 0.0
+      },
+      "model": "glm-5",
       "kernel_found": true,
       "static_verify": "pass",
       "runtime_status": "fail"
@@ -49,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Timeout after 330s",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\nname__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:11:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        k = asc2.sqrt(0.5)\n        out = x * (asc2.erf(x * k) + 1) * 0.5\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -132,7 +175,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 3 P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

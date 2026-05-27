@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T21:31:20Z",
+  "date": "2026-05-27T11:31:40Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -18,24 +25,60 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 7859,
-    "output": 1575,
-    "cache_read": 68768,
-    "total": 9434
+    "input": 114381,
+    "output": 6942,
+    "cache_read": 824087,
+    "total": 121323
   },
-  "elapsed_total_s": 87.6,
+  "elapsed_total_s": 597.11,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 87.6,
+      "elapsed_s": 117.09,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7859,
-        "output": 1575,
-        "cache_read": 68768,
-        "total": 9434,
+        "input": 21280,
+        "output": 1476,
+        "cache_read": 76965,
+        "total": 22756,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 28748,
+        "output": 2820,
+        "cache_read": 393608,
+        "total": 31568,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 64353,
+        "output": 2646,
+        "cache_read": 353514,
+        "total": 66999,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: AttributeError: 'Tensor' object has no attribute 'npu'\nRunning GELU kernel with SOC version: Ascend950PR_9599\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a1.krg6iqqx/kernel.py\", line 102, in <module>\n    test_gelu()\n  File \"/tmp/gen-gelu-float16-a1.krg6iqqx/kernel.py\", line 63, in test_gelu\n    x_npu = x_cpu.npu()\n            ^^^^^^^^^\nAttributeError: 'Tensor' object has no attribute 'npu'\n",
+    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\nname__}: {e}\") from e\nasc.codegen.errors.CodegenError: at <source>:11:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        k = asc2.sqrt(0.5)\n        out = x * (asc2.erf(x * k) + 1) * 0.5\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -61,7 +104,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -98,8 +141,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -107,7 +150,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 4"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -132,7 +175,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 2 P4",
+  "notes": "",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",

@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-05-26T21:20:21Z",
+  "date": "2026-05-27T11:05:57Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -16,24 +23,60 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 9260,
-    "output": 1183,
-    "cache_read": 46106,
-    "total": 10443
+    "input": 23454,
+    "output": 3033,
+    "cache_read": 160466,
+    "total": 26487
   },
-  "elapsed_total_s": 47.31,
+  "elapsed_total_s": 141.68,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 47.31,
+      "elapsed_s": 28.35,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 9260,
-        "output": 1183,
-        "cache_read": 46106,
-        "total": 10443,
+        "input": 12482,
+        "output": 274,
+        "cache_read": 30919,
+        "total": 12756,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "minimal",
+      "elapsed_s": 36.5,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 5358,
+        "output": 476,
+        "cache_read": 36799,
+        "total": 5834,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "minimal",
+      "elapsed_s": 76.83,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 5614,
+        "output": 2283,
+        "cache_read": 92748,
+        "total": 7897,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -59,7 +102,7 @@
     "checks": {}
   },
   "static_verify": "fail",
-  "notes": "Stage C stability trial 2 P2",
+  "notes": "",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",

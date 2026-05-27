@@ -1,43 +1,84 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
   "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T22:25:33Z",
+  "date": "2026-05-27T11:21:43Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
     "completed": true,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 6986,
-    "output": 2121,
-    "cache_read": 38154,
-    "total": 9107
+    "input": 102727,
+    "output": 7061,
+    "cache_read": 567409,
+    "total": 109788
   },
-  "elapsed_total_s": 70.87,
+  "elapsed_total_s": 431.98,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 70.87,
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 83167,
+        "output": 2967,
+        "cache_read": 425949,
+        "total": 86134,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 92.91,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 6986,
-        "output": 2121,
-        "cache_read": 38154,
-        "total": 9107,
+        "input": 8506,
+        "output": 1676,
+        "cache_read": 95935,
+        "total": 10182,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 99.06,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 11054,
+        "output": 2418,
+        "cache_read": 45525,
+        "total": 13472,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -51,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: TypeError: tensor() got an unexpected keyword argument 'dtype'\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a1.4wle9y2o/kernel.py\", line 62, in <module>\n    test_kernel(shape, tile_size)\n  File \"/tmp/gen-gelu-float16-a1.4wle9y2o/kernel.py\", line 36, in test_kernel\n    x = asc2.tensor(shape, dtype=np.float16, name='x')\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: tensor() got an unexpected keyword argument 'dtype'\n",
+    "detail": "Exit code 1: TypeError: tensor() got an unexpected keyword argument 'data'\n\nTesting shape: [1, 128]\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a3.0in3d_kg/kernel.py\", line 144, in <module>\n    main()\n  File \"/tmp/gen-gelu-float16-a3.0in3d_kg/kernel.py\", line 114, in main\n    x_device = asc2.tensor(shape, \"float16\", data=x_host)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: tensor() got an unexpected keyword argument 'data'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -134,7 +175,7 @@
     }
   },
   "static_verify": "fail",
-  "notes": "Stage C stability trial 3 P3",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

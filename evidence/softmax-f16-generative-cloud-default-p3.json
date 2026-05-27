@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "softmax",
   "dtype": "float16",
   "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-26T20:06:21Z",
+  "date": "2026-05-27T10:08:17Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -18,24 +25,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 36856,
-    "output": 1802,
-    "cache_read": 214736,
-    "total": 38658
+    "input": 24961,
+    "output": 7581,
+    "cache_read": 216907,
+    "total": 32542
   },
-  "elapsed_total_s": 128.09,
+  "elapsed_total_s": 286.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 128.09,
+      "elapsed_s": 171.77,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 12646,
+        "output": 4966,
+        "cache_read": 101438,
+        "total": 17612,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 114.26,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 36856,
-        "output": 1802,
-        "cache_read": 214736,
-        "total": 38658,
+        "input": 12315,
+        "output": 2615,
+        "cache_read": 115469,
+        "total": 14930,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -132,7 +157,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage B re-run with simulator (host backend) P3",
+  "notes": "",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",

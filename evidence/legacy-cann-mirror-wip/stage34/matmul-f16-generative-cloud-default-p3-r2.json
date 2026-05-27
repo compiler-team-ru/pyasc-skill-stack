@@ -1,0 +1,148 @@
+{
+  "schema_version": "3",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "kernel.py",
+  "date": "2026-05-26T21:40:52Z",
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 360,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py"
+    ]
+  },
+  "skills_mode": "off",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 67080,
+    "output": 2063,
+    "cache_read": 186864,
+    "total": 69143
+  },
+  "elapsed_total_s": 107.96,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "guided",
+      "elapsed_s": 107.96,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 67080,
+        "output": 2063,
+        "cache_read": 186864,
+        "total": 69143,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "found ['@ ']",
+    "markers_found": [
+      "@ "
+    ]
+  },
+  "score": {
+    "value": 15.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=3 params, found 3"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": false,
+        "detail": "single verify call, no shape loop"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "found ['@ ']"
+      }
+    }
+  },
+  "static_verify": "pass",
+  "notes": "Stage C stability trial 2 P3",
+  "protocol": {
+    "id": "P3",
+    "name": "opencode-skills-off-guided",
+    "prompt_variant": "guided",
+    "skills_enabled": false,
+    "allowed_context": {
+      "task_prompt": true,
+      "agents_md": false,
+      "skills": false,
+      "golden_kernels": false
+    }
+  },
+  "history": []
+}

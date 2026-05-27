@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float16/kernel.py",
-  "date": "2026-05-26T22:21:35Z",
+  "date": "2026-05-27T11:03:35Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
@@ -21,24 +28,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 83863,
-    "output": 6633,
-    "cache_read": 322659,
-    "total": 90496
+    "input": 75534,
+    "output": 4353,
+    "cache_read": 244666,
+    "total": 79887
   },
-  "elapsed_total_s": 240.01,
+  "elapsed_total_s": 240.08,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
+      "elapsed_s": 240.08,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 83863,
-        "output": 6633,
-        "cache_read": 322659,
-        "total": 90496,
+        "input": 75534,
+        "output": 4353,
+        "cache_read": 244666,
+        "total": 79887,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -134,7 +141,7 @@
     }
   },
   "static_verify": "pass",
-  "notes": "Stage C stability trial 3 P6",
+  "notes": "",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
