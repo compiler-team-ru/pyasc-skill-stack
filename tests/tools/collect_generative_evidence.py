@@ -105,7 +105,8 @@ KNOWN_PROFILES = {
     "local-qwen-coder-7b",
     "local-llama-3.1-8b",
 }
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
+DEFAULT_PYASC_EVAL_ROOT = "/home/aloschilov/workspace/pyasc-v2-eval"
 
 
 def _run(cmd: list[str], timeout: int = 30) -> tuple[int, str, str]:
@@ -454,6 +455,81 @@ def check_op_semantics(kernel_path: Path, op: str) -> dict:
 
 
 RUNTIME_BACKEND_CHOICES = ("auto", "host", "docker")
+
+
+def _git_capture(args: list[str], *, cwd: str) -> str:
+    try:
+        out = subprocess.run(
+            ["git", "-C", cwd, *args],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ""
+    if out.returncode != 0:
+        return ""
+    return out.stdout.strip()
+
+
+def resolve_pyasc_src() -> str | None:
+    """Resolve the on-disk root of the imported pyasc git checkout.
+
+    Starts from ``asc.__file__`` and walks up at most 5 levels looking
+    for a ``.git`` directory or file (worktree). For a normal editable
+    install rooted at ``.../pyasc-v2-eval/python/asc/__init__.py`` this
+    lands on ``.../pyasc-v2-eval``. Returns ``None`` when ``asc`` cannot
+    be imported or no ``.git`` is found along the path. Kept
+    dependency-free; the harness already shells out to ``sys.executable
+    -c "import asc"`` elsewhere.
+    """
+    probe_script = (
+        "import asc, os, sys\n"
+        "p = os.path.abspath(asc.__file__)\n"
+        "for _ in range(5):\n"
+        "    p = os.path.dirname(p)\n"
+        "    if os.path.exists(os.path.join(p, '.git')):\n"
+        "        print(p)\n"
+        "        sys.exit(0)\n"
+        "sys.exit(1)\n"
+    )
+    try:
+        probe = subprocess.run(
+            [sys.executable, "-c", probe_script],
+            capture_output=True, text=True, timeout=15,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+    if probe.returncode != 0:
+        return None
+    path = probe.stdout.strip()
+    return path or None
+
+
+def collect_pyasc_revision() -> dict:
+    """Capture ``{url, branch, sha, dirty, root}`` of the imported pyasc.
+
+    Returns a dict with empty strings when something is missing so the
+    field always lands in the JSON with a predictable shape. The
+    ``dirty`` flag respects ``.git/info/exclude`` and ``.gitignore`` —
+    the eval clone keeps ``EVAL-ONLY.README.md`` excluded so its presence
+    does not mark the tree dirty.
+    """
+    root = resolve_pyasc_src()
+    if not root or not os.path.exists(os.path.join(root, ".git")):
+        return {"url": "", "branch": "", "sha": "", "dirty": False, "root": root or ""}
+    url = _git_capture(["config", "--get", "remote.origin.url"], cwd=root)
+    sha = _git_capture(["rev-parse", "HEAD"], cwd=root)
+    branch = _git_capture(["symbolic-ref", "--short", "HEAD"], cwd=root)
+    if not branch:
+        branch = "(detached)"
+    porcelain = _git_capture(["status", "--porcelain"], cwd=root)
+    dirty = bool(porcelain.strip())
+    return {
+        "url": url,
+        "branch": branch,
+        "sha": sha,
+        "dirty": dirty,
+        "root": root,
+    }
 
 
 def host_runtime_available(platform: str = "Ascend950PR_9599") -> tuple[bool, str]:
@@ -1066,6 +1142,12 @@ def main() -> None:
                              "`import asc`); 'docker' spawns a container from "
                              "the pyasc-sim image; 'auto' (default) prefers "
                              "host when available, otherwise docker.")
+    parser.add_argument("--allow-dirty-pyasc", action="store_true",
+                        help="Permit --runtime collection even when the "
+                             "imported pyasc working tree has uncommitted "
+                             "changes. Off by default so nightly evidence "
+                             "always pins to a recorded SHA. Override only "
+                             "for local iteration; CI must never set this.")
     parser.add_argument("--docker-timeout", type=int, default=300,
                         help="Runtime verify timeout in seconds, applies to "
                              "both docker and host backends (default: 300)")
@@ -1201,6 +1283,54 @@ def main() -> None:
         print("SKIP: opencode CLI not found on PATH", file=sys.stderr)
         sys.exit(2)
 
+    # Capture pyasc revision up-front so downstream JSON always has it.
+    pyasc_revision = collect_pyasc_revision()
+    if args.runtime:
+        # Hard guards only fire for runs that actually exercise pyasc
+        # (--runtime). Static-only collection still records the field for
+        # auditability but tolerates an absent/dirty tree.
+        if not pyasc_revision["sha"]:
+            print(
+                "ERROR: --runtime requires an importable pyasc; "
+                "`import asc` did not resolve to a git checkout. "
+                "Install the editable from /home/aloschilov/workspace/pyasc-v2-eval "
+                "(see docs/cann-setup.md).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        eval_root = os.environ.get("PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
+        eval_basename = os.path.basename(eval_root.rstrip("/"))
+        if not pyasc_revision["root"].rstrip("/").endswith(eval_basename):
+            if args.allow_dirty_pyasc:
+                print(
+                    f"  WARN: imported pyasc is at {pyasc_revision['root']!r}, "
+                    f"not under {eval_root!r}. Recording anyway because "
+                    f"--allow-dirty-pyasc is set; result is NOT comparable "
+                    f"to the canonical baseline.",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"ERROR: --runtime resolved pyasc to "
+                    f"{pyasc_revision['root']!r} but expected a tree under "
+                    f"{eval_root!r}. Something (likely an opencode skill "
+                    f"step) overwrote the editable install. Re-pin with:\n"
+                    f"    pip install -e {eval_root}\n"
+                    f"or pass --allow-dirty-pyasc to record evidence "
+                    f"anyway.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        if pyasc_revision["dirty"] and not args.allow_dirty_pyasc:
+            print(
+                f"ERROR: pyasc working tree at {pyasc_revision['root']} is "
+                f"dirty; refuse to record evidence against an "
+                f"un-pinnable revision. Pass --allow-dirty-pyasc to "
+                f"override (e.g. while iterating locally).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     print(f"  Generative evidence for {args.op}/{args.dtype}")
     print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
     if args.protocol_id:
@@ -1294,6 +1424,7 @@ def main() -> None:
         "prompt": primary_prompt,
         "kernel_path": kernel_rel,
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "pyasc_revision": pyasc_revision,
         "agent": {
             "platform": "opencode",
             "timeout_s": args.timeout,

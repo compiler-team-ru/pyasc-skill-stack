@@ -3,11 +3,29 @@ __pycache__/
 .codex
 .eval-history/
 
-# Agent-generated kernel outputs (test artifacts from opencode runs)
+# Agent-generated kernel outputs (test artifacts from opencode runs).
+# The single tracked kernel is `add/` (no dtype suffix); every directory
+# named after a typed kernel (e.g. add_f16/, reduce_sum_f32/, abs_float32/)
+# is a transient agent scratch dir and must stay untracked.
 teams/pyasc-kernel-dev-team/kernels/abs_f16/
+teams/pyasc-kernel-dev-team/kernels/abs_f32/
+teams/pyasc-kernel-dev-team/kernels/abs_float32/
+teams/pyasc-kernel-dev-team/kernels/add_f16/
+teams/pyasc-kernel-dev-team/kernels/gelu_f16/
+teams/pyasc-kernel-dev-team/kernels/gelu_f32/
+teams/pyasc-kernel-dev-team/kernels/leaky_relu_f16/
+teams/pyasc-kernel-dev-team/kernels/matmul_f16/
 teams/pyasc-kernel-dev-team/kernels/neg_f16/
+teams/pyasc-kernel-dev-team/kernels/reduce_sum_f16/
+teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/
+teams/pyasc-kernel-dev-team/kernels/rms_norm_f16/
+teams/pyasc-kernel-dev-team/kernels/rms_norm_f32/
+teams/pyasc-kernel-dev-team/kernels/softmax_f16/
 teams/pyasc-kernel-dev-team/kernels/sub_f16/
 teams/pyasc-kernel-dev-team/kernels/vadd_f32_1024/
+
+# Matrix-run orchestrator logs (forensic records; kept on disk only).
+run-matrix-log-*.csv
 
 # Generated dashboard output
 _site/

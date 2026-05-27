@@ -92,6 +92,40 @@ python3.10 python/tutorials/01_add/add.py -r Model -v Ascend950PR_9599
 
 Success criteria: The tutorial prints "Sample add run success." with no ISA errors.
 
+## Evaluation pyasc clone (`pyasc-v2-eval`)
+
+The skill-stack harness imports `asc` / `asc2` from a dedicated, read-only
+checkout at `/home/aloschilov/workspace/pyasc-v2-eval`. This clone exists
+purely so every simulator-verified evidence file pins to a specific SHA on
+`compiler-team/pyasc#v2`. Treat the directory as read-only:
+
+- Active pyasc development belongs in `/home/aloschilov/workspace/pyasc-fork`
+  (or wherever your team-side clone lives), never here.
+- The tree is kept at a detached `HEAD` so `git status` flags any accidental
+  branch checkout.
+- A `.git/hooks/pre-commit` refuses every commit with a pointer back to
+  `pyasc-fork`.
+- `EVAL-ONLY.README.md` is excluded via `.git/info/exclude` so it does not
+  flip the `pyasc_revision.dirty` bit recorded in evidence files.
+
+Bumping the pinned SHA (only by the evaluation owner):
+
+```bash
+cd /home/aloschilov/workspace/pyasc-v2-eval
+git fetch origin
+git checkout <new-sha-on-origin/v2>
+
+# Re-link the editable so the harness picks the new revision up.
+cd /home/aloschilov/workspace/pyasc-skill-stack
+pip install -e /home/aloschilov/workspace/pyasc-v2-eval
+
+# Then re-run the matrix and refresh docs/skill-value-q1-findings.md.
+```
+
+The CI workflow exports `PYASC_EVAL_ROOT=/home/aloschilov/workspace/pyasc-v2-eval`
+so a runner that imports `asc` from any other tree gets a loud warning in
+the evidence record.
+
 ## Running pyasc Kernels
 
 Always use `python3.10` (not `python` or `python3`) since pyasc and torch are installed under Python 3.10.

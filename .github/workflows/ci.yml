@@ -19,7 +19,16 @@ permissions:
   packages: read
 
 env:
+  # NB: this image tag is built from docker/Dockerfile with
+  # PYASC_GIT_URL=https://gitcode.com/compiler-team/pyasc.git and
+  # PYASC_GIT_REV pinned to the SHA recorded in
+  # docs/skill-value-q1-findings.md "Setup" section. Bumping the host-side
+  # pyasc-v2-eval pin therefore requires rebuilding+repushing this image
+  # so docker fallback runs stay consistent with the host-runtime baseline.
   PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11
+  # Hard pin so the harness aborts if a runner accidentally imports a
+  # pyasc tree other than pyasc-v2-eval (e.g. the user's dev fork).
+  PYASC_EVAL_ROOT: /home/aloschilov/workspace/pyasc-v2-eval
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:

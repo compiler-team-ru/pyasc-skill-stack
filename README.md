@@ -19,6 +19,7 @@ These must be available on the host before starting:
 - `opencode` CLI installed
 - CANN Toolkit installed somewhere on disk (see [docs/cann-setup.md](docs/cann-setup.md))
 - Simulator libraries for `Ascend950PR_9599` (shipped with CANN — the only platform the stack targets)
+- `pip install -e /home/aloschilov/workspace/pyasc-v2-eval` (the dedicated read-only evaluation clone described in [docs/cann-setup.md](docs/cann-setup.md#evaluation-pyasc-clone-pyasc-v2-eval)). Active pyasc development should remain in `pyasc-fork`; never edit `pyasc-v2-eval`.
 - Either: Python 3.10.x (for the local-build path) **or** Docker (for the containerized path)
 
 > **Note on `asc2`.** The `asc2` tile-based API is not yet published to PyPI — the PyPI `pyasc` wheel ships only the `asc` v1 API. To get `asc2` you currently need either the Docker image (Option A) or a build from the `v2` branch of the `pyasc` source (Option B).
