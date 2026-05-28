@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "abs",
+  "dtype": "float32",
+  "kernel_path": "golden/kernels/abs_f32.py",
+  "date": "2026-05-28T13:00:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599 for sizes [8192, 131072]; 3 consecutive runs locally, atol=rtol=1e-3"
+  },
+  "runtime_verified": true,
+  "notes": "Vendored from pyasc-v2-eval@7b85554a:python/test/asc2/{operations/test_unary_ops.py,target/test_vadd.py}; see docs/golden-upstream-map.md. Pattern A (1D flatten) rank-consistent tiling."
+}

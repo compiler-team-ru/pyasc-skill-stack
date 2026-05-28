@@ -187,11 +187,31 @@ expected = np.abs(x)
 np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 ```
 
-**Recommended tolerances** (simulator introduces rounding):
-- float16 elementwise: `atol=1e-3, rtol=1e-3`
-- float16 composed (gelu, softmax): `atol=5e-2, rtol=5e-2`
-- float32 elementwise: `atol=1e-5, rtol=1e-5`
-- float32 composed (gelu, tanh form): `atol=1e-2, rtol=1e-2` (use the tanh / Padé approximation; the simulator's `asc2.erf` is too noisy on float32 and was retired from the f32 golden)
+**Recommended tolerances** (simulator introduces rounding). Each row
+cites the upstream source of truth at `pyasc-v2-eval@7b85554a`:
+
+- float16 elementwise: `atol=1e-3, rtol=1e-3` — matches our golden
+  `golden/kernels/abs_f16.py`. Upstream `operations/test_unary_ops.py`
+  asserts f32 at `atol=1e-3` against `torch.abs`; we extend that
+  contract to f16.
+- float16 composed (gelu, softmax): `atol=5e-2, rtol=5e-2` — matches
+  `golden/kernels/gelu_f16.py`. Upstream `kernels/test_gelu.py` uses
+  `rtol=1e-3, atol=1e-5` on f32; we relax for the f16 composed path.
+- float32 elementwise (matmul output / accumulators only): `atol=1e-5,
+  rtol=1e-5`. **Do not use `1e-5` for elementwise unary on f32** —
+  upstream `operations/test_unary_ops.py` ships `asc2.abs(f32)` at
+  `atol=1e-3` and our `capabilities.yaml` `abs/float32` cell agrees.
+  Use `atol=1e-3, rtol=1e-3` for unary float32 ops.
+- float32 composed (gelu, tanh form): `atol=1e-2, rtol=1e-2`. Upstream
+  `target/test_gelu.py` is tighter (`atol=1e-3`); our looser bound is
+  current headroom and may tighten after a stability sweep.
+
+The previous version of this table said `float32 elementwise: 1e-5`
+unconditionally, which contradicted `capabilities.yaml` and was a
+known driver of agent confusion. The rule of thumb: **trust the
+golden's `assert_allclose` value as the contract; if the golden does
+not exist yet, take it from upstream `operations/test_*_ops.py` for
+that op family**.
 
 ## Available asc2 Operations
 
@@ -247,11 +267,50 @@ np.testing.assert_allclose(out, expected, atol=1e-3, rtol=1e-3)
 
 ## Proven Kernel Patterns
 
-> **Use these exact patterns.** They are extracted from golden kernels verified on the CANN 9.0.0 simulator. Deviating from these patterns is the primary cause of runtime failures.
+> **Use these exact patterns.** They are extracted from golden kernels verified on the CANN 9.0.0 simulator and cross-referenced against upstream `pyasc-v2-eval@7b85554a:python/test/asc2/`. Deviating from these patterns is the primary cause of runtime failures.
 
-### Tier 0 — Elementwise (1D flatten)
+### Rule: rank-consistent tiling
 
-Use for any unary or binary element-wise operation (abs, exp, add, sub, gelu, leaky_relu, etc.).
+Every `asc2.tensor`, `asc2.load`, `asc2.store`, and `offsets=...` argument
+in the same kernel **must use the same rank**. If you declare a 2D
+tensor, your load shape is 2D and your offsets are 2D. If you flatten
+to 1D, load shape is 1D and offsets are 1D. Never mix.
+
+This is the single most common cause of v2 generative failures —
+agents see 2D test shapes in the prompt and emit:
+
+```python
+# WRONG -- 2D tensor, 1D load shape, 2D offsets => rank mismatch
+x_gm = asc2.tensor(x_ptr, [num_rows, num_cols])
+row_idx = tile_offset // num_cols
+col_idx = tile_offset % num_cols
+x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])
+out = asc2.abs(x)
+asc2.store(out, out_gm, offsets=[row_idx, col_idx])
+```
+
+v2's strict rank check rejects this immediately:
+
+```
+RuntimeError: rank of 'tensor_shape' must match rank of 'shape'
+asc.codegen.errors.CodegenError: at <source>:N:M
+    x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])
+        ^
+```
+
+The fix is either **flatten to 1D** (Pattern A or B below) or **keep
+2D and align the load shape to it** (Pattern C). Pick one; do not
+half-flatten.
+
+Three patterns are valid on v2 for elementwise / composed-elementwise
+kernels. Pick by the kernel's needs; do not invent a fourth.
+
+### Pattern A — 1D flatten (simple)
+
+Source: upstream `pyasc-v2-eval@7b85554a:python/test/asc2/kernels/test_vadd.py`.
+Use for any unary or binary element-wise operation (abs, exp, add,
+sub, gelu, leaky_relu, etc.) when the test shapes are 1D or can be
+collapsed to 1D at the host call site.
 
 ```python
 TILE_SIZE = 128
@@ -261,28 +320,96 @@ CORE_NUM = 16
 def my_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
               size: int, tile_size: asc.ConstExpr[int],
               tile_per_block: asc.ConstExpr[int]):
-    x_gm = asc2.tensor(x_ptr, [size])
+    x_gm = asc2.tensor(x_ptr, [size])           # 1D tensor
     out_gm = asc2.tensor(out_ptr, [size])
     base_offset = asc2.block_idx() * tile_size * tile_per_block
     for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
         tile_offset = base_offset + i * tile_size
-        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
+        x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])  # 1D load, 1D offsets
         out = asc2.abs(x)  # replace with your op
         asc2.store(out, out_gm, offsets=[tile_offset])
 
-# Launch:
+# Launch (flatten multi-dim test inputs to 1D first):
 num_tiles = asc.ceildiv(size, TILE_SIZE)
 my_kernel[CORE_NUM](x, out, size, TILE_SIZE, asc.ceildiv(num_tiles, CORE_NUM))
 ```
 
-The `unroll_factor=2, parallel=True` form on the tile loop is the PR 190
-default for any loop with no carried dependency — see the rule above.
-Tier 2 (gelu, leaky_relu) inherits this pattern unchanged; the loop body
-chains more `asc2` ops but iterations stay independent.
+If your test shape is multi-dim (e.g. `[24, 512, 1024]`), compute the
+flat length at the host: `size = int(np.prod(test_shape))`. The kernel
+sees only `size` and never reasons about row/column structure.
 
-### Tier 2 — Composed (gelu, leaky_relu)
+### Pattern B — 1D flatten with cache-line aligned tail (production)
 
-Uses the same 1D tiling pattern as elementwise but chains multiple `asc2` ops.
+Source: upstream `pyasc-v2-eval@7b85554a:python/test/asc2/target/test_vadd.py`.
+Use when the kernel must accept non-aligned input sizes (the kernel
+declares `tail_behavior: padded` or `aligned_only` with host-side
+padding). All Phase 9 new goldens follow this pattern.
+
+```python
+ALIGNMENT_ELEMENTS = 32 // input_dtype.itemsize  # 32 bytes / dtype.itemsize
+tile_length = asc2.ceildiv(tile_length_request, ALIGNMENT_ELEMENTS) * ALIGNMENT_ELEMENTS
+block_loop_num = asc2.ceildiv(asc2.ceildiv(length, core_num), tile_length)
+block_length = tile_length * block_loop_num
+block_loop_num_tail = asc2.ceildiv(length - block_length * (core_num - 1), tile_length)
+padded_length = block_length * (core_num - 1) + tile_length * block_loop_num_tail
+# Then pad the host input to padded_length with zeros; the kernel skips
+# the last block_loop_num_tail iterations on the final core.
+
+@asc2.jit(static_alloc=True, reuse_ub=True)
+def my_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+              input_shape: asc2.ConstExpr, output_shape: asc2.ConstExpr,
+              block_loop_num: asc2.ConstExpr, block_loop_num_tail: asc2.ConstExpr,
+              tile_length: asc2.ConstExpr, block_length: asc2.ConstExpr,
+              UNROLL_FACTOR: asc2.ConstExpr):
+    x_gm = asc2.tensor(x_ptr, input_shape)
+    out_gm = asc2.tensor(out_ptr, output_shape)
+    block_offset = asc2.block_idx() * block_length
+    loop_count = block_loop_num
+    if asc2.block_idx() == (asc2.block_num() - 1):
+        loop_count = block_loop_num_tail
+    for i in asc2.range(loop_count, unroll_factor=UNROLL_FACTOR, parallel=True):
+        current_offset = block_offset + i * tile_length
+        xt = asc2.load(x_gm, [tile_length], offsets=[current_offset])
+        zt = asc2.abs(xt)  # replace with your op
+        asc2.store(zt, out_gm, offsets=[current_offset])
+```
+
+### Pattern C — 2D row-tiled
+
+Source: upstream `pyasc-v2-eval@7b85554a:python/test/asc2/kernels/test_gelu.py`.
+Use when the kernel must process one row at a time (per-row reductions
+or per-row composed ops where the iteration index is logically a row
+index). Ranks are 2D everywhere.
+
+```python
+@asc2.jit(always_compile=True)
+def my_kernel(x_ptr: asc2.GlobalAddress, out_ptr: asc2.GlobalAddress,
+              num_rows: asc2.ConstExpr, num_columns: asc2.ConstExpr,
+              tile_size: asc2.ConstExpr):
+    x_gm = asc2.tensor(x_ptr, [num_rows, num_columns])    # 2D tensor
+    out_gm = asc2.tensor(out_ptr, [num_rows, num_columns])
+    for i in asc2.range(asc2.block_idx(), num_rows, asc2.block_num(), parallel=True):
+        row = asc2.load(x_gm, [1, tile_size], offsets=[i, 0])  # 2D load, 2D offsets
+        # ... per-row computation here, e.g. erf-form GELU:
+        k = asc2.sqrt(0.5)
+        out = row * (asc2.erf(row * k) + 1) * 0.5
+        asc2.store(out, out_gm, offsets=[i, 0])
+
+# Launch:
+core_num = 16
+tile_size = 1024
+my_kernel[core_num](x, out, num_rows, num_columns, tile_size)
+```
+
+Note `[1, tile_size]` for the load shape (rank 2) and `[i, 0]` for
+offsets (rank 2) — both match the rank of the 2D tensor.
+
+### Composed (gelu, leaky_relu) — choose Pattern A or C
+
+Composed elementwise ops (gelu, leaky_relu) work in either Pattern A
+(1D flatten + composed math in the loop body) or Pattern C (2D
+row-tiled). Both are valid on v2 as long as **ranks stay consistent**.
+
 Two GELU forms are supported on the simulator; pick by dtype:
 
 ```python
@@ -301,9 +428,16 @@ out = x * (asc2.tanh(inner) + 1) * 0.5
 out = asc2.where(x >= 0, x, x * alpha)
 ```
 
-Two simulator constraints to honour:
-- Module-level constants only (e.g. `GELU_K = math.sqrt(...)`); calling `math.sqrt`
-  inside a `@asc2.jit` body raises `RuntimeError: Unsupported function referenced`.
+Simulator constraints to honour:
+- **Module-level constants only.** `asc2.*` functions are valid only
+  inside a `@asc2.jit` body; module-level constants must use Python or
+  `math.*` (e.g. `GELU_K = math.sqrt(2.0 / math.pi)`). Calling `math.sqrt`
+  inside a `@asc2.jit` body raises `RuntimeError: Unsupported function
+  referenced`. Calling `asc2.sqrt(0.5)` outside `@asc2.jit` (at module
+  scope) raises `AttributeError: 'NoneType' object has no attribute
+  'create_math_SqrtOp'`. Use `asc2.sqrt(0.5)` **inside** the jit body
+  (as in the f16 GELU example) or precompute as a module-level Python
+  constant (as in the f32 GELU example).
 - For tanh-form f32 GELU, pin `TILE_SIZE = 64`. With wider tiles (128) only the
   first 64 elements get written (a wide-tile lowering bug on C310's simulator path);
   the rest are silently zero. Same class of issue as the wide-tile rms_norm history.
@@ -608,6 +742,7 @@ what makes the row dim dynamic.
 
 | Mistake | Why it fails | Fix |
 |---------|-------------|-----|
+| **Rank-inconsistent tiling**: 2D `asc2.tensor(..., [num_rows, num_cols])` + 1D `asc2.load(..., [tile_size], ...)` + 2D `offsets=[row_idx, col_idx]` | v2 rejects with `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'` before any numerics run. The wip-era simulator was lenient; v2 enforces. Single biggest cause of v2 generative drift across abs/{f16,f32}, gelu/f16, add/f16 in Stage 3.3 evidence | Pick **one** rank and stay there. Either flatten to 1D (Pattern A) and use `asc2.tensor(..., [size])` + `[tile_size]` load + `[tile_offset]` offsets, **or** keep 2D (Pattern C) and use `[1, tile_size]` load + `[i, 0]` offsets. Never mix |
 | `break`, `continue`, or early `return` inside `@asc2.jit` | Not supported by the AST codegen | Remove; restructure loop logic |
 | `if row_idx >= num_rows: pass` bounds guard | asc2 handles bounds automatically; `if` with `pass` confuses codegen | Remove the guard entirely |
 | Tiling softmax with sub-row chunks | `asc2.softmax` needs the full row to compute the denominator | Load full `[block_size, num_cols]` and call `asc2.softmax` once |
@@ -625,7 +760,7 @@ what makes the row dim dynamic.
 | Using `range()` instead of `asc2.range()` inside kernel | Python `range` is not JIT-compatible | Replace with `asc2.range()` |
 | `rng.random(shape, dtype=np.float16)` for test data | numpy Generator does not support float16 | Generate as float32, then cast: `rng.random(shape, dtype=np.float32).astype(np.float16)` |
 | `np.erf(x)` or `scipy.special.erf(x)` for host-side reference | numpy has no `erf`; scipy not in Docker | Use `import math; _verf = np.vectorize(math.erf); result = _verf(x)` |
-| Tolerance too tight for simulator (`atol=1e-5`) | Simulator introduces rounding; composed ops accumulate error | Use `atol=1e-3, rtol=1e-3` for float16; `atol=1e-3, rtol=1e-3` for composed float32 |
+| Tolerance too tight for simulator (`atol=1e-5` for unary float32) | Simulator introduces rounding; even unary f32 ops accumulate error. Upstream `operations/test_unary_ops.py` ships f32 at `atol=1e-3` | Use `atol=1e-3, rtol=1e-3` for float16 elementwise; `atol=1e-3, rtol=1e-3` for float32 unary elementwise (matches `capabilities.yaml` + upstream `operations/test_unary_ops.py`). Reserve `1e-5` for matmul output / accumulators only |
 | Testing many/large shapes on simulator | Simulator is ~1000x slower than NPU; large shapes cause timeouts | Test 1-2 shapes per run; keep total elements ≤ 131072 for float16 |
 | `asc2.range(...)` without `unroll_factor=2` | Defaults to `unroll_factor=1`; leaves PR 190 perf on the table | Always pass `unroll_factor=2` (and `parallel=True` when the loop body has no carried dependency — see "Recommended asc2.range parameters" above) |
 | `parallel=True` on a loop with a carried scalar accumulator (`sum_sq = sum_sq + ...`, running max, prefix scan) | Iteration order is no longer guaranteed; accumulator updates collide and the reduction is silently wrong | Omit `parallel` (default `False`) on accumulator loops. Only the *outer* row distribution and *disjoint-tile* inner loops can be `parallel=True` |
