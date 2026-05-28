@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T11:58:13Z",
+  "date": "2026-05-28T12:53:05Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,7 +16,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,24 +25,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 34819,
-    "output": 2181,
-    "cache_read": 96456,
-    "total": 37000
+    "input": 44245,
+    "output": 5458,
+    "cache_read": 340367,
+    "total": 49703
   },
-  "elapsed_total_s": 112.11,
+  "elapsed_total_s": 477.94,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 112.11,
+      "elapsed_s": 237.93,
       "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 11143,
+        "output": 2391,
+        "cache_read": 124921,
+        "total": 13534,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 240.01,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 34819,
-        "output": 2181,
-        "cache_read": 96456,
-        "total": 37000,
+        "input": 33102,
+        "output": 3067,
+        "cache_read": 215446,
+        "total": 36169,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -61,9 +79,8 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.matmul', '@ ']",
+    "detail": "found ['@ ']",
     "markers_found": [
-      "asc2.matmul",
       "@ "
     ]
   },
@@ -134,7 +151,7 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.matmul', '@ ']"
+        "detail": "found ['@ ']"
       }
     }
   },
@@ -152,5 +169,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T11:58:13Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 37000,
+      "elapsed_s": 112.11
+    }
+  ]
 }

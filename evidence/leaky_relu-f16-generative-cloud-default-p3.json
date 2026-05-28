@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T09:59:40Z",
+  "date": "2026-05-28T11:12:15Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,85 +16,47 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 130361,
-    "output": 5920,
-    "cache_read": 543223,
-    "total": 136281
+    "input": 43801,
+    "output": 2133,
+    "cache_read": 236377,
+    "total": 45934
   },
-  "elapsed_total_s": 395.47,
+  "elapsed_total_s": 240.02,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 60.57,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 15369,
-        "output": 958,
-        "cache_read": 18384,
-        "total": 16327,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 240.07,
+      "elapsed_s": 240.02,
       "exit": 124,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 94903,
-        "output": 2156,
-        "cache_read": 474980,
-        "total": 97059,
+        "input": 43801,
+        "output": 2133,
+        "cache_read": 236377,
+        "total": 45934,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 94.83,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 20089,
-        "output": 2806,
-        "cache_read": 49859,
-        "total": 22895,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Kernel executed but verification unclear: Building for variant: Ascend950PR_9599\nTesting shape: [1, 128]\n  Input shape: (1, 128), dtype: float16\n  Output shape: (1, 128), dtype: float16\n  Alpha: 0.01\n  Verification: Passed\n\nTesting shape: [4, 2048]\n  Input shape: (4, 2048), dtype: float16\n  Output shape: (4, 2048), dtype: float16\n  Alpha: 0",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -105,13 +67,13 @@
     ]
   },
   "score": {
-    "value": 10.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -122,28 +84,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -151,7 +113,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -175,7 +137,7 @@
       }
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "",
   "protocol": {
     "id": "P3",
@@ -189,5 +151,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T09:59:40Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 136281,
+      "elapsed_s": 395.47
+    }
+  ]
 }

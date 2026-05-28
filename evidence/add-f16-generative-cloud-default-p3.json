@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])` / `asc2.tensor(y_ptr, [size])`, `asc2.load(.., [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T08:43:30Z",
+  "date": "2026-05-28T10:35:40Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,7 +16,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,74 +25,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 128145,
-    "output": 10413,
-    "cache_read": 834269,
-    "total": 138558
+    "input": 20319,
+    "output": 2570,
+    "cache_read": 204550,
+    "total": 22889
   },
-  "elapsed_total_s": 610.61,
+  "elapsed_total_s": 240.0,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
       "elapsed_s": 240.0,
       "exit": 124,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 28222,
-        "output": 3222,
-        "cache_read": 480124,
-        "total": 31444,
+        "input": 20319,
+        "output": 2570,
+        "cache_read": 204550,
+        "total": 22889,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 240.0,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 54740,
-        "output": 5261,
-        "cache_read": 245116,
-        "total": 60001,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": false,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 130.61,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 45183,
-        "output": 1930,
-        "cache_read": 109029,
-        "total": 47113,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: RuntimeError: rank of 'tensor_shape' must match rank of 'shape'\nrom e\nasc.codegen.errors.CodegenError: at <source>:12:12:\n    for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):\n        tile_offset = base_offset + i * tile_size\n        row_idx = tile_offset // num_cols\n        col_idx = tile_offset % num_cols\n            ^\n        x = asc2.load(x_gm, [tile_size], offsets=[row_idx, col_idx])\n        y = asc2.load(y_gm, [tile_size], offsets=[row_idx, col_idx])\n        out = x + y\nRuntimeError: rank of 'tensor_shape' must match rank of 'shape'\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -188,5 +152,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T08:43:30Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 138558,
+      "elapsed_s": 610.61
+    }
+  ]
 }

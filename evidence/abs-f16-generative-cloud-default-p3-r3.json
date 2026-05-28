@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
-  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T10:50:21Z",
+  "date": "2026-05-28T11:51:33Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,71 +16,69 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 17377,
-    "output": 4963,
-    "cache_read": 216956,
-    "total": 22340
+    "input": 76585,
+    "output": 9640,
+    "cache_read": 629294,
+    "total": 86225
   },
-  "elapsed_total_s": 277.48,
+  "elapsed_total_s": 602.21,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 146.71,
+      "elapsed_s": 122.21,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 11464,
-        "output": 2359,
-        "cache_read": 142680,
-        "total": 13823,
+        "input": 24957,
+        "output": 1441,
+        "cache_read": 167358,
+        "total": 26398,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
+      "static_verify": "pass",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 90.3,
-      "exit": 0,
+      "elapsed_s": 240.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 3340,
-        "output": 1199,
-        "cache_read": 51118,
-        "total": 4539,
+        "input": 15438,
+        "output": 2979,
+        "cache_read": 297514,
+        "total": 18417,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
+      "static_verify": "pass",
       "runtime_status": "fail"
     },
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 40.47,
-      "exit": 0,
+      "elapsed_s": 240.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 2573,
-        "output": 1405,
-        "cache_read": 23158,
-        "total": 3978,
+        "input": 36190,
+        "output": 5220,
+        "cache_read": 164422,
+        "total": 41410,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -94,7 +92,7 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'ascend'\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a3.n8lbxx9f/kernel.py\", line 2, in <module>\n    import ascend.kernel as akr\nModuleNotFoundError: No module named 'ascend'\n",
+    "detail": "Kernel executed but verification unclear: ============================================================\nTIK Abs Kernel for Float16\n============================================================\nPlatform: Ascend950PR_9599\nTILE_SIZE: 128\nCORE_NUM: 16\nTest shapes: [[1, 128], [4, 2048], [32, 4096]]\n=================================================",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -103,7 +101,7 @@
     "markers_found": []
   },
   "score": {
-    "value": 9.0,
+    "value": 8.0,
     "threshold": 12,
     "accepted": false,
     "checks": {
@@ -132,8 +130,8 @@
         "detail": "no range call in kernel"
       },
       "verification": {
-        "passed": true,
-        "detail": "verification call present"
+        "passed": false,
+        "detail": "no allclose/assert_close call"
       },
       "launch_pattern": {
         "passed": false,
@@ -161,7 +159,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x1, shape loop=yes"
+        "detail": "verify x0, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -187,5 +185,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:50:21Z",
+      "overall_pass": false,
+      "score": 9.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 22340,
+      "elapsed_s": 277.48
+    }
+  ]
 }

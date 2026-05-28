@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants outside the @asc2.jit body; use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64 for this cell (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants OUTSIDE the @asc2.jit body. Use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T09:36:48Z",
+  "date": "2026-05-28T11:00:05Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,7 +16,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 61823,
-    "output": 5021,
-    "cache_read": 164794,
-    "total": 66844
+    "input": 77469,
+    "output": 4525,
+    "cache_read": 639956,
+    "total": 81994
   },
-  "elapsed_total_s": 285.02,
+  "elapsed_total_s": 519.64,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 74.88,
-      "exit": 0,
+      "elapsed_s": 240.08,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 22680,
-        "output": 2018,
-        "cache_read": 65834,
-        "total": 24698,
+        "input": 44064,
+        "output": 1823,
+        "cache_read": 469179,
+        "total": 45887,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 167.4,
+      "elapsed_s": 39.46,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 36560,
-        "output": 2348,
-        "cache_read": 59207,
-        "total": 38908,
+        "input": 7026,
+        "output": 811,
+        "cache_read": 19291,
+        "total": 7837,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -71,19 +71,19 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 42.74,
-      "exit": 0,
+      "elapsed_s": 240.1,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 2583,
-        "output": 655,
-        "cache_read": 39753,
-        "total": 3238,
+        "input": 26379,
+        "output": 1891,
+        "cache_read": 151486,
+        "total": 28270,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
+      "static_verify": "pass",
       "runtime_status": "fail"
     }
   ],
@@ -92,58 +92,59 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'asc2.builder'\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float32-a3.syeqz05w/kernel.py\", line 3, in <module>\n    import asc2.builder as bd\nModuleNotFoundError: No module named 'asc2.builder'\n",
+    "detail": "Timeout after 150s",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.tanh', '0.044715', 'gelu']",
+    "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']",
     "markers_found": [
       "asc2.tanh",
       "0.044715",
+      "asc2.erf",
       "gelu"
     ]
   },
   "score": {
-    "value": 8.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
         "passed": true,
         "detail": "1 JIT function(s)"
       },
       "no_return_value": {
-        "passed": false,
-        "detail": "kernel returns a value"
+        "passed": true,
+        "detail": "OK"
       },
       "no_banned_constructs": {
         "passed": true,
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
-        "passed": false,
-        "detail": "no allclose/assert_close call"
+        "passed": true,
+        "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -151,7 +152,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 1"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -162,8 +163,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -171,11 +172,11 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.tanh', '0.044715', 'gelu']"
+        "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']"
       }
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "",
   "protocol": {
     "id": "P3",
@@ -189,5 +190,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T09:36:48Z",
+      "overall_pass": false,
+      "score": 8.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 66844,
+      "elapsed_s": 285.02
+    }
+  ]
 }

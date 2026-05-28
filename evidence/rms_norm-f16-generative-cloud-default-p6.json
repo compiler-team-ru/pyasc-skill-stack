@@ -4,8 +4,8 @@
   "operation": "rms_norm",
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm/kernel.py",
-  "date": "2026-05-27T10:31:24Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/rms_norm_float16/kernel.py",
+  "date": "2026-05-28T11:36:27Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -26,10 +26,10 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 129446,
-    "output": 5080,
-    "cache_read": 152818,
-    "total": 134526
+    "input": 125366,
+    "output": 5474,
+    "cache_read": 132489,
+    "total": 130840
   },
   "elapsed_total_s": 240.01,
   "attempts": [
@@ -40,10 +40,10 @@
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 129446,
-        "output": 5080,
-        "cache_read": 152818,
-        "total": 134526,
+        "input": 125366,
+        "output": 5474,
+        "cache_read": 132489,
+        "total": 130840,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -128,7 +128,7 @@
       },
       "multi_shape_verification": {
         "passed": true,
-        "detail": "verify x2, shape loop=no"
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": false,
@@ -154,5 +154,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:31:24Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 134526,
+      "elapsed_s": 240.01
+    }
+  ]
 }

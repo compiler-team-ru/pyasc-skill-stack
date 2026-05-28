@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
-  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Place `asc2.sqrt(0.5)` INSIDE the @asc2.jit body (not at module level \u2014 module-level `asc2.*` raises `AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'`). TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T11:21:37Z",
+  "date": "2026-05-28T12:12:33Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 111949,
-    "output": 14284,
-    "cache_read": 664069,
-    "total": 126233
+    "input": 56726,
+    "output": 7355,
+    "cache_read": 568275,
+    "total": 64081
   },
-  "elapsed_total_s": 605.94,
+  "elapsed_total_s": 635.14,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 125.89,
-      "exit": 0,
+      "elapsed_s": 240.0,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 11211,
-        "output": 3144,
-        "cache_read": 152351,
-        "total": 14355,
+        "input": 26522,
+        "output": 2163,
+        "cache_read": 321539,
+        "total": 28685,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,37 +53,37 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.03,
-      "exit": 124,
+      "elapsed_s": 155.05,
+      "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 76220,
-        "output": 4804,
-        "cache_read": 427025,
-        "total": 81024,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 240.02,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 24518,
-        "output": 6336,
-        "cache_read": 84693,
-        "total": 30854,
+        "input": 19219,
+        "output": 3058,
+        "cache_read": 114975,
+        "total": 22277,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.09,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 10985,
+        "output": 2134,
+        "cache_read": 131761,
+        "total": 13119,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     }
   ],
@@ -92,24 +92,25 @@
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "fail",
-    "detail": "Exit code 1: ModuleNotFoundError: No module named 'tvm'\nTraceback (most recent call last):\n  File \"/tmp/gen-gelu-float16-a3.tr2li4r7/kernel.py\", line 10, in <module>\n    import tvm\nModuleNotFoundError: No module named 'tvm'\n",
+    "detail": "Timeout after 150s",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['gelu']",
+    "detail": "found ['asc2.erf', 'gelu']",
     "markers_found": [
+      "asc2.erf",
       "gelu"
     ]
   },
   "score": {
-    "value": 10.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -120,28 +121,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -149,7 +150,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -169,11 +170,11 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['gelu']"
+        "detail": "found ['asc2.erf', 'gelu']"
       }
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "",
   "protocol": {
     "id": "P3",
@@ -187,5 +188,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T11:21:37Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 126233,
+      "elapsed_s": 605.94
+    }
+  ]
 }

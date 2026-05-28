@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
-  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float16/kernel.py",
-  "date": "2026-05-27T11:08:58Z",
+  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+  "date": "2026-05-28T11:59:50Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -19,19 +19,21 @@
     "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md"
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 285385,
-    "output": 15826,
-    "cache_read": 855685,
-    "total": 301211
+    "input": 136432,
+    "output": 8606,
+    "cache_read": 373156,
+    "total": 145038
   },
-  "elapsed_total_s": 720.02,
+  "elapsed_total_s": 480.02,
   "attempts": [
     {
       "n": 1,
@@ -40,15 +42,15 @@
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 119653,
-        "output": 7367,
-        "cache_read": 304095,
-        "total": 127020,
+        "input": 80868,
+        "output": 3247,
+        "cache_read": 107597,
+        "total": 84115,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
+      "kernel_found": false,
+      "static_verify": "fail",
       "runtime_status": "fail"
     },
     {
@@ -56,30 +58,12 @@
       "prompt_label": "guided",
       "elapsed_s": 240.01,
       "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 74092,
-        "output": 5493,
-        "cache_read": 409597,
-        "total": 79585,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 240.0,
-      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 91640,
-        "output": 2966,
-        "cache_read": 141993,
-        "total": 94606,
+        "input": 55564,
+        "output": 5359,
+        "cache_read": 265559,
+        "total": 60923,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -188,5 +172,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T11:08:58Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 301211,
+      "elapsed_s": 720.02
+    }
+  ]
 }

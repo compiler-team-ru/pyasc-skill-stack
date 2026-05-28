@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
-  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T10:55:24Z",
+  "date": "2026-05-28T11:45:33Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -25,60 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 42994,
-    "output": 4568,
-    "cache_read": 415639,
-    "total": 47562
+    "input": 28900,
+    "output": 2012,
+    "cache_read": 208978,
+    "total": 30912
   },
-  "elapsed_total_s": 415.65,
+  "elapsed_total_s": 150.21,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 105.17,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 9292,
-        "output": 1492,
-        "cache_read": 172636,
-        "total": 10784,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 240.01,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 24307,
-        "output": 1912,
-        "cache_read": 135548,
-        "total": 26219,
-        "cost_usd": 0.0
-      },
-      "model": "glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 70.47,
+      "elapsed_s": 150.21,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 9395,
-        "output": 1164,
-        "cache_read": 107455,
-        "total": 10559,
+        "input": 28900,
+        "output": 2012,
+        "cache_read": 208978,
+        "total": 30912,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -187,5 +151,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:55:24Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 47562,
+      "elapsed_s": 415.65
+    }
+  ]
 }

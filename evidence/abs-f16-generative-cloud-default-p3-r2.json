@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "abs",
   "dtype": "float16",
-  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range(asc2.block_idx(), num_tiles, asc2.block_num()); use asc2.load/store and asc2.tensor. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T10:45:42Z",
+  "date": "2026-05-28T11:41:30Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,35 +16,33 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
-      "kernel.py",
-      "design.md",
-      "verification.md"
+      "kernel.py"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 28955,
-    "output": 4583,
-    "cache_read": 129444,
-    "total": 33538
+    "input": 44118,
+    "output": 6089,
+    "cache_read": 288621,
+    "total": 50207
   },
-  "elapsed_total_s": 206.3,
+  "elapsed_total_s": 461.1,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 53.34,
+      "elapsed_s": 221.09,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 2890,
-        "output": 896,
-        "cache_read": 30537,
-        "total": 3786,
+        "input": 18924,
+        "output": 4376,
+        "cache_read": 124912,
+        "total": 23300,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -55,46 +53,28 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 62.37,
-      "exit": 0,
-      "outcome": "fail",
+      "elapsed_s": 240.01,
+      "exit": 124,
+      "outcome": "pass",
       "tokens": {
-        "input": 12472,
-        "output": 828,
-        "cache_read": 32151,
-        "total": 13300,
+        "input": 25194,
+        "output": 1713,
+        "cache_read": 163709,
+        "total": 26907,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 90.59,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 13593,
-        "output": 2859,
-        "cache_read": 66756,
-        "total": 16452,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
+      "static_verify": "pass",
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\nTraceback (most recent call last):\n  File \"/tmp/gen-abs-float16-a3.ufkew_zr/kernel.py\", line 82, in <module>\n    verify()\n  File \"/tmp/gen-abs-float16-a3.ufkew_zr/kernel.py\", line 51, in verify\n    x_npu = asc2.Tensor(x_np)\n            ^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'Tensor'. Did you mean: 'tensor'?\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -105,13 +85,13 @@
     ]
   },
   "score": {
-    "value": 10.0,
+    "value": 16.0,
     "threshold": 12,
-    "accepted": false,
+    "accepted": true,
     "checks": {
       "jit_decorator": {
-        "passed": false,
-        "detail": "missing"
+        "passed": true,
+        "detail": "1 JIT function(s)"
       },
       "no_return_value": {
         "passed": true,
@@ -122,28 +102,28 @@
         "detail": "OK"
       },
       "asc2_load_store": {
-        "passed": false,
-        "detail": "missing asc2.load/asc2.store"
+        "passed": true,
+        "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": false,
-        "detail": "missing asc2.tensor"
+        "passed": true,
+        "detail": "present"
       },
       "loop_range": {
-        "passed": false,
-        "detail": "no range call in kernel"
+        "passed": true,
+        "detail": "range/asc2.range present"
       },
       "verification": {
         "passed": true,
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": false,
-        "detail": "no launch pattern"
+        "passed": true,
+        "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -151,7 +131,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "skipped (no --op or op not in arity table)"
+        "detail": "expected>=1 params, found 2"
       },
       "output_dtype": {
         "passed": true,
@@ -175,7 +155,7 @@
       }
     }
   },
-  "static_verify": "fail",
+  "static_verify": "pass",
   "notes": "",
   "protocol": {
     "id": "P3",
@@ -189,5 +169,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:45:42Z",
+      "overall_pass": false,
+      "score": 10.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 33538,
+      "elapsed_s": 206.3
+    }
+  ]
 }

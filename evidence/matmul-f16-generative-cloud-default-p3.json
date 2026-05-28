@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T10:17:43Z",
+  "date": "2026-05-28T11:23:54Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,7 +16,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,74 +25,38 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 51855,
-    "output": 5272,
-    "cache_read": 224076,
-    "total": 57127
+    "input": 21069,
+    "output": 1932,
+    "cache_read": 217806,
+    "total": 23001
   },
-  "elapsed_total_s": 329.78,
+  "elapsed_total_s": 240.09,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 132.3,
-      "exit": 0,
-      "outcome": "fail",
+      "elapsed_s": 240.09,
+      "exit": 124,
+      "outcome": "pass",
       "tokens": {
-        "input": 7201,
-        "output": 1308,
-        "cache_read": 63761,
-        "total": 8509,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 107.38,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 9863,
-        "output": 2203,
-        "cache_read": 60030,
-        "total": 12066,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "fail",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 90.1,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 34791,
-        "output": 1761,
-        "cache_read": 100285,
-        "total": 36552,
+        "input": 21069,
+        "output": 1932,
+        "cache_read": 217806,
+        "total": 23001,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Exit code 1: Greatest relative difference: 1.0 at index (16, 0) (up to 0.01 allowed)\n73, in run_kernel\n    torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2)\n  File \"/home/aloschilov/.pyenv/versions/3.11.10/lib/python3.11/site-packages/torch/testing/_comparison.py\", line 1631, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 512 / 1024 (50.0%)\nGreatest absolute difference: 6.432650566101074 at index (24, 15) (up to 0.01 allowed)\nGreatest relative difference: 1.0 at index (16, 0) (up to 0.01 allowed)\n",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -187,5 +151,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:17:43Z",
+      "overall_pass": false,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 57127,
+      "elapsed_s": 329.78
+    }
+  ]
 }

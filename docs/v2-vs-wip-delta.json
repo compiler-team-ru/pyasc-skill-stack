@@ -25,24 +25,24 @@
     {
       "cell": "abs/float16",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": true,
       "wip_static": true,
       "wip_sim": "pass",
-      "classification": "regressed"
+      "classification": "stable_pass"
     },
     {
       "cell": "abs/float16",
       "protocol": "P6",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": true,
       "wip_static": true,
       "wip_sim": "pass",
-      "classification": "regressed"
+      "classification": "stable_pass"
     },
     {
       "cell": "abs/float32",
@@ -58,35 +58,35 @@
     {
       "cell": "abs/float32",
       "protocol": "P3",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_partial_fail"
+      "classification": "resolved"
     },
     {
       "cell": "abs/float32",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": true,
       "wip_static": true,
       "wip_sim": "pass",
-      "classification": "regressed"
+      "classification": "stable_pass"
     },
     {
       "cell": "abs/float32",
       "protocol": "P6",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": true,
       "wip_static": true,
       "wip_sim": "pass",
-      "classification": "regressed"
+      "classification": "stable_pass"
     },
     {
       "cell": "add/float16",
@@ -102,24 +102,24 @@
     {
       "cell": "add/float16",
       "protocol": "P3",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_partial_fail"
+      "classification": "resolved"
     },
     {
       "cell": "add/float16",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": true,
       "wip_sim": "fail",
-      "classification": "persist_drift"
+      "classification": "resolved"
     },
     {
       "cell": "add/float16",
@@ -234,35 +234,35 @@
     {
       "cell": "gelu/float16",
       "protocol": "P3",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": true,
       "wip_sim": "fail",
-      "classification": "persist_drift"
+      "classification": "resolved"
     },
     {
       "cell": "gelu/float16",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": true,
       "wip_sim": "fail",
-      "classification": "persist_drift"
+      "classification": "resolved"
     },
     {
       "cell": "gelu/float16",
       "protocol": "P6",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": true,
       "wip_static": true,
       "wip_sim": "pass",
-      "classification": "regressed"
+      "classification": "stable_pass"
     },
     {
       "cell": "gelu/float32",
@@ -279,12 +279,12 @@
       "cell": "gelu/float32",
       "protocol": "P3",
       "v2_pass": false,
-      "v2_static": false,
+      "v2_static": true,
       "v2_sim": "fail",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_total_fail"
+      "classification": "shared_partial_fail"
     },
     {
       "cell": "gelu/float32",
@@ -322,24 +322,24 @@
     {
       "cell": "leaky_relu/float16",
       "protocol": "P3",
-      "v2_pass": false,
-      "v2_static": false,
-      "v2_sim": "fail",
+      "v2_pass": true,
+      "v2_static": true,
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_total_fail"
+      "classification": "resolved"
     },
     {
       "cell": "leaky_relu/float16",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": true,
       "wip_sim": "fail",
-      "classification": "persist_drift"
+      "classification": "resolved"
     },
     {
       "cell": "leaky_relu/float16",
@@ -410,13 +410,13 @@
     {
       "cell": "matmul/float16",
       "protocol": "P3",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_partial_fail"
+      "classification": "resolved"
     },
     {
       "cell": "matmul/float16",
@@ -530,12 +530,12 @@
     }
   ],
   "summary": {
-    "stable_pass": 14,
-    "resolved": 6,
-    "regressed": 8,
-    "persist_drift": 5,
-    "shared_total_fail": 9,
-    "shared_partial_fail": 6,
+    "stable_pass": 19,
+    "resolved": 14,
+    "regressed": 3,
+    "persist_drift": 1,
+    "shared_total_fail": 7,
+    "shared_partial_fail": 4,
     "missing": 0
   }
 }

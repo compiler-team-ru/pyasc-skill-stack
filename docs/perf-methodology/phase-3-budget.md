@@ -162,6 +162,41 @@ failing on a recorded SHA. Total wall (including resume) was
   timeout overshoot is wasted spend; if it isn't, the protocol-axis
   decomposition is incomplete. Stage 3.4 monitors this.
 
+## Orchestrator timeouts and effective sim budget (realized on v2-eval)
+
+The Phase 3 budget projection only fixed the per-leg LLM timeout. The
+v2-eval matrix exposed two additional timeout layers that materially
+shape spend and wall:
+
+| Layer | Where | Default | Effect |
+|---|---|---:|---|
+| Agent / LLM timeout | `collect_generative_evidence.py --timeout` | 240 s | Stops the agent loop. Tokens billed up to this cutoff. |
+| Sim verify timeout | `collect_generative_evidence.py --docker-timeout` | 180 s | Wall budget for one `python kernel.py -r Model -v Ascend950PR_9599` invocation. |
+| Effective sim budget | [`tests/tools/run_and_verify.py`](../../tests/tools/run_and_verify.py) | `docker-timeout − 30 s` = **150 s** | Buffer for orchestration overhead; the kernel itself sees a 150 s wall. |
+
+The `run_matrix_v2_eval.py` orchestrator now defaults to these values.
+The Stage 3.3 / 3.4 runs reported above were collected with
+`--timeout 240 --docker-timeout 180 --parallel 2`.
+
+**Risk — composed-math timeouts.** `gelu/float16` P4 and P6 retries hit
+the 150 s effective sim budget repeatedly during Stage 3.3, contributing
+to the 0/12 stability sweep result. Several other Tier-2 cells
+(softmax, leaky_relu) ran 110–140 s — uncomfortably close. The Phase 9
+plan does **not** raise `--docker-timeout` (every cell's wall budget
+would change), but flags it for a follow-up sprint. The drift cells
+might still be tight after the rank-consistency teaching lands; revisit
+after the Phase 9 targeted re-run.
+
+**Risk — mid-run editable-install diversion (one-time).** Stage 3.3
+lost 18 trials on 2026-05-27 11:30 UTC to an unintended
+`pip install -e ../pyasc-fork` triggered by the P4 baseline
+AGENTS.md (see
+[`docs/skill-value-q1-findings.md` Appendix B](../skill-value-q1-findings.md#appendix-b--postmortem-2026-05-27-1130-utc-pip-install-diversion)).
+The orchestrator absorbed the failure with a `--resume-from` flag and
+the resume completed in **50 min**. This is one-time cost recorded
+here so the budget memo reflects realized wall (7 h 26 min) faithfully;
+the mitigation (PYTHONPATH pin + hard ERROR) is already in place.
+
 ## Cross-references
 
 - Stage 3.2 spec in [`.cursor/plans/phase_3_agents_md_baseline.plan.md`](../../.cursor/plans/phase_3_agents_md_baseline.plan.md).

@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
-  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Place `asc2.sqrt(0.5)` INSIDE the @asc2.jit body (not at module level \u2014 module-level `asc2.*` raises `AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'`). TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T09:26:58Z",
+  "date": "2026-05-28T10:53:37Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -16,7 +16,7 @@
   "agent": {
     "platform": "opencode",
     "timeout_s": 240,
-    "completed": false,
+    "completed": true,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 149107,
-    "output": 9156,
-    "cache_read": 893011,
-    "total": 158263
+    "input": 111069,
+    "output": 6914,
+    "cache_read": 631494,
+    "total": 117983
   },
-  "elapsed_total_s": 582.25,
+  "elapsed_total_s": 605.04,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 102.23,
-      "exit": 0,
+      "elapsed_s": 240.02,
+      "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 17402,
-        "output": 1604,
-        "cache_read": 171435,
-        "total": 19006,
+        "input": 76133,
+        "output": 2656,
+        "cache_read": 314834,
+        "total": 78789,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,14 +53,14 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.0,
+      "elapsed_s": 240.08,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 82952,
-        "output": 5413,
-        "cache_read": 469673,
-        "total": 88365,
+        "input": 23841,
+        "output": 2423,
+        "cache_read": 180330,
+        "total": 26264,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -71,28 +71,28 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 240.02,
-      "exit": 124,
-      "outcome": "fail",
+      "elapsed_s": 124.94,
+      "exit": 0,
+      "outcome": "pass",
       "tokens": {
-        "input": 48753,
-        "output": 2139,
-        "cache_read": 251903,
-        "total": 50892,
+        "input": 11095,
+        "output": 1835,
+        "cache_read": 136330,
+        "total": 12930,
         "cost_usd": 0.0
       },
-      "model": "glm-5",
+      "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Timeout after 150s",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -188,5 +188,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T09:26:58Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 158263,
+      "elapsed_s": 582.25
+    }
+  ]
 }

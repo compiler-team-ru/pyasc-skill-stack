@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
-  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: GELU activation (out = 0.5 * x * (1 + erf(x / sqrt(2)))); compose asc2.erf, multiplication, and addition. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Place `asc2.sqrt(0.5)` INSIDE the @asc2.jit body (not at module level \u2014 module-level `asc2.*` raises `AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'`). TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=5e-2, rtol=5e-2 against 0.5 * x * (1 + np.vectorize(math.erf)(x / np.sqrt(2))); host reference uses `import math; _verf = np.vectorize(math.erf)` because np.erf and scipy.special.erf are not in this environment. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float16/kernel.py",
-  "date": "2026-05-27T11:51:25Z",
+  "date": "2026-05-28T12:40:24Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -19,18 +19,17 @@
     "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 120784,
-    "output": 9565,
-    "cache_read": 956884,
-    "total": 130349
+    "input": 239237,
+    "output": 12382,
+    "cache_read": 572947,
+    "total": 251619
   },
   "elapsed_total_s": 720.04,
   "attempts": [
@@ -41,28 +40,28 @@
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 32087,
-        "output": 1170,
-        "cache_read": 373790,
-        "total": 33257,
+        "input": 66504,
+        "output": 4004,
+        "cache_read": 247311,
+        "total": 70508,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": false,
-      "static_verify": "fail",
+      "kernel_found": true,
+      "static_verify": "pass",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.03,
+      "elapsed_s": 240.02,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 61589,
-        "output": 4801,
-        "cache_read": 250036,
-        "total": 66390,
+        "input": 105855,
+        "output": 3909,
+        "cache_read": 194791,
+        "total": 109764,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -73,14 +72,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
+      "elapsed_s": 240.02,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 27108,
-        "output": 3594,
-        "cache_read": 333058,
-        "total": 30702,
+        "input": 66878,
+        "output": 4469,
+        "cache_read": 130845,
+        "total": 71347,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -190,5 +189,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T11:51:25Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 130349,
+      "elapsed_s": 720.04
+    }
+  ]
 }

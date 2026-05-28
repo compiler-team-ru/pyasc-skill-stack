@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/leaky_relu/kernel.py",
-  "date": "2026-05-27T10:05:37Z",
+  "date": "2026-05-28T11:24:34Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -19,32 +19,31 @@
     "completed": false,
     "artifacts_found": [
       "kernel.py",
-      "design.md",
-      "self_review.md"
+      "design.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 131814,
-    "output": 4275,
-    "cache_read": 230656,
-    "total": 136089
+    "input": 75129,
+    "output": 3651,
+    "cache_read": 242649,
+    "total": 78780
   },
-  "elapsed_total_s": 240.01,
+  "elapsed_total_s": 240.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
+      "elapsed_s": 240.03,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 131814,
-        "output": 4275,
-        "cache_read": 230656,
-        "total": 136089,
+        "input": 75129,
+        "output": 3651,
+        "cache_read": 242649,
+        "total": 78780,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -153,5 +152,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:05:37Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 136089,
+      "elapsed_s": 240.01
+    }
+  ]
 }

@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_float16/kernel.py",
-  "date": "2026-05-27T08:53:24Z",
+  "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])` / `asc2.tensor(y_ptr, [size])`, `asc2.load(.., [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
+  "date": "2026-05-28T10:41:07Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -20,50 +20,31 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 159703,
-    "output": 7728,
-    "cache_read": 493056,
-    "total": 167431
+    "input": 82044,
+    "output": 3933,
+    "cache_read": 168033,
+    "total": 85977
   },
-  "elapsed_total_s": 480.05,
+  "elapsed_total_s": 240.01,
   "attempts": [
     {
       "n": 1,
-      "prompt_label": "guided",
-      "elapsed_s": 240.04,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 99370,
-        "output": 3919,
-        "cache_read": 176073,
-        "total": 103289,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
       "prompt_label": "guided",
       "elapsed_s": 240.01,
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 60333,
-        "output": 3809,
-        "cache_read": 316983,
-        "total": 64142,
+        "input": 82044,
+        "output": 3933,
+        "cache_read": 168033,
+        "total": 85977,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -173,5 +154,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T08:53:24Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 167431,
+      "elapsed_s": 480.05
+    }
+  ]
 }

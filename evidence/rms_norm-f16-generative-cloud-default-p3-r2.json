@@ -5,7 +5,7 @@
   "dtype": "float16",
   "prompt": "Operator: RMSNorm: y = x * gamma * rsqrt(mean(x\u00b2, axis=-1, keepdims=True) + eps), per row, with a host-side dispatcher that selects between two @asc2.jit kernels (full_row and split_d) based on the runtime shape. Input shapes: (num_rows=8, num_cols=256) and (num_rows=8, num_cols=1055). Output shape: same_as_input. Dtype: float16 (gamma is float16 too; eps is a float32 scalar). Layout: contiguous. Axis: -1 (normalize along the feature axis). Tiling: host_dispatcher \u2014 provide TWO @asc2.jit kernels: a full_row kernel where num_cols is asc.ConstExpr[int] and the row tile fits in UB, and a split_d kernel where both num_rows and num_cols are runtime int and the kernel streams along D in tile_cols=64 tiles with host-side zero padding; both kernels distribute rows via `for row in asc2.range(asc2.block_idx(), num_rows, asc2.block_num())`; cast loaded tiles to float32 via `.to(asc.float32)` before accumulating sum_sq via asc2.reduce_sum, then cast back via `.to(x.dtype)` before asc2.store; seed sum_sq in split_d with a PlainValue zero: `sum_sq = asc2.reduce_sum(asc2.full([1, tile_cols], 0.0, dtype=asc.float32))`; a host-side dispatcher `rms_norm_launch(x, gamma, eps)` picks full_row when `num_cols * dtype_bytes <= 64 * 1024` AND `num_cols % 8 == 0`, otherwise split_d. Tail: host_dispatcher \u2014 full_row covers aligned shapes, split_d covers everything else by streaming along D with host-side zero padding. Accumulator: float32 (sum_sq is fp32 even when the input is fp16). Tolerance: atol=2e-2, rtol=2e-2 for the full_row regime (8, 256) and atol=5e-2, rtol=5e-2 for the split_d regime (8, 1055), both against a torch reference; host inputs MUST be torch.Tensor \u2014 numpy buffers are silently zeroed by the C310 simulator path and surface as `0., 0., 0.` tail bands in any downstream comparison. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T12:17:42Z",
+  "date": "2026-05-28T13:06:47Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -25,24 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 31799,
-    "output": 5921,
-    "cache_read": 455717,
-    "total": 37720
+    "input": 123993,
+    "output": 10491,
+    "cache_read": 693885,
+    "total": 134484
   },
-  "elapsed_total_s": 480.1,
+  "elapsed_total_s": 720.03,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.1,
+      "elapsed_s": 240.02,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 10894,
-        "output": 2406,
-        "cache_read": 53207,
-        "total": 13300,
+        "input": 22866,
+        "output": 4808,
+        "cache_read": 68547,
+        "total": 27674,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -53,28 +53,46 @@
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.0,
+      "elapsed_s": 240.01,
       "exit": 124,
-      "outcome": "pass",
+      "outcome": "fail",
       "tokens": {
-        "input": 20905,
-        "output": 3515,
-        "cache_read": 402510,
-        "total": 24420,
+        "input": 51187,
+        "output": 2610,
+        "cache_read": 293998,
+        "total": 53797,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "pass"
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 240.0,
+      "exit": 124,
+      "outcome": "fail",
+      "tokens": {
+        "input": 49940,
+        "output": 3073,
+        "cache_read": 331340,
+        "total": 53013,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: NameError: name 'asc2' is not defined. Did you mean: 'asc'?\nTraceback (most recent call last):\n  File \"/tmp/gen-rms_norm-float16-a3.b02aq0b9/kernel.py\", line 7, in <module>\n    @asc2.jit\n     ^^^^\nNameError: name 'asc2' is not defined. Did you mean: 'asc'?\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -87,7 +105,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 12.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -100,16 +118,16 @@
         "detail": "OK"
       },
       "no_banned_constructs": {
-        "passed": true,
-        "detail": "OK"
+        "passed": false,
+        "detail": "found: With, With"
       },
       "asc2_load_store": {
         "passed": true,
         "detail": "load+store"
       },
       "asc2_tensor": {
-        "passed": true,
-        "detail": "present"
+        "passed": false,
+        "detail": "missing asc2.tensor"
       },
       "loop_range": {
         "passed": true,
@@ -120,12 +138,12 @@
         "detail": "verification call present"
       },
       "launch_pattern": {
-        "passed": true,
-        "detail": "kernel launch found"
+        "passed": false,
+        "detail": "no launch pattern"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -148,8 +166,8 @@
         "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
-        "passed": false,
-        "detail": "numeric shape tuples found inside JIT function"
+        "passed": true,
+        "detail": "shapes parameterized"
       },
       "semantic_api_usage": {
         "passed": true,
@@ -157,7 +175,7 @@
       }
     }
   },
-  "static_verify": "pass",
+  "static_verify": "fail",
   "notes": "",
   "protocol": {
     "id": "P3",
@@ -171,5 +189,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T12:17:42Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 37720,
+      "elapsed_s": 480.1
+    }
+  ]
 }

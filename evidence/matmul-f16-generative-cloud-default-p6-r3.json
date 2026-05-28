@@ -4,8 +4,8 @@
   "operation": "matmul",
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_f16_f32/kernel.py",
-  "date": "2026-05-27T12:03:41Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/matmul_float16/kernel.py",
+  "date": "2026-05-28T12:57:30Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -20,18 +20,17 @@
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md",
-      "acceptance_review.md"
+      "self_review.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 150887,
-    "output": 5951,
-    "cache_read": 294614,
-    "total": 156838
+    "input": 82261,
+    "output": 4990,
+    "cache_read": 215355,
+    "total": 87251
   },
   "elapsed_total_s": 240.01,
   "attempts": [
@@ -42,10 +41,10 @@
       "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 150887,
-        "output": 5951,
-        "cache_read": 294614,
-        "total": 156838,
+        "input": 82261,
+        "output": 4990,
+        "cache_read": 215355,
+        "total": 87251,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -70,7 +69,7 @@
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -107,8 +106,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": false,
-        "detail": "missing GlobalAddress type"
+        "passed": true,
+        "detail": "GlobalAddress found"
       },
       "valid_python": {
         "passed": true,
@@ -116,7 +115,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=3 params, found 10"
+        "detail": "expected>=3 params, found 3"
       },
       "output_dtype": {
         "passed": true,
@@ -154,5 +153,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T12:03:41Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 156838,
+      "elapsed_s": 240.01
+    }
+  ]
 }
