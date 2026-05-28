@@ -526,6 +526,16 @@ jobs:
           bash tests/tools/merge_evidence_artifacts.sh artifacts evidence
           ls -1 evidence/
 
+      - name: Snapshot prior summary for --merge-history
+        # Phase 10 noise-floor: capture the last main summary BEFORE we
+        # overwrite it so the aggregator can append a `deltas_pp_history`
+        # entry derived from it. This gives the dashboard a multi-night
+        # noise-floor view without standing up new infrastructure.
+        run: |
+          if [ -f evidence/skills-value-summary.json ]; then
+            cp evidence/skills-value-summary.json artifacts/prior-summary.json
+          fi
+
       - name: Run OpenCode skills-intervention aggregator
         env:
           PARTIAL_RUN: ${{ steps.partial-run.outputs.partial_run }}
@@ -533,6 +543,10 @@ jobs:
           EXTRA=()
           if [ "$PARTIAL_RUN" = "true" ]; then
             EXTRA+=(--partial-run)
+          fi
+          if [ -f artifacts/prior-summary.json ]; then
+            EXTRA+=(--merge-history artifacts/prior-summary.json)
+            EXTRA+=(--history-archive-dir evidence/history)
           fi
           python3.10 tests/tools/compare_skills_value.py \
             "${EXTRA[@]}" \
@@ -563,8 +577,16 @@ jobs:
           if [ "$PARTIAL_RUN" = "true" ]; then
             echo "::warning::Partial nightly detected (at least one matrix leg cancelled or failed). Committing skills-value-summary.json only; per-cell evidence files and capabilities.yaml are NOT updated to avoid mixing fresh and stale rows. See evidence/skills-value-summary.json -> legs_status for the leg-by-leg breakdown."
             git add evidence/skills-value-summary.json
+            # Phase 10: history archive entries are immutable per-day
+            # snapshots and safe to commit even on partial nightlies.
+            if [ -d evidence/history ]; then
+              git add evidence/history
+            fi
           else
             git add evidence/*.json capabilities.yaml
+            if [ -d evidence/history ]; then
+              git add evidence/history
+            fi
           fi
           if git diff --cached --quiet; then
             echo "No new evidence to commit."

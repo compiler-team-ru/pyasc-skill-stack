@@ -1075,6 +1075,79 @@ def build_summary(
     return out
 
 
+_HISTORY_DELTA_KEYS = ("P3-P2", "P4-P3", "P6-P4")
+
+
+def merge_history_inplace(
+    fresh_summary: dict,
+    prior_summary: dict,
+    *,
+    archive_dir: Path,
+    prior_path: Path,
+) -> None:
+    """Append the prior summary's `deltas_pp` snapshot to the fresh history.
+
+    For each profile present in both summaries, build one history entry of
+    the form ``{date, model, P3-P2, P4-P3, P6-P4}`` from the prior
+    ``deltas_pp`` block and append it to the fresh profile's
+    ``deltas_pp_history`` list (oldest first; we append rather than
+    insert because callers chain nightly merges).
+
+    If ``archive_dir`` is provided and writable, the prior summary is
+    also archived under ``skills-value-summary-YYYYMMDD.json`` so the
+    merger chain has stable inputs.
+    """
+    prior_date_raw = prior_summary.get("generated_at") or ""
+    prior_date = prior_date_raw[:10] if prior_date_raw else "unknown"
+    prior_model = prior_summary.get("model")  # may be absent; that's fine
+    prior_profiles = (prior_summary.get("by_profile") or {})
+
+    fresh_profiles = fresh_summary.get("by_profile") or {}
+    for profile, fresh_agg in fresh_profiles.items():
+        prior_agg = prior_profiles.get(profile)
+        if not prior_agg:
+            continue
+        prior_deltas = prior_agg.get("deltas_pp") or {}
+        if not any(prior_deltas.get(k) for k in _HISTORY_DELTA_KEYS):
+            continue
+        history_entry: dict = {
+            "date": prior_date,
+        }
+        if prior_model is not None:
+            history_entry["model"] = prior_model
+        for key in _HISTORY_DELTA_KEYS:
+            block = prior_deltas.get(key)
+            if block is None:
+                history_entry[key] = None
+                continue
+            history_entry[key] = {
+                "pass_pp": block.get("pass_pp"),
+                "pass_pp_ci_low": block.get("pass_pp_ci_low"),
+                "pass_pp_ci_high": block.get("pass_pp_ci_high"),
+                "tokens_pct": block.get("tokens_pct"),
+            }
+        existing_history = list(prior_agg.get("deltas_pp_history") or [])
+        merged_history = existing_history + [history_entry]
+        fresh_agg["deltas_pp_history"] = merged_history
+
+    if archive_dir is not None:
+        try:
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            archive_name = f"skills-value-summary-{prior_date.replace('-', '')}.json"
+            archive_path = archive_dir / archive_name
+            if not archive_path.exists():
+                archive_path.write_text(json.dumps(prior_summary, indent=2) + "\n")
+                print(
+                    f"INFO: archived prior summary to {archive_path}",
+                    file=sys.stderr,
+                )
+        except OSError as e:
+            print(
+                f"WARNING: could not archive prior summary to {archive_dir}: {e}",
+                file=sys.stderr,
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Aggregate generative evidence into a skills-value report.",
@@ -1107,6 +1180,25 @@ def main() -> int:
             "leg in the most recent nightly. Embedded under "
             "`legs_status` in the summary so the dashboard can show "
             "exactly what was/wasn't measured."
+        ),
+    )
+    parser.add_argument(
+        "--merge-history", default=None,
+        help=(
+            "Optional path to a prior skills-value-summary.json. After "
+            "computing the fresh summary, take each per-profile "
+            "`deltas_pp` block (P3-P2, P4-P3, P6-P4 entries) from the "
+            "prior summary and append it to that profile's "
+            "`deltas_pp_history` in the new summary. Used by the "
+            "3-night noise-floor cron (Phase 10)."
+        ),
+    )
+    parser.add_argument(
+        "--history-archive-dir", default=str(EVIDENCE_DIR / "history"),
+        help=(
+            "Directory where prior summaries are archived under "
+            "skills-value-summary-YYYYMMDD.json when --merge-history "
+            "is set. Used together with --merge-history."
         ),
     )
     args = parser.parse_args()
@@ -1169,6 +1261,27 @@ def main() -> int:
         partial_run=args.partial_run,
         legs_status=legs_status,
     )
+
+    if args.merge_history:
+        prior_path = Path(args.merge_history)
+        if not prior_path.exists():
+            print(
+                f"WARNING: --merge-history not found: {prior_path}; "
+                f"deltas_pp_history will remain empty",
+                file=sys.stderr,
+            )
+        else:
+            try:
+                prior_summary = json.loads(prior_path.read_text())
+            except json.JSONDecodeError as e:
+                print(
+                    f"WARNING: could not parse --merge-history {prior_path}: {e}",
+                    file=sys.stderr,
+                )
+            else:
+                merge_history_inplace(summary, prior_summary,
+                                       archive_dir=Path(args.history_archive_dir),
+                                       prior_path=prior_path)
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

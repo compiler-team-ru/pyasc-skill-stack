@@ -56,6 +56,38 @@ DEFAULT_AGENTS_MD = REPO_ROOT / "docs" / "baseline" / "pyasc-fork-AGENTS.md"
 PYTHON = "python3.10"
 
 
+def _snapshot_asc_file() -> str | None:
+    """Phase 10: capture the resolved location of the ``asc`` package.
+
+    Prefers the in-process value (``sys.modules['asc'].__file__``) but
+    falls back to ``importlib.util.find_spec`` so we still get a signal
+    even when ``asc`` was never imported by this process (e.g. running
+    on a host with the package installed system-wide but not yet
+    referenced). Returns ``None`` only when ``asc`` is genuinely
+    unresolvable.
+
+    Used in pairs around the ``opencode run`` subprocess to catch the
+    pip-install-e diversion captured in Appendix B of
+    ``docs/skill-value-q1-findings.md``: a P4 baseline AGENTS.md
+    routinely runs ``pip install -e .`` against the agent's working
+    directory, which on disk swaps the resolved ``asc`` to a different
+    clone. The next 18 trials in the matrix then quietly silently fail
+    with "pyasc working tree at ... is dirty". A pre/post snapshot
+    catches the mutation immediately and the trial is failed cleanly
+    with ``failure_category: pyasc_root_mutated_during_run``.
+    """
+    mod = sys.modules.get("asc")
+    in_proc = getattr(mod, "__file__", None) if mod is not None else None
+    if in_proc:
+        return in_proc
+    try:
+        import importlib.util as _imp_util
+        spec = _imp_util.find_spec("asc")
+        return spec.origin if spec else None
+    except (ImportError, ValueError):
+        return None
+
+
 # Phase 0 protocol-axis mapping. Single source of truth for what each
 # protocol id resolves to. See docs/evaluation-methodology.md
 # "Protocol-axis CI mapping (Phase 0)" for the full contract.
@@ -942,6 +974,11 @@ def run_one_attempt(
     agent_completed = False
     exit_code = 1
     elapsed = 0.0
+
+    asc_path_before = _snapshot_asc_file()
+    asc_path_after: str | None = asc_path_before
+    asc_root_mutated = False
+
     try:
         env = os.environ.copy()
         env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
@@ -971,6 +1008,14 @@ def run_one_attempt(
             if isinstance(partial_err, bytes):
                 partial_err = partial_err.decode("utf-8", errors="replace")
             agent_output.write_text(partial_out + partial_err)
+            asc_path_after = _snapshot_asc_file()
+            asc_root_mutated = (
+                bool(asc_path_before) and bool(asc_path_after)
+                and asc_path_before != asc_path_after
+            )
+            if asc_root_mutated:
+                print(f"  [attempt {attempt_num}] CRITICAL: pyasc root mutated "
+                      f"during agent run: {asc_path_before} -> {asc_path_after}")
             return _finalize_attempt(
                 attempt_num=attempt_num, elapsed=elapsed, exit_code=124,
                 project=project, op=op, dtype=dtype,
@@ -979,6 +1024,9 @@ def run_one_attempt(
                 agent_output_path=agent_output, agent_completed=False,
                 keep_project=keep_project, archive_dir=archive_dir,
                 skills_mode=skills_mode, profile=profile,
+                asc_path_before=asc_path_before,
+                asc_path_after=asc_path_after,
+                asc_root_mutated=asc_root_mutated,
             )
         elapsed = time.monotonic() - t0
         agent_output.write_text((result.stdout or "") + (result.stderr or ""))
@@ -991,6 +1039,15 @@ def run_one_attempt(
         elapsed = time.monotonic() - t0 if "t0" in dir() else 0.0
         print(f"  [attempt {attempt_num}] agent error: {exc}")
 
+    asc_path_after = _snapshot_asc_file()
+    asc_root_mutated = (
+        bool(asc_path_before) and bool(asc_path_after)
+        and asc_path_before != asc_path_after
+    )
+    if asc_root_mutated:
+        print(f"  [attempt {attempt_num}] CRITICAL: pyasc root mutated "
+              f"during agent run: {asc_path_before} -> {asc_path_after}")
+
     return _finalize_attempt(
         attempt_num=attempt_num, elapsed=elapsed, exit_code=exit_code,
         project=project, op=op, dtype=dtype,
@@ -999,6 +1056,9 @@ def run_one_attempt(
         agent_output_path=agent_output, agent_completed=agent_completed,
         keep_project=keep_project, archive_dir=archive_dir,
         skills_mode=skills_mode, profile=profile,
+        asc_path_before=asc_path_before,
+        asc_path_after=asc_path_after,
+        asc_root_mutated=asc_root_mutated,
     )
 
 
@@ -1019,6 +1079,9 @@ def _finalize_attempt(
     archive_dir: str | None,
     skills_mode: str,
     profile: str,
+    asc_path_before: str | None = None,
+    asc_path_after: str | None = None,
+    asc_root_mutated: bool = False,
 ) -> dict:
     """Score, verify, and clean up after one attempt.
 
@@ -1082,6 +1145,7 @@ def _finalize_attempt(
         and semantic_check["passed"]
         and kernel is not None
         and runtime_ok
+        and not asc_root_mutated
     )
 
     tokens = extract_tokens_and_model(agent_output_path)
@@ -1119,6 +1183,12 @@ def _finalize_attempt(
         "_project": project,
         "_keep_project": keep_project,
     }
+    if asc_root_mutated:
+        record["failure_category"] = "pyasc_root_mutated_during_run"
+        record["pyasc_root_mutation"] = {
+            "before": asc_path_before,
+            "after": asc_path_after,
+        }
     return record
 
 
@@ -1444,6 +1514,12 @@ def main() -> None:
             "threshold": 12,
             "accepted": score_data.get("accepted", False) if score_data else False,
             "checks": score_data.get("checks", {}) if score_data else {},
+            "failure_category": (
+                score_data.get("failure_category") if score_data else None
+            ),
+            "gating_detail": (
+                score_data.get("gating_detail", {}) if score_data else {}
+            ),
         },
         "static_verify": static_result,
         "notes": args.notes,
