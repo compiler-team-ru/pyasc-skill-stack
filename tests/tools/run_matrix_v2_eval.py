@@ -215,6 +215,21 @@ def main() -> int:
              "rerun; pass/fail rows are skipped. Use after a partial "
              "matrix run.",
     )
+    parser.add_argument(
+        "--cell-filter", default=None,
+        help="Comma-sep list of cells to run, formatted as "
+             "OP-DTYPE (e.g. 'abs-f16,gelu-f16,add-f16'). DTYPE accepts "
+             "both 'f16'/'f32' and 'float16'/'float32'. When given, jobs "
+             "outside the filter are dropped. Use for targeted re-runs "
+             "of a subset of drift cells.",
+    )
+    parser.add_argument(
+        "--protocol-filter", default=None,
+        help="Comma-sep list of protocols to keep (e.g. 'P3,P4,P6'). "
+             "Combines with --cell-filter; jobs outside both filters are "
+             "dropped. Use to restrict the targeted re-run to the "
+             "failing protocols only.",
+    )
     args = parser.parse_args()
 
     stages = [s.strip() for s in args.stages.split(",") if s.strip()]
@@ -223,11 +238,50 @@ def main() -> int:
             print(f"unknown stage: {s!r}", file=sys.stderr)
             return 2
 
-    if shutil.which("opencode") is None:
+    if not args.dry_run and shutil.which("opencode") is None:
         print("opencode not on PATH", file=sys.stderr)
         return 2
 
     jobs = plan_jobs(stages)
+
+    def _norm_dtype(d: str) -> str:
+        d = d.strip().lower()
+        if d in ("f16", "float16"):
+            return "float16"
+        if d in ("f32", "float32"):
+            return "float32"
+        if d in ("bf16", "bfloat16"):
+            return "bfloat16"
+        return d
+
+    if args.cell_filter:
+        wanted: set[tuple[str, str]] = set()
+        for token in args.cell_filter.split(","):
+            token = token.strip()
+            if not token:
+                continue
+            if "-" not in token:
+                print(f"  --cell-filter token without '-': {token!r} "
+                      "(expected OP-DTYPE, e.g. 'abs-f16')",
+                      file=sys.stderr)
+                return 2
+            op, dtype = token.rsplit("-", 1)
+            wanted.add((op.strip(), _norm_dtype(dtype)))
+        before = len(jobs)
+        jobs = [j for j in jobs if (j["op"], j["dtype"]) in wanted]
+        print(f"  cell-filter: kept {len(jobs)} of {before} jobs "
+              f"({len(wanted)} cells)", flush=True)
+
+    if args.protocol_filter:
+        wanted_p: set[str] = {
+            p.strip().upper() for p in args.protocol_filter.split(",")
+            if p.strip()
+        }
+        before = len(jobs)
+        jobs = [j for j in jobs if j["protocol"] in wanted_p]
+        print(f"  protocol-filter: kept {len(jobs)} of {before} jobs "
+              f"({sorted(wanted_p)})", flush=True)
+
     if args.resume_from:
         keep_keys: set[tuple[str, str, str, str]] = set()
         with open(args.resume_from) as f:

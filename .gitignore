@@ -26,6 +26,7 @@ teams/pyasc-kernel-dev-team/kernels/vadd_f32_1024/
 
 # Matrix-run orchestrator logs (forensic records; kept on disk only).
 run-matrix-log-*.csv
+rerun-phase9.log
 
 # Generated dashboard output
 _site/
