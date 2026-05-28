@@ -9,8 +9,25 @@ Implements 16 checklist categories for asc2 kernels:
 Each category is scored 0 or 1; the final score is out of 16.
 The workflow acceptance threshold is >= 12.
 
+In addition to the 16 checks, two **gating** checks introduced in Phase 10
+force `accepted: false` (regardless of total score) and emit
+``failure_category`` in the JSON output:
+
+  - ``F_legacy_api_import``: kernel imports or references a banned legacy
+    framework (``ascendcl``, ``tik``, ``tik2``, ``tbe``, ``TPosition``,
+    ``.npu()``). See ``skills/pyasc-api-patterns/SKILL.md`` -> "Required
+    host imports & forbidden APIs".
+  - ``F_missing_asc2_import``: kernel source calls ``asc2.<something>`` but
+    does not ``import asc2``. Would surface as ``NameError`` at simulator
+    launch and burn the 150 s sim budget.
+
+Per-cell opt-out: pass ``--allow-legacy-apis`` to skip the
+``F_legacy_api_import`` gate (used only by cells that explicitly set
+``allow_legacy_apis: true`` in capabilities.yaml; none today).
+
 Usage:
   python score_kernel.py <kernel.py> [--json] [--op abs] [--dtype float16]
+                                     [--allow-legacy-apis]
 """
 
 import ast
@@ -77,6 +94,72 @@ try:
 except AttributeError:
     pass
 
+
+# Phase 10 host-import policy. Top-level module names (and submodule prefixes)
+# that constitute a legacy v1 / TBE / TIK leak. See
+# ``skills/pyasc-api-patterns/SKILL.md`` -> "Required host imports & forbidden
+# APIs" for the policy rationale and the four Phase 9 failure modes that
+# motivated the ban.
+LEGACY_API_MODULES = ("ascendcl", "tik", "tik2", "tbe")
+# Banned source-level symbol references (regex-matched against the raw source).
+# ``TPosition`` and ``.npu()`` are v1 dispatch / placement markers; the asc2
+# stack handles these automatically.
+LEGACY_API_SYMBOL_PATTERNS = (
+    r"\bTPosition\b",
+    r"\.npu\(",
+)
+
+
+def _imported_top_modules(tree: ast.Module) -> set[str]:
+    """Return the set of top-level module names imported in *tree*.
+
+    For ``import a.b.c`` -> ``{'a'}``. For ``from a.b import c`` -> ``{'a'}``.
+    """
+    mods: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".", 1)[0]
+                if top:
+                    mods.add(top)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0 and node.module:
+                top = node.module.split(".", 1)[0]
+                if top:
+                    mods.add(top)
+    return mods
+
+
+def _legacy_api_findings(tree: ast.Module, source: str) -> list[str]:
+    """Return the list of banned legacy-API references in this kernel.
+
+    Empty list means the kernel is policy-clean.
+    """
+    findings: list[str] = []
+    imported = _imported_top_modules(tree)
+    for mod in LEGACY_API_MODULES:
+        if mod in imported:
+            findings.append(f"import {mod}")
+    for pat in LEGACY_API_SYMBOL_PATTERNS:
+        if re.search(pat, source):
+            findings.append(pat.replace(r"\b", "").replace(r"\(", "(").replace(r"\.", "."))
+    return findings
+
+
+def _has_asc2_call_without_import(tree: ast.Module, source: str) -> bool:
+    """True if source calls ``asc2.<something>`` without ``import asc2``.
+
+    The call detection is lenient (string search) to cover both ``asc2.foo()``
+    and aliased imports — but if ``asc2`` is in the import set we accept it
+    regardless.
+    """
+    imported = _imported_top_modules(tree)
+    if "asc2" in imported:
+        return False
+    # Look for actual asc2.<name> usage; mere ``asc2`` mention in a docstring
+    # is not enough.
+    return bool(re.search(r"\basc2\.\w", source))
+
 from semantic_markers import OP_SEMANTIC_MARKERS
 
 OP_ARITY = {
@@ -101,7 +184,14 @@ DTYPE_STRINGS = {
 # Scoring
 # ---------------------------------------------------------------------------
 
-def score(path: str, op: str | None = None, dtype: str | None = None) -> list[Check]:
+class ScoreResult(NamedTuple):
+    checks: list[Check]
+    failure_category: str | None
+    gating_detail: dict
+
+
+def score(path: str, op: str | None = None, dtype: str | None = None,
+          allow_legacy_apis: bool = False) -> ScoreResult:
     source = Path(path).read_text()
     tree = ast.parse(source)
     checks: list[Check] = []
@@ -252,7 +342,29 @@ def score(path: str, op: str | None = None, dtype: str | None = None) -> list[Ch
         checks.append(Check("semantic_api_usage", True,
                              "skipped (no --op or op not in semantic table)"))
 
-    return checks
+    # --- Phase 10 host-import policy (gating; not part of the 16-point score)
+
+    failure_category: str | None = None
+    gating_detail: dict = {
+        "legacy_api_findings": [],
+        "missing_asc2_import": False,
+        "allow_legacy_apis": allow_legacy_apis,
+    }
+
+    legacy_findings = _legacy_api_findings(tree, source)
+    if legacy_findings and not allow_legacy_apis:
+        gating_detail["legacy_api_findings"] = legacy_findings
+        if failure_category is None:
+            failure_category = "F_legacy_api_import"
+
+    if _has_asc2_call_without_import(tree, source):
+        gating_detail["missing_asc2_import"] = True
+        if failure_category is None:
+            failure_category = "F_missing_asc2_import"
+
+    return ScoreResult(checks=checks,
+                       failure_category=failure_category,
+                       gating_detail=gating_detail)
 
 
 MAX_SCORE = 16
@@ -261,12 +373,14 @@ THRESHOLD = 12
 
 def main():
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <kernel.py> [--json] [--op OP] [--dtype DTYPE]",
+        print(f"Usage: {sys.argv[0]} <kernel.py> [--json] [--op OP] [--dtype DTYPE] "
+              f"[--allow-legacy-apis]",
               file=sys.stderr)
         sys.exit(2)
 
     path = sys.argv[1]
     use_json = "--json" in sys.argv
+    allow_legacy_apis = "--allow-legacy-apis" in sys.argv
 
     op_val: str | None = None
     dtype_val: str | None = None
@@ -277,7 +391,8 @@ def main():
             dtype_val = sys.argv[i + 1]
 
     try:
-        checks = score(path, op=op_val, dtype=dtype_val)
+        result = score(path, op=op_val, dtype=dtype_val,
+                       allow_legacy_apis=allow_legacy_apis)
     except SyntaxError as exc:
         if use_json:
             print(json.dumps({"file": path, "score": 0.0, "max_score": MAX_SCORE, "error": str(exc)}))
@@ -291,7 +406,10 @@ def main():
             print(f"FAIL: file not found: {path}")
         sys.exit(1)
 
+    checks = result.checks
     total = sum(1 for c in checks if c.passed)
+    gated = result.failure_category is not None
+    accepted = (total >= THRESHOLD) and not gated
 
     if use_json:
         data = {
@@ -299,7 +417,9 @@ def main():
             "score": float(total),
             "max_score": MAX_SCORE,
             "threshold": float(THRESHOLD),
-            "accepted": total >= THRESHOLD,
+            "accepted": accepted,
+            "failure_category": result.failure_category,
+            "gating_detail": result.gating_detail,
             "checks": {c.name: {"passed": c.passed, "detail": c.detail} for c in checks},
         }
         print(json.dumps(data, indent=2))
@@ -307,13 +427,21 @@ def main():
         for c in checks:
             tag = "PASS" if c.passed else "FAIL"
             print(f"  [{tag}] {c.name}: {c.detail}")
+        if gated:
+            print(f"\n  [GATE FAIL] {result.failure_category}: "
+                  f"legacy_findings={result.gating_detail['legacy_api_findings']} "
+                  f"missing_asc2_import={result.gating_detail['missing_asc2_import']}")
         print(f"\n  Score: {total}/{MAX_SCORE} (threshold: {THRESHOLD})")
-        if total >= THRESHOLD:
+        if accepted:
             print("  ACCEPTED")
         else:
-            print("  REJECTED")
+            reason = "score below threshold"
+            if gated:
+                reason = f"score below threshold or {result.failure_category}" \
+                    if total < THRESHOLD else result.failure_category
+            print(f"  REJECTED ({reason})")
 
-    sys.exit(0 if total >= THRESHOLD else 1)
+    sys.exit(0 if accepted else 1)
 
 
 if __name__ == "__main__":

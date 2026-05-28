@@ -202,9 +202,11 @@ cites the upstream source of truth at `pyasc-v2-eval@7b85554a`:
   upstream `operations/test_unary_ops.py` ships `asc2.abs(f32)` at
   `atol=1e-3` and our `capabilities.yaml` `abs/float32` cell agrees.
   Use `atol=1e-3, rtol=1e-3` for unary float32 ops.
-- float32 composed (gelu, tanh form): `atol=1e-2, rtol=1e-2`. Upstream
-  `target/test_gelu.py` is tighter (`atol=1e-3`); our looser bound is
-  current headroom and may tighten after a stability sweep.
+- float32 composed (gelu, lean exp restatement of tanh/Pade):
+  `atol=1e-2, rtol=1e-2`. Upstream `target/test_gelu.py` is tighter
+  (`atol=1e-3`) but uses swapped polynomial coefficients (see
+  `docs/golden-upstream-map.md`); our looser bound is current
+  headroom and may tighten after a stability sweep.
 
 The previous version of this table said `float32 elementwise: 1e-5`
 unconditionally, which contradicted `capabilities.yaml` and was a
@@ -224,8 +226,9 @@ that op family**.
 | `asc2.log(x)` | Natural log | |
 | `asc2.sqrt(x)` | Square root | |
 | `asc2.relu(x)` | ReLU activation | |
-| `asc2.erf(x)` | Error function | Noisy on float32 simulator (~1.84-4.7 max abs error); avoid for f32 GELU — use `asc2.tanh` instead |
-| `asc2.tanh(x)` | Hyperbolic tangent | Bit-exact on the simulator; the canonical f32 GELU primitive |
+| `asc2.erf(x)` | Error function | Noisy on float32 simulator (~1.84-4.7 max abs error); avoid for f32 GELU — use the lean `asc2.exp` restatement instead. |
+| `asc2.tanh(x)` | Hyperbolic tangent | Bit-exact on the simulator, but heavier than `asc2.exp`. For f32 GELU, prefer the algebraically-equivalent `x / (1 + asc2.exp(-sqrt(8/pi) * (x + 0.044715*x^3)))` form (see f32 GELU Pattern below) — the asc2.tanh variant pushed the gelu/f32 cell over the 150s sim budget through Phase 9. |
+| `asc2.exp(x)` (re-listed for emphasis) | Exponential | Lean primitive; canonical building block for the f32 GELU sigmoid restatement. |
 | `asc2.sin(x)` | Sine | |
 | `asc2.cos(x)` | Cosine | |
 | `-x` | Negate | Unary operator |
@@ -417,12 +420,20 @@ Two GELU forms are supported on the simulator; pick by dtype:
 k = asc2.sqrt(0.5)
 out = x * (asc2.erf(x * k) + 1) * 0.5
 
-# float32 GELU (tanh / Pade form -- simulator erf is too noisy on f32):
+# float32 GELU (tanh/Pade form via the LEAN exp/sigmoid restatement
+# -- simulator erf is too noisy on f32 AND simulator asc2.tanh
+# pushed this cell over the 150s sim budget through Phase 9):
+# Math identity: 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3)))
+#              = x / (1 + exp(-sqrt(8/pi)*(x+0.044715*x^3)))
 # Define module-level constants OUTSIDE @asc2.jit:
-#     GELU_K = math.sqrt(2.0 / math.pi)
 #     GELU_C = 0.044715
-inner = (x + x * x * x * GELU_C) * GELU_K
-out = x * (asc2.tanh(inner) + 1) * 0.5
+#     NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)
+x_cub = x * x * x
+inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI
+out = x / (asc2.exp(inner) + 1)
+# Replaces asc2.tanh + scalar_mul + add + scalar_mul with
+# asc2.exp + add + div (one fewer asc2 op per tile, no tanh dep).
+# Verified in golden/kernels/gelu_f32.py at TILE_SIZE=64, CORE_NUM=16.
 
 # Leaky ReLU kernel op (inside @asc2.jit):
 out = asc2.where(x >= 0, x, x * alpha)
@@ -431,16 +442,18 @@ out = asc2.where(x >= 0, x, x * alpha)
 Simulator constraints to honour:
 - **Module-level constants only.** `asc2.*` functions are valid only
   inside a `@asc2.jit` body; module-level constants must use Python or
-  `math.*` (e.g. `GELU_K = math.sqrt(2.0 / math.pi)`). Calling `math.sqrt`
-  inside a `@asc2.jit` body raises `RuntimeError: Unsupported function
-  referenced`. Calling `asc2.sqrt(0.5)` outside `@asc2.jit` (at module
-  scope) raises `AttributeError: 'NoneType' object has no attribute
-  'create_math_SqrtOp'`. Use `asc2.sqrt(0.5)` **inside** the jit body
-  (as in the f16 GELU example) or precompute as a module-level Python
-  constant (as in the f32 GELU example).
-- For tanh-form f32 GELU, pin `TILE_SIZE = 64`. With wider tiles (128) only the
-  first 64 elements get written (a wide-tile lowering bug on C310's simulator path);
-  the rest are silently zero. Same class of issue as the wide-tile rms_norm history.
+  `math.*` (e.g. `NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)`).
+  Calling `math.sqrt` inside a `@asc2.jit` body raises
+  `RuntimeError: Unsupported function referenced`. Calling `asc2.sqrt(0.5)`
+  outside `@asc2.jit` (at module scope) raises
+  `AttributeError: 'NoneType' object has no attribute 'create_math_SqrtOp'`.
+  Use `asc2.sqrt(0.5)` **inside** the jit body (as in the f16 GELU example)
+  or precompute as a module-level Python constant (as in the f32 GELU
+  example).
+- For f32 GELU, pin `TILE_SIZE = 64`, `CORE_NUM = 16`. With wider tiles
+  (128) only the first 64 elements get written (a wide-tile lowering
+  bug on C310's simulator path); the rest are silently zero. Same class
+  of issue as the wide-tile rms_norm history.
 
 **GELU host-side verification** (pick one):
 
@@ -786,7 +799,49 @@ and commit the resulting capabilities.yaml.
 
 ## API Restrictions
 
-**Do not use inside `@asc2.jit` functions**:
+### Required host imports & forbidden APIs
+
+**Every kernel module MUST begin with these three imports** (typically at module
+top, before the `@asc2.jit` body):
+
+```python
+import asc
+import asc.runtime.config as config
+import asc2
+```
+
+`asc` provides the host-side types (`asc.GlobalAddress`, `asc.ConstExpr[T]`,
+`asc.ceildiv`) used in the kernel signature. `asc2` provides every kernel-side
+op (`asc2.tensor`, `asc2.load`, `asc2.store`, `asc2.range`, `asc2.exp`,
+`asc2.tanh`, `asc2.erf`, `asc2.where`, `asc2.softmax`, `asc2.matmul`,
+`asc2.block_idx`, `asc2.block_num`, ...). Missing `import asc2` while still
+calling `asc2.foo(...)` raises `NameError: name 'asc2' is not defined` at
+simulator launch and burns the full 150 s sim budget before failing — this
+was the failure mode for `rms_norm/f16 P3/r2` in Phase 9 evidence.
+
+**Forbidden legacy frameworks.** All kernels in this skill stack target the
+asc2 v2 surface only. Do **not** import or call any of the following:
+
+| Banned symbol | Why |
+|---|---|
+| `import ascendcl`, `from ascendcl import ...` | Pre-v2 device-runtime; not on the v2 sim path. `ModuleNotFoundError` at runtime (observed: `gelu/f16 P4/r2`, Phase 9). |
+| `import tik`, `import tik2` | TBE / TIK is the v1 codegen surface. Submitting a TIK kernel produces output that the v2 sim either ignores or refuses to verify — the trial is recorded as `verification unclear` (observed: `abs/f16 P3/r3`, Phase 9). |
+| `from tbe.*`, `import tbe.dsl.*` | TBE DSL; same reason as `tik`. |
+| `TPosition`, `Tensor.npu()`, `.npu()`, `LocalTensor` | Manual position/dispatch markers from the v1 stack. `@asc2.jit(insert_sync=True)` handles placement automatically. |
+| `scipy`, `scipy.special.*` | Not installed in the Docker image; use `math.*`, `numpy.*`, or `np.vectorize(math.fn)` instead. |
+
+These are scored at static-verify time (`tests/tools/score_kernel.py` emits
+`F_legacy_api_import` for any of the banned symbols above, and
+`F_missing_asc2_import` if any `asc2.*` call is reached without an
+`import asc2`). A `static_verify: fail` short-circuits the trial *before*
+the 150 s simulator window, so the agent gets an immediate signal.
+
+**Per-cell opt-out.** A cell that genuinely needs a legacy API (none today)
+can set `allow_legacy_apis: true` in its `capabilities.yaml` block; the
+scorer will skip the ban.
+
+### Do not use inside `@asc2.jit` functions
+
 - `print()` — use `assert` with f-strings for debug messages
 - Standard library imports — all imports must be outside JIT scope
 - Dynamic Python features (exceptions, generators, etc.)
