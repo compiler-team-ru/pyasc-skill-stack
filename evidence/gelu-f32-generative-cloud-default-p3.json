@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64 for this cell (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants OUTSIDE the @asc2.jit body. Use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form expressed via the lean exp/sigmoid restatement: out = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Mathematically identical to 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))), but uses asc2.exp + add + div (one fewer asc2 op per tile, no tanh dependency) and lands inside the simulator budget. DO NOT use asc2.tanh \u2014 Phase 9 evidence shows that variant timed out at the 150s sim limit. DO NOT use asc2.erf \u2014 simulator erf is too noisy on float32. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: Pattern A (rank-consistent 1D flatten) \u2014 host launcher flattens each test shape to 1D (size = product of dims); the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64, CORE_NUM=16 (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute `GELU_C = 0.044715` and `NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)` as Python module-level constants OUTSIDE the @asc2.jit body. Inside the kernel: `x_cub = x * x * x; inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI; out = x / (asc2.exp(inner) + 1)`. Tile-on-left rule: every scalar-times-Tile multiplication MUST place the Tile on the left (`x_cub * GELU_C`, NOT `GELU_C * x_cub`). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against the canonical numpy reference `0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3)))` (mathematically identical at the assert_close level). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-28T11:00:05Z",
+  "date": "2026-05-28T15:34:31Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -25,42 +25,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 77469,
-    "output": 4525,
-    "cache_read": 639956,
-    "total": 81994
+    "input": 26201,
+    "output": 4421,
+    "cache_read": 258335,
+    "total": 30622
   },
-  "elapsed_total_s": 519.64,
+  "elapsed_total_s": 480.04,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.08,
+      "elapsed_s": 240.01,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 44064,
-        "output": 1823,
-        "cache_read": 469179,
-        "total": 45887,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "guided",
-      "elapsed_s": 39.46,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 7026,
-        "output": 811,
-        "cache_read": 19291,
-        "total": 7837,
+        "input": 7003,
+        "output": 1157,
+        "cache_read": 90123,
+        "total": 8160,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -69,30 +51,30 @@
       "runtime_status": "fail"
     },
     {
-      "n": 3,
+      "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.1,
+      "elapsed_s": 240.03,
       "exit": 124,
-      "outcome": "fail",
+      "outcome": "pass",
       "tokens": {
-        "input": 26379,
-        "output": 1891,
-        "cache_read": 151486,
-        "total": 28270,
+        "input": 19198,
+        "output": 3264,
+        "cache_read": 168212,
+        "total": 22462,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Timeout after 150s",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -174,6 +156,12 @@
         "passed": true,
         "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
@@ -201,6 +189,28 @@
       "skipped": false,
       "tokens_total": 66844,
       "elapsed_s": 285.02
+    },
+    {
+      "date": "2026-05-28T11:00:05Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 81994,
+      "elapsed_s": 519.64
+    },
+    {
+      "date": "2026-05-28T15:17:58Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 66752,
+      "elapsed_s": 606.36
     }
   ]
 }

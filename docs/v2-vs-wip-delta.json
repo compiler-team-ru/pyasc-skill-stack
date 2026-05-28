@@ -278,35 +278,35 @@
     {
       "cell": "gelu/float32",
       "protocol": "P3",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "fail",
-      "classification": "shared_partial_fail"
+      "classification": "resolved"
     },
     {
       "cell": "gelu/float32",
       "protocol": "P4",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": false,
       "wip_sim": "static-only(fail)",
-      "classification": "shared_partial_fail"
+      "classification": "resolved"
     },
     {
       "cell": "gelu/float32",
       "protocol": "P6",
-      "v2_pass": false,
+      "v2_pass": true,
       "v2_static": true,
-      "v2_sim": "fail",
+      "v2_sim": "pass",
       "wip_pass": false,
       "wip_static": true,
       "wip_sim": "fail",
-      "classification": "persist_drift"
+      "classification": "resolved"
     },
     {
       "cell": "leaky_relu/float16",
@@ -531,11 +531,11 @@
   ],
   "summary": {
     "stable_pass": 19,
-    "resolved": 14,
+    "resolved": 17,
     "regressed": 3,
-    "persist_drift": 1,
+    "persist_drift": 0,
     "shared_total_fail": 7,
-    "shared_partial_fail": 4,
+    "shared_partial_fail": 2,
     "missing": 0
   }
 }

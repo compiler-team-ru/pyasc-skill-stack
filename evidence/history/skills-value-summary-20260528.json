@@ -1,6 +1,6 @@
 {
   "schema_version": "2",
-  "generated_at": "2026-05-28T17:15:23Z",
+  "generated_at": "2026-05-28T13:28:59Z",
   "partial_run": false,
   "legs_status": null,
   "cells": [
@@ -621,47 +621,47 @@
       "dtype": "float32",
       "profile": "cloud-default",
       "on": {
-        "pass": true,
+        "pass": false,
         "validity": "ok",
-        "failure_mode": null,
-        "attempts_to_pass": 2,
-        "tokens_total": 78055,
-        "tokens_input": 70319,
-        "tokens_output": 7736,
-        "tokens_cache_read": 463352,
+        "failure_mode": "F8_correctness",
+        "attempts_to_pass": null,
+        "tokens_total": 187359,
+        "tokens_input": 173685,
+        "tokens_output": 13674,
+        "tokens_cache_read": 786162,
         "cost_usd": 0.0,
-        "elapsed_s": 614.65,
-        "attempts": 2,
+        "elapsed_s": 720.05,
+        "attempts": 3,
         "model": "dashscope/glm-5",
         "score": 16.0,
-        "date": "2026-05-28T17:15:00Z",
+        "date": "2026-05-28T11:19:36Z",
         "protocol_id": "P6"
       },
       "off": {
-        "pass": true,
+        "pass": false,
         "validity": "ok",
-        "failure_mode": null,
-        "attempts_to_pass": 2,
-        "tokens_total": 30622,
-        "tokens_input": 26201,
-        "tokens_output": 4421,
-        "tokens_cache_read": 258335,
+        "failure_mode": "F8_correctness",
+        "attempts_to_pass": null,
+        "tokens_total": 81994,
+        "tokens_input": 77469,
+        "tokens_output": 4525,
+        "tokens_cache_read": 639956,
         "cost_usd": 0.0,
-        "elapsed_s": 480.04,
-        "attempts": 2,
+        "elapsed_s": 519.64,
+        "attempts": 3,
         "model": "dashscope/glm-5",
         "score": 16.0,
-        "date": "2026-05-28T15:34:31Z",
+        "date": "2026-05-28T11:00:05Z",
         "protocol_id": "P3"
       },
-      "on_date": "2026-05-28T17:15:00Z",
-      "off_date": "2026-05-28T15:34:31Z",
-      "failure_on": null,
-      "failure_off": null,
+      "on_date": "2026-05-28T11:19:36Z",
+      "off_date": "2026-05-28T11:00:05Z",
+      "failure_on": "F8_correctness",
+      "failure_off": "F8_correctness",
       "quality_delta": 0,
-      "tokens_delta": 47433,
+      "tokens_delta": 105365,
       "cost_delta_usd": 0.0,
-      "elapsed_delta_s": 134.61,
+      "elapsed_delta_s": 200.41,
       "attempts_delta": 0,
       "viability_unlocked": false,
       "viability_unlocked_clean": false,
@@ -1523,46 +1523,50 @@
     "cloud-default": {
       "cells_total": 12,
       "cells_compared": 12,
-      "pass_on": 12,
-      "pass_off": 12,
-      "pass_off_clean": 12,
+      "pass_on": 11,
+      "pass_off": 11,
+      "pass_off_clean": 11,
       "cells_off_ok": 12,
       "cells_off_infra_fail": 0,
       "cells_off_incomplete": 0,
-      "tokens_on_sum": 1124359,
-      "tokens_off_sum": 405783,
+      "tokens_on_sum": 1233663,
+      "tokens_off_sum": 457155,
       "cost_on_sum": 0.0,
       "cost_off_sum": 0.0,
-      "elapsed_on_sum": 3254.91,
-      "elapsed_off_sum": 3165.74,
+      "elapsed_on_sum": 3360.31,
+      "elapsed_off_sum": 3205.34,
       "viability_unlocked_count": 0,
       "viability_unlocked_clean": 0,
       "unresolved_due_to_off_infra": 0,
       "model": "dashscope/glm-5",
-      "pass_rate_on": 1.0,
-      "pass_rate_off": 1.0,
-      "pass_rate_off_clean": 1.0,
-      "tokens_delta_avg": 59881.333333333336,
+      "pass_rate_on": 0.917,
+      "pass_rate_off": 0.917,
+      "pass_rate_off_clean": 0.917,
+      "tokens_delta_avg": 64709.0,
       "cost_delta_avg_usd": 0.0,
-      "elapsed_delta_avg_s": 7.43,
-      "on_last_run_at": "2026-05-28T17:15:00Z",
-      "off_last_run_at": "2026-05-28T15:34:31Z",
+      "elapsed_delta_avg_s": 12.91,
+      "on_last_run_at": "2026-05-28T11:36:27Z",
+      "off_last_run_at": "2026-05-28T11:31:20Z",
       "off_max_staleness_days": 1,
-      "failure_mode_counts_on": {},
-      "failure_mode_counts_off": {},
-      "attempts_to_pass_on_n": 12,
-      "attempts_to_pass_off_clean_n": 12,
-      "attempts_to_pass_on_mean": 1.08,
-      "attempts_to_pass_off_clean_mean": 1.25,
+      "failure_mode_counts_on": {
+        "F8_correctness": 1
+      },
+      "failure_mode_counts_off": {
+        "F8_correctness": 1
+      },
+      "attempts_to_pass_on_n": 11,
+      "attempts_to_pass_off_clean_n": 11,
+      "attempts_to_pass_on_mean": 1.0,
+      "attempts_to_pass_off_clean_mean": 1.18,
       "attempts_to_pass_on_median": 1,
       "attempts_to_pass_off_clean_median": 1,
       "pass_rate_on_ci": [
-        0.757,
-        1.0
+        0.646,
+        0.985
       ],
       "pass_rate_off_clean_ci": [
-        0.757,
-        1.0
+        0.646,
+        0.985
       ],
       "by_protocol": {
         "P2": {
@@ -1576,83 +1580,61 @@
           "n_clean": 12
         },
         "P3": {
-          "pass_rate": 1.0,
-          "pass_rate_ci_low": 0.757,
-          "pass_rate_ci_high": 1.0,
-          "pass_count": 12,
-          "attempts_to_pass_mean": 1.25,
-          "tokens_mean": 33815.2,
+          "pass_rate": 0.917,
+          "pass_rate_ci_low": 0.646,
+          "pass_rate_ci_high": 0.985,
+          "pass_count": 11,
+          "attempts_to_pass_mean": 1.18,
+          "tokens_mean": 38096.2,
           "n_cells": 12,
           "n_clean": 12
         },
         "P4": {
-          "pass_rate": 1.0,
-          "pass_rate_ci_low": 0.757,
-          "pass_rate_ci_high": 1.0,
-          "pass_count": 12,
-          "attempts_to_pass_mean": 1.25,
-          "tokens_mean": 37845.7,
+          "pass_rate": 0.917,
+          "pass_rate_ci_low": 0.646,
+          "pass_rate_ci_high": 0.985,
+          "pass_count": 11,
+          "attempts_to_pass_mean": 1.27,
+          "tokens_mean": 41377.1,
           "n_cells": 12,
           "n_clean": 12
         },
         "P6": {
-          "pass_rate": 1.0,
-          "pass_rate_ci_low": 0.757,
-          "pass_rate_ci_high": 1.0,
-          "pass_count": 12,
-          "attempts_to_pass_mean": 1.08,
-          "tokens_mean": 93696.6,
+          "pass_rate": 0.917,
+          "pass_rate_ci_low": 0.646,
+          "pass_rate_ci_high": 0.985,
+          "pass_count": 11,
+          "attempts_to_pass_mean": 1.0,
+          "tokens_mean": 102805.2,
           "n_cells": 12,
           "n_clean": 12
         }
       },
       "deltas_pp": {
         "P3-P2": {
-          "pass_pp": 100.0,
-          "pass_pp_ci_low": 65.7,
-          "pass_pp_ci_high": 100.0,
-          "tokens_pct": -60.4,
+          "pass_pp": 91.7,
+          "pass_pp_ci_low": 55.3,
+          "pass_pp_ci_high": 98.5,
+          "tokens_pct": -55.4,
           "attempts_delta": null
         },
         "P4-P3": {
           "pass_pp": 0.0,
-          "pass_pp_ci_low": -24.3,
-          "pass_pp_ci_high": 24.3,
-          "tokens_pct": 11.9,
-          "attempts_delta": 0.0
+          "pass_pp_ci_low": -27.9,
+          "pass_pp_ci_high": 27.9,
+          "tokens_pct": 8.6,
+          "attempts_delta": 0.09
         },
         "P6-P4": {
           "pass_pp": 0.0,
-          "pass_pp_ci_low": -24.3,
-          "pass_pp_ci_high": 24.3,
-          "tokens_pct": 147.6,
-          "attempts_delta": -0.17
+          "pass_pp_ci_low": -27.9,
+          "pass_pp_ci_high": 27.9,
+          "tokens_pct": 148.5,
+          "attempts_delta": -0.27
         },
         "P5-P2": null
       },
-      "deltas_pp_history": [
-        {
-          "date": "2026-05-28",
-          "P3-P2": {
-            "pass_pp": 91.7,
-            "pass_pp_ci_low": 55.3,
-            "pass_pp_ci_high": 98.5,
-            "tokens_pct": -55.4
-          },
-          "P4-P3": {
-            "pass_pp": 0.0,
-            "pass_pp_ci_low": -27.9,
-            "pass_pp_ci_high": 27.9,
-            "tokens_pct": 8.6
-          },
-          "P6-P4": {
-            "pass_pp": 0.0,
-            "pass_pp_ci_low": -27.9,
-            "pass_pp_ci_high": 27.9,
-            "tokens_pct": 148.5
-          }
-        }
-      ]
+      "deltas_pp_history": []
     },
     "local-llama-3.1-8b": {
       "cells_total": 8,

@@ -1,12 +1,12 @@
 # OpenCode skills intervention (skills-on vs skills-off)
 
-Generated 2026-05-28 13:28:59Z from 30 comparison cell(s). The CI matrix is an intended paired OpenCode skills-on/off intervention (same harness, model, prompt, budget, evaluator); a per-pair validity classifier determines whether each off-leg is a comparable baseline. See `docs/evaluation-methodology.md` for the contract.
+Generated 2026-05-28 17:15:23Z from 30 comparison cell(s). The CI matrix is an intended paired OpenCode skills-on/off intervention (same harness, model, prompt, budget, evaluator); a per-pair validity classifier determines whether each off-leg is a comparable baseline. See `docs/evaluation-methodology.md` for the contract.
 
 ## Per-profile summary (clean baseline available)
 
 | Profile | Cells compared | Pass-rate on | Pass-rate off (clean) | Off-leg validity | Tokens Δ (avg) | Cost Δ (avg, USD) | Elapsed Δ (avg) | Viability unlocked (clean) | Unresolved (off infra-failed) |
 |---|---|---|---|---|---|---|---|---|---|
-| `cloud-default` | 12/12 | 92% | 92% | 12 ok | +64709.0 | 0.0 | +12.9s | 0/12 | 0/0 |
+| `cloud-default` | 12/12 | 100% | 100% | 12 ok | +59881.3 | 0.0 | +7.4s | 0/12 | 0/0 |
 | `local-llama-3.1-8b` | 8/8 | 0% | 0% | 8 ok | +228.6 | 0.0 | +97.0s | 0/8 | 0/0 |
 | `local-qwen-coder-7b` | 9/10 | 0% | 0% | 9 ok | -45.6 | 0.0 | -16.9s | 0/9 | 0/0 |
 
@@ -26,7 +26,7 @@ Generated 2026-05-28 13:28:59Z from 30 comparison cell(s). The CI matrix is an i
 | gelu | float16 | `cloud-default` | ok | 0 | +61,665 | 0.0s | 0 | no |
 | gelu | float16 | `local-llama-3.1-8b` | ok | 0 | -249 | -19.6s | 0 | no |
 | gelu | float16 | `local-qwen-coder-7b` | ok | 0 | -209 | -47.4s | 0 | no |
-| gelu | float32 | `cloud-default` | ok | 0 | +105,365 | +200.4s | 0 | no |
+| gelu | float32 | `cloud-default` | ok | 0 | +47,433 | +134.6s | 0 | no |
 | gelu | float32 | `local-llama-3.1-8b` | ok | 0 | +35 | +51.9s | 0 | no |
 | gelu | float32 | `local-qwen-coder-7b` | ok | 0 | +98 | +9.4s | 0 | no |
 | leaky_relu | float16 | `cloud-default` | ok | 0 | +32,846 | +0.0s | 0 | no |

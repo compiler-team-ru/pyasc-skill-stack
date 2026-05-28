@@ -1,10 +1,38 @@
 #!/usr/bin/env python3.10
 """Golden kernel: gelu/float32
 
-GELU activation, tanh / Padé approximation form (PyTorch's
-``gelu(approximate='tanh')`` / TensorFlow's ``gelu(approximate=True)``):
+GELU activation, tanh / Pade approximation form (PyTorch's
+``gelu(approximate='tanh')`` / TensorFlow's ``gelu(approximate=True)``),
+expressed as a lean exp/sigmoid restatement to reduce per-tile op count:
 
     gelu(x) = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+            = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3)))
+
+The two forms are mathematically identical (substitute
+``tanh(z) = 1 - 2/(exp(2z) + 1)`` and let ``2z = sqrt(8/pi) * (...)``)
+but the exp form replaces ``asc2.tanh + scalar_mul + add + scalar_mul``
+with ``asc2.exp + add + div`` -- one fewer asc2 op per tile and no
+tanh dependency. This matters because the heavier tanh path made the
+generative ``gelu/float32`` cell hit ``Timeout after 150s`` repeatedly
+in Phase 9 evidence (see ``docs/skill-value-q1-findings.md`` Anomaly
+#1); the lean exp form lands within the sim budget.
+
+Vendored from pyasc-v2-eval@7b85554a:
+  python/test/asc2/target/test_gelu.py
+    -- structural Pattern A skeleton (1D flatten, ``asc2.tensor(ptr,
+       [size])`` + ``asc2.load(..., [tile_size], offsets=[tile_offset])``)
+       and the sigmoid restatement (``x / (1 + exp(...))``).
+**Math correction vs upstream**: upstream's
+``target/test_gelu.py`` swaps the polynomial coefficients
+(``x^3 + 0.044715 * x``) compared to PyTorch's
+``gelu(approximate='tanh')`` (``x + 0.044715 * x^3``); upstream's
+test passes because its reference uses the same swapped form. Our
+golden uses the canonical PyTorch coefficients so the numpy reference
+``gelu_numpy`` continues to match ``torch.nn.functional.gelu(
+approximate='tanh')``.
+
+numpy / numpy.testing.assert_allclose adapted from
+torch / torch.testing.assert_close (see docs/golden-upstream-map.md).
 
 Cell metadata (mirrors capabilities.yaml; do not drift):
   - shape_regime: fixed
@@ -16,35 +44,25 @@ Cell metadata (mirrors capabilities.yaml; do not drift):
   - padding: null
   - partitioning: tile_per_core
   - unsupported_regimes: []
-  - regime_note: tanh/Padé approximation form; do not use asc2.erf
-    on float32 (simulator erf is too noisy).
+  - regime_note: tanh/Pade approximation form via the lean
+    exp/sigmoid restatement; do not use asc2.erf on float32
+    (simulator erf is too noisy).
 
-Non-obvious constraints (Phase 1.5):
-  - Numerical: the original ``erf`` form was too noisy on the CANN
-    simulator (``asc2.erf`` exhibits up to ~4.7 absolute error vs
-    the host ``math.erf`` on float32 and flaked 2-of-3 nightlies
-    even with atol=2.0). The tanh/Padé form sidesteps simulator
-    erf entirely and is bit-exact against numpy at TILE_SIZE=64.
+Non-obvious constraints:
+  - Rank-consistent tiling (Pattern A in
+    skills/pyasc-api-patterns/SKILL.md): 1D tensor + 1D load shape +
+    1D offsets. The kernel sees a flat ``size``; the host launcher
+    flattens any multi-dim test shape before launch.
   - Tile width: ``TILE_SIZE = 64`` (conservative single-lane width
     for C310). Wider tiles can hit a lowering bug that only writes
-    the first 64 elements — leaving the tile at 64 keeps the
-    correctness contract while the perf retune is filed as a
-    follow-up.
+    the first 64 elements (see history with rms_norm wide-tile
+    issues).
   - Alignment: input ``size`` must be a multiple of
-    ``TILE_SIZE * CORE_NUM = 64 * 16 = 1024``; smaller inputs trip
-    C310's stricter MTE GDMA burst alignment check (size=128 is
-    excluded from the test set for this reason).
-  - UB/L1/L0 placement: every op (``asc2.tanh``, the multiplies,
-    the additions) runs in UB. No L0 / cube involvement.
-  - Padding: none.
-  - Tail behavior: aligned_only.
-  - Accumulator dtype: null. Composition is elementwise in float32
-    throughout.
+    ``TILE_SIZE * CORE_NUM = 64 * 16 = 1024``.
   - CRITICAL ordering rule: inside the ``@asc2.jit`` body, every
     scalar-times-Tile multiplication MUST put the Tile on the left
-    (``x * GELU_K``, NOT ``GELU_K * x``). The asc2 Tile class lacks
-    ``__rmul__``, so scalar-on-left fails at codegen with
-    ``AttributeError: 'Tile' object has no attribute '__rmul__'``.
+    (``x_cubed * GELU_C``, NOT ``GELU_C * x_cubed``). The asc2 Tile
+    class lacks ``__rmul__``.
   - Simulator/platform assumptions: ``Ascend950PR_9599`` (C310);
     numpy buffers are safe for this elementwise UB-only path.
 """
@@ -61,8 +79,8 @@ import asc2
 TILE_SIZE = 64
 CORE_NUM = 16
 
-GELU_K = math.sqrt(2.0 / math.pi)
 GELU_C = 0.044715
+NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -77,8 +95,9 @@ def gelu_kernel(x_ptr: asc.GlobalAddress, out_ptr: asc.GlobalAddress,
     for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
         tile_offset = base_offset + i * tile_size
         x = asc2.load(x_gm, [tile_size], offsets=[tile_offset])
-        inner = (x + x * x * x * GELU_C) * GELU_K
-        out = x * (asc2.tanh(inner) + 1) * 0.5
+        x_cub = x * x * x
+        inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI
+        out = x / (asc2.exp(inner) + 1)
         asc2.store(out, out_gm, offsets=[tile_offset])
 
 

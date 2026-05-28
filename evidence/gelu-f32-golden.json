@@ -4,14 +4,14 @@
   "operation": "gelu",
   "dtype": "float32",
   "kernel_path": "golden/kernels/gelu_f32.py",
-  "date": "2026-05-06T11:46:46Z",
+  "date": "2026-05-28T17:55:15Z",
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed"
+    "detail": "Kernel executed on Model/Ascend950PR_9599 for sizes [8192, 131072]; 3 consecutive runs locally, atol=rtol=1e-2; run wall-clock ~203-210s each (within 600s docker-timeout budget)"
   },
   "runtime_verified": true,
-  "notes": "Golden kernel verified on CANN 9.0.0 simulator in Docker on Ascend950PR_9599 (C310). Migrated from Ascend910B1 in plan migrate_goldens_to_c310; size=128 dropped from elementwise test set due to C310's stricter MTE GDMA burst alignment."
+  "notes": "Phase 10 re-vendor: structural Pattern A skeleton from pyasc-v2-eval@7b85554a:python/test/asc2/target/test_gelu.py with lean exp/sigmoid restatement (asc2.exp+add+div instead of asc2.tanh+mul+add+scalar_mul). Standard PyTorch tanh-approximate GELU coefficients (upstream's target/test_gelu.py uses swapped coefficients; see kernel docstring math correction). See docs/golden-upstream-map.md for the upstream cross-reference."
 }

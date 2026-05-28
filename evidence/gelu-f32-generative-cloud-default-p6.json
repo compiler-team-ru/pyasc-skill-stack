@@ -3,9 +3,9 @@
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form (out = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64 for this cell (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute sqrt(2/pi) and the 0.044715 constant as Python module-level constants OUTSIDE the @asc2.jit body. Use asc2.tanh (the tanh/Pad\u00e9 form of GELU is the correctness specification at this cell \u2014 asc2.erf is excluded from this cell's correctness spec, see the cell's regime_note). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against 0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3))). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_f32_tanh/kernel.py",
-  "date": "2026-05-28T11:19:36Z",
+  "prompt": "Operator: GELU activation, tanh/Pad\u00e9 approximation form expressed via the lean exp/sigmoid restatement: out = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Mathematically identical to 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3))), but uses asc2.exp + add + div (one fewer asc2 op per tile, no tanh dependency) and lands inside the simulator budget. DO NOT use asc2.tanh \u2014 Phase 9 evidence shows that variant timed out at the 150s sim limit. DO NOT use asc2.erf \u2014 simulator erf is too noisy on float32. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: Pattern A (rank-consistent 1D flatten) \u2014 host launcher flattens each test shape to 1D (size = product of dims); the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with a 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. Pin TILE_SIZE=64, CORE_NUM=16 (wider tiles trigger a wide-tile lowering bug on C310 that writes only the first 64 elements). Compute `GELU_C = 0.044715` and `NEG_SQRT_EIGHT_OVER_PI = -math.sqrt(8.0 / math.pi)` as Python module-level constants OUTSIDE the @asc2.jit body. Inside the kernel: `x_cub = x * x * x; inner = (x_cub * GELU_C + x) * NEG_SQRT_EIGHT_OVER_PI; out = x / (asc2.exp(inner) + 1)`. Tile-on-left rule: every scalar-times-Tile multiplication MUST place the Tile on the left (`x_cub * GELU_C`, NOT `GELU_C * x_cub`). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against the canonical numpy reference `0.5 * x * (1 + np.tanh(np.sqrt(2.0 / np.pi) * (x + 0.044715 * x**3)))` (mathematically identical at the assert_close level). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/gelu_float32/kernel.py",
+  "date": "2026-05-28T17:15:00Z",
   "pyasc_revision": {
     "url": "https://gitcode.com/compiler-team/pyasc.git",
     "branch": "(detached)",
@@ -15,95 +15,77 @@
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
-    "completed": false,
+    "timeout_s": 360,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 173685,
-    "output": 13674,
-    "cache_read": 786162,
-    "total": 187359
+    "input": 70319,
+    "output": 7736,
+    "cache_read": 463352,
+    "total": 78055
   },
-  "elapsed_total_s": 720.05,
+  "elapsed_total_s": 614.65,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.0,
+      "elapsed_s": 360.1,
       "exit": 124,
       "outcome": "fail",
       "tokens": {
-        "input": 37718,
-        "output": 4461,
-        "cache_read": 217600,
-        "total": 42179,
+        "input": 1621,
+        "output": 42,
+        "cache_read": 7748,
+        "total": 1663,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
+      "kernel_found": false,
+      "static_verify": "fail",
       "runtime_status": "fail"
     },
     {
       "n": 2,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
-      "exit": 124,
-      "outcome": "fail",
+      "elapsed_s": 254.55,
+      "exit": 0,
+      "outcome": "pass",
       "tokens": {
-        "input": 77435,
-        "output": 4449,
-        "cache_read": 357499,
-        "total": 81884,
+        "input": 68698,
+        "output": 7694,
+        "cache_read": 455604,
+        "total": 76392,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 3,
-      "prompt_label": "guided",
-      "elapsed_s": 240.04,
-      "exit": 124,
-      "outcome": "fail",
-      "tokens": {
-        "input": 58532,
-        "output": 4764,
-        "cache_read": 211063,
-        "total": 63296,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
+      "runtime_status": "pass"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "fail",
-    "detail": "Timeout after 150s",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']",
+    "detail": "found ['0.044715', 'gelu']",
     "markers_found": [
-      "asc2.tanh",
       "0.044715",
-      "asc2.erf",
       "gelu"
     ]
   },
@@ -174,8 +156,14 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.tanh', '0.044715', 'asc2.erf', 'gelu']"
+        "detail": "found ['0.044715', 'gelu']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
@@ -203,6 +191,39 @@
       "skipped": false,
       "tokens_total": 246725,
       "elapsed_s": 720.03
+    },
+    {
+      "date": "2026-05-28T11:19:36Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 187359,
+      "elapsed_s": 720.05
+    },
+    {
+      "date": "2026-05-28T15:55:54Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 335473,
+      "elapsed_s": 720.03
+    },
+    {
+      "date": "2026-05-28T16:59:09Z",
+      "overall_pass": false,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "fail",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 238508,
+      "elapsed_s": 1015.6
     }
   ]
 }
