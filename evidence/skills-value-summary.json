@@ -1,8 +1,48 @@
 {
   "schema_version": "2",
-  "generated_at": "2026-05-28T17:15:23Z",
-  "partial_run": false,
-  "legs_status": null,
+  "generated_at": "2026-05-29T05:06:12Z",
+  "partial_run": true,
+  "legs_status": {
+    "needs": {
+      "nightly-gate": "failure",
+      "local-stability-gate": "success"
+    },
+    "partial_run": true,
+    "legs": [
+      {
+        "name": "nightly-gate (P6)",
+        "conclusion": "failure"
+      },
+      {
+        "name": "nightly-gate (P3)",
+        "conclusion": "success"
+      },
+      {
+        "name": "local-stability-gate (local-llama-3.1-8b, on)",
+        "conclusion": "success"
+      },
+      {
+        "name": "local-stability-gate (local-llama-3.1-8b, off)",
+        "conclusion": "success"
+      },
+      {
+        "name": "nightly-gate (P2)",
+        "conclusion": "success"
+      },
+      {
+        "name": "local-stability-gate (local-qwen-coder-7b, off)",
+        "conclusion": "success"
+      },
+      {
+        "name": "local-stability-gate (local-qwen-coder-7b, on)",
+        "conclusion": "success"
+      },
+      {
+        "name": "nightly-gate (P4)",
+        "conclusion": "success"
+      }
+    ]
+  },
   "cells": [
     {
       "op": "abs",
@@ -1650,6 +1690,27 @@
             "pass_pp_ci_low": -27.9,
             "pass_pp_ci_high": 27.9,
             "tokens_pct": 148.5
+          }
+        },
+        {
+          "date": "2026-05-28",
+          "P3-P2": {
+            "pass_pp": 100.0,
+            "pass_pp_ci_low": 65.7,
+            "pass_pp_ci_high": 100.0,
+            "tokens_pct": -60.4
+          },
+          "P4-P3": {
+            "pass_pp": 0.0,
+            "pass_pp_ci_low": -24.3,
+            "pass_pp_ci_high": 24.3,
+            "tokens_pct": 11.9
+          },
+          "P6-P4": {
+            "pass_pp": 0.0,
+            "pass_pp_ci_low": -24.3,
+            "pass_pp_ci_high": 24.3,
+            "tokens_pct": 147.6
           }
         }
       ]
