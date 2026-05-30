@@ -1,6 +1,6 @@
 {
   "schema_version": "2",
-  "generated_at": "2026-05-30T04:53:02Z",
+  "generated_at": "2026-05-29T05:06:12Z",
   "partial_run": true,
   "legs_status": {
     "needs": {
@@ -18,11 +18,11 @@
         "conclusion": "success"
       },
       {
-        "name": "nightly-gate (P4)",
+        "name": "local-stability-gate (local-llama-3.1-8b, on)",
         "conclusion": "success"
       },
       {
-        "name": "local-stability-gate (local-llama-3.1-8b, on)",
+        "name": "local-stability-gate (local-llama-3.1-8b, off)",
         "conclusion": "success"
       },
       {
@@ -38,7 +38,7 @@
         "conclusion": "success"
       },
       {
-        "name": "local-stability-gate (local-llama-3.1-8b, off)",
+        "name": "nightly-gate (P4)",
         "conclusion": "success"
       }
     ]
@@ -1587,7 +1587,7 @@
       "elapsed_delta_avg_s": 7.43,
       "on_last_run_at": "2026-05-28T17:15:00Z",
       "off_last_run_at": "2026-05-28T15:34:31Z",
-      "off_max_staleness_days": 2,
+      "off_max_staleness_days": 1,
       "failure_mode_counts_on": {},
       "failure_mode_counts_off": {},
       "attempts_to_pass_on_n": 12,
@@ -1712,27 +1712,6 @@
             "pass_pp_ci_high": 24.3,
             "tokens_pct": 147.6
           }
-        },
-        {
-          "date": "2026-05-29",
-          "P3-P2": {
-            "pass_pp": 100.0,
-            "pass_pp_ci_low": 65.7,
-            "pass_pp_ci_high": 100.0,
-            "tokens_pct": -60.4
-          },
-          "P4-P3": {
-            "pass_pp": 0.0,
-            "pass_pp_ci_low": -24.3,
-            "pass_pp_ci_high": 24.3,
-            "tokens_pct": 11.9
-          },
-          "P6-P4": {
-            "pass_pp": 0.0,
-            "pass_pp_ci_low": -24.3,
-            "pass_pp_ci_high": 24.3,
-            "tokens_pct": 147.6
-          }
         }
       ]
     },
@@ -1763,7 +1742,7 @@
       "elapsed_delta_avg_s": 97.04,
       "on_last_run_at": "2026-05-16T10:42:00Z",
       "off_last_run_at": "2026-05-16T10:29:14Z",
-      "off_max_staleness_days": 13,
+      "off_max_staleness_days": 12,
       "failure_mode_counts_on": {
         "F10_no_artifact": 8
       },
@@ -1841,7 +1820,7 @@
       "elapsed_delta_avg_s": -16.92,
       "on_last_run_at": "2026-05-19T20:25:54Z",
       "off_last_run_at": "2026-05-16T10:14:04Z",
-      "off_max_staleness_days": 13,
+      "off_max_staleness_days": 12,
       "failure_mode_counts_on": {
         "F10_no_artifact": 9
       },
