@@ -100,6 +100,37 @@ for i in asc2.range(tile_per_block, unroll_factor=2, parallel=True):
 
 **Why `ConstExpr`?** `tile_size` and `tile_per_block` are passed as `asc.ConstExpr[int]` so the JIT compiler can optimize tile-level code and include these values in the cache key.
 
+### Tile sizing for vector-only ops (perf-aware)
+
+`TILE_SIZE = 128` is a safe **correctness** default, but it is often a poor
+**performance** default for elementwise/reduction kernels: a 128-element tile
+leaves the AIV vector pipeline mostly idle behind per-tile MTE setup and loop
+overhead. For perf-sensitive vector ops, use a **wide tile** that keeps the
+vector units busy and amortises per-tile setup, mirroring the ops-math arch35
+elementwise tile policy:
+
+```python
+# perf-aware (oracle_guided) — wide tile for AIV utilisation
+TILE_SIZE = 2048   # vs 128 correctness default
+CORE_NUM  = 16
+# size must be a multiple of TILE_SIZE * CORE_NUM (aligned_only)
+```
+
+Evidence (camodel `Ascend950PR_9599`, abs/float16, `[32,4096]`, vs the
+hand-written AscendC `aclnnAbs`): `TILE_SIZE=128` → ratio ≈ 0.20;
+`TILE_SIZE=2048` → ratio ≈ 0.93 (within 7% of hand-written). The op is
+unchanged — only the tile width moves the number. See
+[`docs/perf-vs-ascendc-demo.md`](../../docs/perf-vs-ascendc-demo.md) and
+[`docs/perf-methodology/ticks-calculation.md` §8](../../docs/perf-methodology/ticks-calculation.md).
+
+Reference tile policy (hand-written AscendC, arch35):
+[`ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/abs/op_host/arch35/abs_tiling_arch35.cpp)
+and [`add_tiling_arch35.cpp`](/home/aloschilov/workspace/ops-math/math/add/op_host/arch35/add_tiling_arch35.cpp).
+
+> Keep the **rank-1 flatten** invariant when widening the tile: declare the GM
+> tensor as `asc2.tensor(x_ptr, [size])` and load `[tile_size]` with a 1D
+> `offsets=[tile_offset]`. Widening `TILE_SIZE` does not change the rank rules.
+
 > **CRITICAL**: Any value used in the **shape** argument of `asc2.load` or `asc2.tensor`
 > MUST be either a literal integer, a `ConstExpr[int]` parameter, or a compile-time
 > expression. Using a plain `int` parameter in load shape (e.g., `asc2.load(gm, [cols])` where

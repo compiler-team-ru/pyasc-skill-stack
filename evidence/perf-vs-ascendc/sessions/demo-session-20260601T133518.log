@@ -1,0 +1,43 @@
+[regen] abs/float16: /home/aloschilov/.pyenv/versions/3.11.10/bin/python3 /home/aloschilov/workspace/pyasc-skill-stack/tests/tools/collect_generative_evidence.py --op abs --dtype float16 --prompt-variant oracle_guided --model-profile cloud-default --skills-mode on --max-attempts 3 --timeout 420 --archive-dir /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/abs-float16
+[regen] abs/float16: landed fresh kernel /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/abs-float16/abs-f16-cloud-default-on-a1/kernel.py -> /home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py
+[build] abs: build.sh --pkg --soc=ascend950 --ops=abs (may take ~1-2 min)
+[install] abs: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_abs_f16_32x4096.cpp
+[run 1/3] Total tick = 4348
+[run 2/3] Total tick = 4349
+[run 3/3] Total tick = 4344
+[gen] abs_f16 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 4686
+[run 2/3] Total tick = 4690
+[run 3/3] Total tick = 4685
+[regen] add/float16: /home/aloschilov/.pyenv/versions/3.11.10/bin/python3 /home/aloschilov/workspace/pyasc-skill-stack/tests/tools/collect_generative_evidence.py --op add --dtype float16 --prompt-variant oracle_guided --model-profile cloud-default --skills-mode on --max-attempts 3 --timeout 420 --archive-dir /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/add-float16
+[regen] add/float16: landed fresh kernel /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/add-float16/add-f16-cloud-default-on-a1/kernel.py -> /home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py
+[build] add: build.sh --pkg --soc=ascend950 --ops=add (may take ~1-2 min)
+[install] add: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_add_f16_32x4096.cpp
+[run 1/3] Total tick = 4282
+[run 2/3] Total tick = 4283
+[run 3/3] Total tick = 4282
+[gen] add_f16 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 6309
+[run 2/3] Total tick = 6302
+[run 3/3] Total tick = 6305
+[regen] reduce_sum/float32: /home/aloschilov/.pyenv/versions/3.11.10/bin/python3 /home/aloschilov/workspace/pyasc-skill-stack/tests/tools/collect_generative_evidence.py --op reduce_sum --dtype float32 --prompt-variant oracle_guided --model-profile cloud-default --skills-mode on --max-attempts 3 --timeout 420 --archive-dir /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/reduce_sum-float32
+[regen] reduce_sum/float32: landed fresh kernel /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/reduce_sum-float32/reduce_sum-f32-cloud-default-on-a1/kernel.py -> /home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py
+[build] reduce_sum: build.sh --pkg --soc=ascend950 --ops=reduce_sum (may take ~1-2 min)
+[install] reduce_sum: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_reduce_sum_f32_32x4096.cpp
+[run 1/3] Total tick = 8332
+[run 2/3] Total tick = 8334
+[run 3/3] Total tick = 8336
+[gen] reduce_sum_f32 @ 32x4096: 3 single-launch processes
+
+| cell                 | ref_ticks | gen_ticks | ratio | gate    |
+|----------------------|-----------|-----------|-------|---------|
+| abs/float16          |      4348 |      4686 |  0.93 | PASS    |
+| add/float16          |      4282 |      6305 |  0.68 | FAIL    |
+| reduce_sum/float32   |      8334 |   BLOCKED |   -   | GEN-BLK |
+
+[evidence] abs/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/abs-float16-20260601T140149.json
+[evidence] add/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/add-float16-20260601T140149.json
+[evidence] reduce_sum/float32 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/reduce_sum-float32-20260601T140149.json

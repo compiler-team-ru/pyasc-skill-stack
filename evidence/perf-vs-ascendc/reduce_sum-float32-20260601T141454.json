@@ -1,0 +1,65 @@
+{
+  "cell": "reduce_sum/float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 8328,
+  "gen_ticks": 5106,
+  "ratio": 1.631,
+  "gate": 0.7,
+  "passed": true,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "regen": null,
+  "ref_detail": {
+    "cell": "reduce_sum/float32",
+    "op": "reduce_sum",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 8328,
+    "ref_ticks_runs": [
+      8328,
+      8326,
+      8334
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.001,
+    "wall_ms_last": 23064.2,
+    "reference_kind": "canonical_only",
+    "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+  },
+  "gen_detail": {
+    "cell": "reduce_sum_f32",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 5106,
+    "gen_ticks_runs": [
+      5106,
+      5105,
+      5107
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0004,
+    "wall_ms_last": 19772.2,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_reduce_sum_f32_32x4096.run3.log"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "cell": "abs_f16",
+  "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 4686,
+  "gen_ticks_runs": [
+    4686,
+    4685,
+    4687
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.0004,
+  "wall_ms_last": 12235.9,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_abs_f16_32x4096.run3.log"
+}

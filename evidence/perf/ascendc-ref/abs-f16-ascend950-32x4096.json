@@ -1,0 +1,26 @@
+{
+  "cell": "abs/float16",
+  "op": "abs",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 4341,
+  "ref_ticks_runs": [
+    4341,
+    4344,
+    4340
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0009,
+  "wall_ms_last": 15369.2,
+  "reference_kind": "canonical_only",
+  "reference_source": "ops-math canonical operator (math/abs), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=abs",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
+}

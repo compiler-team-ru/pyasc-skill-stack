@@ -1,0 +1,48 @@
+{
+  "cell": "reduce_sum/float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 8334,
+  "gen_ticks": null,
+  "ratio": null,
+  "gate": 0.7,
+  "passed": false,
+  "status": "gen_blocked",
+  "gen_blocker": "pyasc probe run 1 did not complete cleanly:\n[INFO] AicWrapper attach AIC 24, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 25, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 26, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 27, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 28, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 29, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 30, num_vec_core=2, num_subcore=3\n[INFO] AicWrapper attach AIC 31, num_vec_core=2, num_subcore=3\n[INFO] Chip 0 AIC / Scheduler / Soc periods: 200.0000 / 200.0000 / 105.0000\n[INFO] chip 0 die 0 device created\n================================================================================\n>>>>                                                                        \n>>>>                             \" PEM MODEL \"                                \n>>>>             Total no. of 1 chip(s) Model Init Success!                \n>>>>                                                                        \n================================================================================\n[INFO] Model Start Time: 2026-06-01 14:01:48\n[DRVSTUB_LOG] driver_api.c:556 sendSwapBuf:swapbuf_base_addr:10000000\n[DRVSTUB_LOG] driver_api.c:557 sendSwapBuf:sq:0 swapbuf_addr:10000000\n[DRVSTUB_LOG] driver_api.c:556 sendSwapBuf:swapbuf_base_addr:10000000\n[DRVSTUB_LOG] driver_api.c:557 sendSwapBuf:sq:1 swapbuf_addr:10000040\n[INFO] Model Stop Time: 2026-06-01 14:01:49\nModel RUN TIME: 34.8706 ms\n[INFO] Total tick: 15\n[INFO] Model stopped successfully.",
+  "kernel_mode": "regen",
+  "regen": {
+    "archived_kernel": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/reduce_sum-float32/reduce_sum-f32-cloud-default-on-a1/kernel.py",
+    "landed_kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/reduce_sum_f32/kernel.py",
+    "archive_dir": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/regen-archive/reduce_sum-float32"
+  },
+  "ref_detail": {
+    "cell": "reduce_sum/float32",
+    "op": "reduce_sum",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 8334,
+    "ref_ticks_runs": [
+      8332,
+      8334,
+      8336
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0005,
+    "wall_ms_last": 23642.1,
+    "reference_kind": "canonical_only",
+    "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+  },
+  "gen_detail": null
+}

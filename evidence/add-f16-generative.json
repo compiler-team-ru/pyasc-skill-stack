@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "prompt": "Operator: add (out = x + y, element-wise binary). Input shapes: [1, 128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with two global loads \u2014 `asc2.tensor(x_ptr, [size])`, `asc2.tensor(y_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.load(y_gm, [tile_size], offsets=[tile_offset])`, `out = x + y`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness default) to keep the AIV vector pipeline busy and amortise per-tile MTE setup across the two input loads, mirroring the ops-math arch35 elementwise tile policy (math/add/op_host/arch35/add_tiling_arch35.cpp); on camodel this closes the gap to the canonical AscendC reference (aclnnAdd) at [32, 4096]. CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_f16/kernel.py",
-  "date": "2026-05-15T06:39:59Z",
+  "date": "2026-06-01T10:50:19Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
@@ -22,42 +29,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 251817,
-    "output": 13626,
-    "cache_read": 749985,
-    "total": 265443
+    "input": 87550,
+    "output": 9066,
+    "cache_read": 633650,
+    "total": 96616
   },
-  "elapsed_total_s": 542.23,
+  "elapsed_total_s": 385.59,
   "attempts": [
     {
       "n": 1,
-      "prompt_label": "primary",
-      "elapsed_s": 233.66,
-      "exit": 0,
-      "outcome": "fail",
-      "tokens": {
-        "input": 97377,
-        "output": 5989,
-        "cache_read": 376941,
-        "total": 103366,
-        "cost_usd": 0.0
-      },
-      "model": "dashscope/glm-5",
-      "kernel_found": true,
-      "static_verify": "pass",
-      "runtime_status": "fail"
-    },
-    {
-      "n": 2,
-      "prompt_label": "primary",
-      "elapsed_s": 308.57,
+      "prompt_label": "oracle_guided",
+      "elapsed_s": 385.59,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 154440,
-        "output": 7637,
-        "cache_read": 373044,
-        "total": 162077,
+        "input": 87550,
+        "output": 9066,
+        "cache_read": 633650,
+        "total": 96616,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -67,11 +56,8 @@
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -151,21 +137,17 @@
         "passed": true,
         "detail": "found ['x + y', '+ y']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
+  "notes": "",
   "history": [
-    {
-      "date": "2026-04-30T04:42:58Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-30T11:05:17Z",
       "overall_pass": true,
@@ -432,6 +414,17 @@
       "skipped": false,
       "tokens_total": 379004,
       "elapsed_s": 883.09
+    },
+    {
+      "date": "2026-05-15T06:39:59Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 265443,
+      "elapsed_s": 542.23
     }
   ]
 }

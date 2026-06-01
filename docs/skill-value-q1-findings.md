@@ -665,6 +665,60 @@ mitigation above is sufficient for Phase 9; a separate retrospective
 should decide whether to re-vendor the baseline AGENTS.md or change
 protocol semantics.
 
+## Phase 11 / 11b perf-vs-ascendc demo
+
+First time the generated kernels are compared against the **hand-written
+AscendC C++** references in `ops-math/math/` on the *same* camodel
+(`Ascend950PR_9599`, `[32,4096]`), gate `ratio = ref_ticks / gen_ticks >= 0.70`.
+**Phase 11b** drove all three generated kernels via **live opencode regen**
+(`opencode 1.15.10` + `dashscope/glm-5`, `oracle_guided`, skills-on, attempt-1
+pass each) and measured every cell on the host camodel:
+
+```
+| cell                 | ref_ticks | gen_ticks | ratio | gate    |
+|----------------------|-----------|-----------|-------|---------|
+| abs/float16          |      4349 |      4690 |  0.93 | PASS    |
+| add/float16          |      4281 |      6304 |  0.68 | FAIL    |
+| reduce_sum/float32   |      8328 |      5106 |  1.63 | PASS    |
+```
+
+What this establishes and what it doesn't:
+
+- **abs/float16 clears the gate at 0.93** — a skill-stack-generated pyasc
+  kernel within 7% of the hand-written AscendC operator on the simulator. The
+  perf lever is the `oracle_guided` wide-tile policy (`TILE_SIZE=2048`, mirroring
+  ops-math arch35 elementwise tiling); at the default `TILE_SIZE=128` the same
+  kernel sits near ratio 0.20, so tile policy — not the op — is what closes the
+  gap. This is now a documented, perf-aware codegen pattern (Stage 11.6).
+- **reduce_sum/float32 clears the gate at 1.63** — the generated row-per-core
+  kernel is *faster* than canonical `aclnnReduceSum`, which carries extra
+  workspace/dispatch overhead the lean pyasc kernel skips.
+- **add/float16 is an honest perf miss at 0.68** — just under the gate. A
+  two-load elementwise add amortises per-tile MTE setup across two input
+  streams, so the wide-tile policy that lands abs at 0.93 only reaches ~0.68. We
+  report the miss rather than hand-tuning the kernel past the bar; it is the one
+  genuine R4 (tile-policy perf miss) in the matrix.
+- **The references are real and canonical** for all three cells
+  (`reference_kind: canonical_only`, no hand-rolled fallback): abs 4349,
+  add 4281, reduce_sum 8328 (3-run medians, <0.15% spread).
+- **The Phase 11 `GEN-BLK` blocker is retired.** Phase 11 saw a host
+  `pyasc-v2-eval` codegen segfault for two-load / reduction kernels; in Phase
+  11b that segfault **did not reproduce** on the same built extension (11/11
+  clean codegen cycles), so no source patch was needed and refs + gen share one
+  host camodel (Docker fallback not required). The single residual `BLOCKED`
+  cell turned out to be a **demo-harness bug** — the gen-runner probe passed an
+  ndarray to a generated `out_pad=…` defaulted launch param — now fixed in
+  `pyasc_gen_runner.py`.
+- **Why P6 missed the perf story:** P6 verification was semantic
+  (`shapes_verified: []`, no camodel run). Phase 11/11b is the first simulator
+  launch of these kernels — exactly the latent gap a perf-on-camodel gate
+  exposes (and where the add perf miss surfaces).
+
+No `gen_ticks` were ever fabricated. Detail + reproduce:
+[`evidence/perf-vs-ascendc/BLOCKER-gen-side-multiinput-reduction.md`](../evidence/perf-vs-ascendc/BLOCKER-gen-side-multiinput-reduction.md)
+(annotated RESOLVED); full writeup:
+[`docs/perf-vs-ascendc-demo.md`](perf-vs-ascendc-demo.md).
+
 ## Cross-references
 
 - Methodology: [`docs/evaluation-methodology.md` §"Comparisons of interest"](evaluation-methodology.md#comparisons-of-interest).

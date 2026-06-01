@@ -1,0 +1,34 @@
+[build] abs: build.sh --pkg --soc=ascend950 --ops=abs (may take ~1-2 min)
+[install] abs: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_abs_f16_32x4096.cpp
+[run 1/3] Total tick = 4353
+[run 2/3] Total tick = 4345
+[run 3/3] Total tick = 4350
+[gen] abs_f16 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 4689
+[run 2/3] Total tick = 4696
+[run 3/3] Total tick = 4693
+[build] add: build.sh --pkg --soc=ascend950 --ops=add (may take ~1-2 min)
+[install] add: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_add_f16_32x4096.cpp
+[run 1/3] Total tick = 4282
+[run 2/3] Total tick = 4285
+[run 3/3] Total tick = 4283
+[gen] add_f16 @ 32x4096: 3 single-launch processes
+[build] reduce_sum: build.sh --pkg --soc=ascend950 --ops=reduce_sum (may take ~1-2 min)
+[install] reduce_sum: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_reduce_sum_f32_32x4096.cpp
+[run 1/3] Total tick = 8331
+[run 2/3] Total tick = 8325
+[run 3/3] Total tick = 8329
+[gen] reduce_sum_f32 @ 32x4096: 3 single-launch processes
+
+| cell                 | ref_ticks | gen_ticks | ratio | gate    |
+|----------------------|-----------|-----------|-------|---------|
+| abs/float16          |      4350 |      4693 |  0.93 | PASS    |
+| add/float16          |      4283 |   BLOCKED |   -   | GEN-BLK |
+| reduce_sum/float32   |      8329 |   BLOCKED |   -   | GEN-BLK |
+
+[evidence] abs/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/abs-float16-20260529T232635.json
+[evidence] add/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/add-float16-20260529T232635.json
+[evidence] reduce_sum/float32 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/reduce_sum-float32-20260529T232635.json

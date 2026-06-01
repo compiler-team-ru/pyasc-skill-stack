@@ -53,6 +53,15 @@ operations:
     prompt: Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].
     prompt_variants:
       minimal: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      oracle_guided:
+        prompt: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness default) to keep the AIV vector pipeline busy and amortise per-tile MTE setup, mirroring the ops-math arch35 elementwise tile policy (math/abs/op_host/arch35/abs_tiling_arch35.cpp); on camodel this raises the ratio vs hand-written aclnnAbs from ~0.20 (TILE=128) to ~0.93 (TILE=2048) at [32, 4096]. CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
       guided: 'Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only — no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
     shapes:
     - - 1
@@ -66,6 +75,17 @@ operations:
     golden_evidence: evidence/abs-f16-golden.json
     generative_status: confirmed
     generative_evidence: evidence/abs-f16-generative.json
+    perf_ratio_demo:
+      ref_source: ops-math/math/abs (canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 4349
+      gen_ticks: 4690
+      last_ratio: 0.93
+      status: pass
+      kernel_source: live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)
+      evidence: evidence/perf-vs-ascendc/
   - dtype: float32
     platform: Ascend950PR_9599
     shape_regime: fixed
@@ -130,6 +150,15 @@ operations:
     prompt_variants:
       minimal: 'Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
       guided: 'Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])` / `asc2.tensor(y_ptr, [size])`, `asc2.load(.., [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: add (out = x + y, element-wise binary). Input shapes: [1, 128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with two global loads — `asc2.tensor(x_ptr, [size])`, `asc2.tensor(y_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.load(y_gm, [tile_size], offsets=[tile_offset])`, `out = x + y`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''`. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness default) to keep the AIV vector pipeline busy and amortise per-tile MTE setup across the two input loads, mirroring the ops-math arch35 elementwise tile policy (math/add/op_host/arch35/add_tiling_arch35.cpp); on camodel this closes the gap to the canonical AscendC reference (aclnnAdd) at [32, 4096]. CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
     shapes:
     - - 1
       - 128
@@ -140,6 +169,17 @@ operations:
     golden_status: confirmed
     golden: golden/kernels/add_f16.py
     golden_evidence: evidence/add-f16-golden.json
+    perf_ratio_demo:
+      ref_source: ops-math/math/add (canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 4281
+      gen_ticks: 6304
+      last_ratio: 0.68
+      status: fail
+      kernel_source: live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)
+      note: 'Honest perf miss (0.68, just under the 0.70 gate): a two-load elementwise add amortises per-tile MTE setup across two input streams, so the wide-tile policy that lands abs at 0.93 only reaches ~0.68. Host codegen runs cleanly (Phase 11 segfault did not reproduce). See docs/perf-vs-ascendc-demo.md.'
     generative_status: confirmed
     generative_evidence: evidence/add-f16-generative.json
 - name: reduce_sum
@@ -176,12 +216,32 @@ operations:
     prompt_variants:
       minimal: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32.'
       guided: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=8 (float32 → 8 elements × 4 bytes = 32-byte alignment). Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]; perf shape [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core — distribute the 32 rows across cores via `asc2.range(rows_per_block, unroll_factor=2, parallel=True)`; for each owned row load the full 4096-wide row in one shot (`asc2.load(x_gm, [num_cols], offsets=[row_offset])`) and call `asc2.reduce_sum(row)` so the whole row reduction is a single wide vector op rather than a per-tile accumulation loop; wrap the scalar result as `asc2.full([1, OUT_PAD], s, dtype=row.dtype)` with OUT_PAD=8 (float32 → 8 elements × 4 bytes = 32-byte alignment) and store at `[row, 0]`. PERF NOTE: unlike elementwise ops, the tile-WIDTH lever is weak for a last-axis reduction — the row width (4096) is fixed by the problem, so the win comes from (a) keeping the reduction as one wide `asc2.reduce_sum` over the full row instead of a narrow tiled accumulator loop, and (b) spreading rows across all 16 cores (row_per_core); this mirrors the ops-math arch35 reduction tiling (math/reduce_sum/op_host/arch35) which assigns whole rows to cores. Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
     shapes:
     - - 32
       - 4096
     golden_status: confirmed
     golden: golden/kernels/reduce_sum_f32.py
     golden_evidence: evidence/reduce_sum-f32-golden.json
+    perf_ratio_demo:
+      ref_source: ops-math/math/reduce_sum (canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 8328
+      gen_ticks: 5106
+      last_ratio: 1.63
+      status: pass
+      kernel_source: live_regen (opencode 1.15.10, dashscope/glm-5, oracle_guided, attempt-1)
+      note: 'Generated row-per-core kernel beats canonical aclnnReduceSum (ratio 1.63 > 1.0): the aclnn op carries extra workspace/dispatch overhead the lean pyasc kernel skips. Host codegen runs cleanly (Phase 11 segfault did not reproduce). See docs/perf-vs-ascendc-demo.md.'
     generative_status: confirmed
     generative_evidence: evidence/reduce_sum-f32-generative.json
   - dtype: float16

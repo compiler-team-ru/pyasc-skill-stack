@@ -1,0 +1,43 @@
+{
+  "cell": "reduce_sum/float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 8329,
+  "gen_ticks": null,
+  "ratio": null,
+  "gate": 0.7,
+  "passed": false,
+  "status": "gen_blocked",
+  "gen_blocker": "pyasc probe run 1 did not complete cleanly:\n[INFO] RUNTIME(3939212,python3.11):2026-05-29-23:26:34.881.862 [task_fail_callback_data_manager.cc:93] 3939212 TaskFailCallBackManager: Constructor.\n[INFO] RUNTIME(3939212,python3.11):2026-05-29-23:26:34.881.900 [xpu_task_fail_callback_data_manager.cc:59] 3939212 XpuTaskFailCallBackManager: XpuTaskFailCallBackManager Constructor.",
+  "kernel_mode": "cached",
+  "ref_detail": {
+    "cell": "reduce_sum/float32",
+    "op": "reduce_sum",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 8329,
+    "ref_ticks_runs": [
+      8331,
+      8325,
+      8329
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0007,
+    "wall_ms_last": 19710.7,
+    "reference_kind": "canonical_only",
+    "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+  },
+  "gen_detail": null
+}

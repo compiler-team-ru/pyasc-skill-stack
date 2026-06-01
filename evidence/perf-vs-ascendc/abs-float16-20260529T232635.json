@@ -1,0 +1,64 @@
+{
+  "cell": "abs/float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 4350,
+  "gen_ticks": 4693,
+  "ratio": 0.9269,
+  "gate": 0.7,
+  "passed": true,
+  "status": "ok",
+  "kernel_mode": "cached",
+  "ref_detail": {
+    "cell": "abs/float16",
+    "op": "abs",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 4350,
+    "ref_ticks_runs": [
+      4353,
+      4345,
+      4350
+    ],
+    "ref_ticks_method": "median_of_3",
+    "ref_ticks_spread": 0.0018,
+    "wall_ms_last": 11859.0,
+    "reference_kind": "canonical_only",
+    "reference_source": "ops-math canonical operator (math/abs), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=abs",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_abs_f16_32x4096.run3.log"
+  },
+  "gen_detail": {
+    "cell": "abs_f16",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/abs_f16/kernel.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 4693,
+    "gen_ticks_runs": [
+      4689,
+      4696,
+      4693
+    ],
+    "gen_ticks_method": "median_of_3",
+    "gen_ticks_spread": 0.0015,
+    "wall_ms_last": 13725.5,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_abs_f16_32x4096.run3.log"
+  }
+}

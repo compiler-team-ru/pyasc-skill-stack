@@ -1,0 +1,40 @@
+[build] abs: build.sh --pkg --soc=ascend950 --ops=abs (may take ~1-2 min)
+[install] abs: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_abs_f16_32x4096.cpp
+[run 1/3] Total tick = 4341
+[run 2/3] Total tick = 4350
+[run 3/3] Total tick = 4349
+[gen] abs_f16 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 4690
+[run 2/3] Total tick = 4688
+[run 3/3] Total tick = 4690
+[build] add: build.sh --pkg --soc=ascend950 --ops=add (may take ~1-2 min)
+[install] add: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_add_f16_32x4096.cpp
+[run 1/3] Total tick = 4286
+[run 2/3] Total tick = 4281
+[run 3/3] Total tick = 4274
+[gen] add_f16 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 6304
+[run 2/3] Total tick = 6302
+[run 3/3] Total tick = 6311
+[build] reduce_sum: build.sh --pkg --soc=ascend950 --ops=reduce_sum (may take ~1-2 min)
+[install] reduce_sum: cann-ops-math-custom_linux-aarch64.run -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/installed_opp
+[compile] perf_reduce_sum_f32_32x4096.cpp
+[run 1/3] Total tick = 8328
+[run 2/3] Total tick = 8326
+[run 3/3] Total tick = 8334
+[gen] reduce_sum_f32 @ 32x4096: 3 single-launch processes
+[run 1/3] Total tick = 5106
+[run 2/3] Total tick = 5105
+[run 3/3] Total tick = 5107
+
+| cell                 | ref_ticks | gen_ticks | ratio | gate    |
+|----------------------|-----------|-----------|-------|---------|
+| abs/float16          |      4349 |      4690 |  0.93 | PASS    |
+| add/float16          |      4281 |      6304 |  0.68 | FAIL    |
+| reduce_sum/float32   |      8328 |      5106 |  1.63 | PASS    |
+
+[evidence] abs/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/abs-float16-20260601T141454.json
+[evidence] add/float16 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/add-float16-20260601T141454.json
+[evidence] reduce_sum/float32 -> /home/aloschilov/workspace/pyasc-skill-stack/evidence/perf-vs-ascendc/reduce_sum-float32-20260601T141454.json

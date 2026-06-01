@@ -1,15 +1,22 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
-  "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
+  "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]; perf shape [32, 4096]. Output shape: [32]. Dtype: float32. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core \u2014 distribute the 32 rows across cores via `asc2.range(rows_per_block, unroll_factor=2, parallel=True)`; for each owned row load the full 4096-wide row in one shot (`asc2.load(x_gm, [num_cols], offsets=[row_offset])`) and call `asc2.reduce_sum(row)` so the whole row reduction is a single wide vector op rather than a per-tile accumulation loop; wrap the scalar result as `asc2.full([1, OUT_PAD], s, dtype=row.dtype)` with OUT_PAD=8 (float32 \u2192 8 elements \u00d7 4 bytes = 32-byte alignment) and store at `[row, 0]`. PERF NOTE: unlike elementwise ops, the tile-WIDTH lever is weak for a last-axis reduction \u2014 the row width (4096) is fixed by the problem, so the win comes from (a) keeping the reduction as one wide `asc2.reduce_sum` over the full row instead of a narrow tiled accumulator loop, and (b) spreading rows across all 16 cores (row_per_core); this mirrors the ops-math arch35 reduction tiling (math/reduce_sum/op_host/arch35) which assigns whole rows to cores. Tail: host_pad (padding=8 element scalar pad). Accumulator: float32 (same as dtype). Tolerance: atol=1e-2, rtol=1e-3 against np.sum(x.astype(np.float32), axis=1). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "teams/pyasc-kernel-dev-team/kernels/reduce_sum_float32/kernel.py",
-  "date": "2026-05-15T06:47:30Z",
+  "date": "2026-06-01T11:00:12Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 420,
-    "completed": true,
+    "completed": false,
     "artifacts_found": [
       "kernel.py",
       "design.md",
@@ -22,24 +29,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 126294,
-    "output": 9164,
-    "cache_read": 411967,
-    "total": 135458
+    "input": 102117,
+    "output": 8942,
+    "cache_read": 354189,
+    "total": 111059
   },
-  "elapsed_total_s": 380.96,
+  "elapsed_total_s": 420.0,
   "attempts": [
     {
       "n": 1,
-      "prompt_label": "primary",
-      "elapsed_s": 380.96,
-      "exit": 0,
+      "prompt_label": "oracle_guided",
+      "elapsed_s": 420.0,
+      "exit": 124,
       "outcome": "pass",
       "tokens": {
-        "input": 126294,
-        "output": 9164,
-        "cache_read": 411967,
-        "total": 135458,
+        "input": 102117,
+        "output": 8942,
+        "cache_read": 354189,
+        "total": 111059,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -49,11 +56,8 @@
     }
   ],
   "verification": {
-    "mode": "simulator",
-    "backend": "Model",
-    "platform": "Ascend950PR_9599",
+    "mode": "static_only",
     "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -133,21 +137,17 @@
         "passed": true,
         "detail": "found ['asc2.reduce_sum', '.sum(']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "Nightly CI run (skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25900216556",
+  "notes": "",
   "history": [
-    {
-      "date": "2026-04-22T12:12:31Z",
-      "overall_pass": true,
-      "score": 16.0,
-      "static": "pass",
-      "runtime": "pass",
-      "semantic": true,
-      "skipped": false
-    },
     {
       "date": "2026-04-23T04:32:15Z",
       "overall_pass": true,
@@ -414,6 +414,17 @@
       "skipped": false,
       "tokens_total": 106419,
       "elapsed_s": 261.75
+    },
+    {
+      "date": "2026-05-15T06:47:30Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 135458,
+      "elapsed_s": 380.96
     }
   ]
 }

@@ -42,6 +42,12 @@ evidence/runtime-archive/**/agent-output.txt
 evidence/runtime-archive/**/opencode.json
 evidence/runtime-archive/**/AGENTS.md
 
+# Phase 11 perf demo: ops-math reference build cache (compiled .run package,
+# installed custom opp, compiled drivers, camodel logs). Rebuilt on demand by
+# tests/tools/perf/ascendc_ref_runner.py; never committed. The parsed tick
+# evidence under evidence/perf/ascendc-ref/ IS tracked.
+evidence/perf/_build_cache/
+
 # Large binary files in Docker overlay (built locally, not tracked).
 # Per-arch subdirectories (x86_64/, aarch64/) keep their host-built .so
 # locally; both are picked up by docker/Dockerfile.overlay at build time.

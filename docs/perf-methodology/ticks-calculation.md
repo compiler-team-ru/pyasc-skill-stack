@@ -338,3 +338,44 @@ Or, more reliably, parse with the Python regex shown in section 3.
   and `Total tick:` second (verified in section 2's run). If you parse
   with a one-pass loop, both lines appear within a few lines of each
   other near the end of stdout — capture both before deciding which to use.
+
+## 8. Cross-implementation comparison (pyasc vs hand-written AscendC)
+
+Phase 11 compares a skill-stack-generated `pyasc` kernel against the
+hand-written AscendC C++ reference in [`ops-math/math/`](/home/aloschilov/workspace/ops-math/math/)
+for the *same op, dtype, and shape*, on the *same* camodel
+(`Ascend950PR_9599`). The headline metric is
+
+```
+ratio = ref_ticks / gen_ticks        # >= 0.70 == within ~30% of hand-written
+```
+
+**Symmetry is the whole game.** To make the ratio meaningful both sides must
+be measured identically:
+
+- **Same camodel core.** ops-math builds with `--soc=ascend950`, whose
+  simulator chip is `dav_3510`; pyasc pins the `Ascend950PR_9599` product.
+  Both load a byte-identical `libmodel_top.so`, so cycles are comparable.
+- **One launch per process, `Total tick`.** The AscendC reference issues a
+  single `aclnn<Op>` launch, so its process-exit `Total tick` *is* the
+  per-launch cost. To stay symmetric, the pyasc side is measured the same
+  way: one launch per process, read `Total tick`, median of 3 processes —
+  **not** the in-process `current_tick()` warm-up delta of §6.3. (Reason: the
+  `always_compile=True` kernels are unstable across multiple launches in one
+  process; a fresh process per launch sidesteps that and matches the
+  reference's single-launch shape exactly.)
+- **Same shape, honestly.** Pin both sides to the same shape (Phase 11 uses
+  `[32,4096]`). Document any unavoidable `core_num`/tiling differences rather
+  than engineering them away.
+- **Launch/dispatch overhead dominates at demo sizes.** At `[32,4096]` a single
+  elementwise launch is overwhelmingly fixed launch cost, so abs ref≈4346,
+  add ref≈4283, reduce_sum ref≈8330 (the reduction does real per-row work).
+  This makes the ratio a *fixed-overhead-inclusive* comparison, which is the
+  honest thing to show for a single-launch demo.
+
+Runners: [`tests/tools/perf/ascendc_ref_runner.py`](../../tests/tools/perf/ascendc_ref_runner.py)
+(reference) and [`tests/tools/perf/pyasc_gen_runner.py`](../../tests/tools/perf/pyasc_gen_runner.py)
+(generated); orchestrated by [`tests/tools/demo_vector_ops.py`](../../tests/tools/demo_vector_ops.py).
+See [`docs/perf-vs-ascendc-demo.md`](../perf-vs-ascendc-demo.md) for the gate,
+caveats, and the current cell status (including the generated-side codegen
+blocker for multi-input/reduction kernels).

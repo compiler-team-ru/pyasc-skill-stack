@@ -1,0 +1,26 @@
+{
+  "cell": "reduce_sum/float32",
+  "op": "reduce_sum",
+  "dtype": "float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 8330,
+  "ref_ticks_runs": [
+    8330,
+    8328,
+    8340
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0014,
+  "wall_ms_last": 15594.1,
+  "reference_kind": "canonical_only",
+  "reference_source": "ops-math canonical operator (math/reduce_sum), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=reduce_sum",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_reduce_sum_f32_32x4096.run3.log"
+}

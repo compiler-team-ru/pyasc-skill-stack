@@ -180,6 +180,12 @@ Main Agent
    - **MANDATORY READ**: Load skill `pyasc-api-patterns` to check correct API usage patterns
    - The standard pattern is: `asc2.tensor` -> `asc2.load` -> compute -> `asc2.store`
    - Tiling: fixed `TILE_SIZE` + `asc.ceildiv(num_tiles, CORE_NUM)` for `tile_per_block`
+   - **For `tier` in {elementwise, reduction}, choose `TILE_SIZE` perf-aware**:
+     `128` is the correctness default but underuses the AIV vector pipeline; a
+     wide tile (e.g. `2048`, mirroring ops-math arch35) closes the gap to
+     hand-written AscendC (abs/f16 ratio 0.20 → 0.93 on camodel). See
+     `pyasc-api-patterns` → "Tile sizing for vector-only ops (perf-aware)" and
+     [docs/perf-vs-ascendc-demo.md](../../docs/perf-vs-ascendc-demo.md).
 4. **Check syntax constraints**: Verify all constructs you plan to use are supported.
    - **MANDATORY READ**: Load skill `pyasc-syntax-constraints` — confirm every construct is in the supported set
 5. **Write design document**: Use [templates/design-template.md](templates/design-template.md)
