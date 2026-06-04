@@ -656,6 +656,8 @@ def smoke_dashboard_payload() -> None:
     original = (REPO / "evidence" / "skills-value-summary.json").read_text()
     perf_path = REPO / "evidence" / "perf-summary.json"
     perf_original = perf_path.read_text() if perf_path.exists() else None
+    vf_path = REPO / "evidence" / "vf-fusion-summary.json"
+    vf_original = vf_path.read_text() if vf_path.exists() else None
     try:
         synth = {
             "schema_version": "2",
@@ -735,6 +737,31 @@ def smoke_dashboard_payload() -> None:
             ],
         }
         perf_path.write_text(json.dumps(perf_synth, indent=2))
+        # Fixture vf-fusion summary (A/B actual-run shape) so the compiler
+        # SIMD-fusion panel renders a neutral and a regressed cell.
+        vf_synth = {
+            "generated_at": "2026-05-19T02:00:00Z",
+            "flag": "--cce-simd-vf-fusion",
+            "counts": {"improved": 0, "neutral": 1, "regressed": 1,
+                       "gen_blocked": 0, "total": 2},
+            "median_speedup": 0.88,
+            "cells": [
+                {"cell": "abs/float16", "op": "abs", "dtype": "float16",
+                 "shape": [32, 4096], "arch": "Ascend950PR_9599",
+                 "ref_ticks": 4349, "ticks_off": 4692, "ticks_on": 4686,
+                 "fusion_speedup": 1.001, "ratio_off": 0.93, "ratio_on": 0.93,
+                 "status": "neutral", "flag": "--cce-simd-vf-fusion",
+                 "source": "measured"},
+                {"cell": "rms_norm/float16", "op": "rms_norm",
+                 "dtype": "float16", "shape": [8, 256],
+                 "arch": "Ascend950PR_9599", "ref_ticks": 4150,
+                 "ticks_off": 3921, "ticks_on": 5101, "fusion_speedup": 0.769,
+                 "ratio_off": 1.06, "ratio_on": 0.81, "status": "regressed",
+                 "flag": "SMOKE-VF-FLAG --cce-simd-vf-fusion",
+                 "source": "measured"},
+            ],
+        }
+        vf_path.write_text(json.dumps(vf_synth, indent=2))
         out = Path(tempfile.mkdtemp())
         try:
             subprocess.run([
@@ -750,6 +777,10 @@ def smoke_dashboard_payload() -> None:
             perf_path.write_text(perf_original)
         elif perf_path.exists():
             perf_path.unlink()
+        if vf_original is not None:
+            vf_path.write_text(vf_original)
+        elif vf_path.exists():
+            vf_path.unlink()
     # Inlined summary payload contains the new fields.
     expects_inlined = [
         '"partial_run": true',
@@ -763,6 +794,9 @@ def smoke_dashboard_payload() -> None:
         # Perf summary (actual-run feed) inlined into DATA.
         '"perf_summary"',
         'SMOKE-PERF-MISS-NOTE',
+        # Compiler SIMD-fusion A/B summary inlined into DATA.
+        '"vf_fusion"',
+        'SMOKE-VF-FLAG',
     ]
     for needle in expects_inlined:
         assert needle in h, f"missing inlined payload key: {needle!r}"
@@ -790,6 +824,12 @@ def smoke_dashboard_payload() -> None:
         "perf-cards",
         "Performance vs hand-written AscendC",
         "clear the ratio",
+        # Compiler SIMD-fusion panel renderer + CSS hooks.
+        "renderVfFusion",
+        "vf-fusion-panel",
+        "vf-cards",
+        "Compiler SIMD fusion",
+        "no micro-api",
     ]
     for needle in expects_static:
         assert needle in h, f"missing template symbol: {needle!r}"

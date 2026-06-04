@@ -176,6 +176,59 @@ docker/build-perf-image.sh            # build only (local tag)
 docker/build-perf-image.sh --push     # build + push to ghcr.io
 ```
 
+## Compiler SIMD fusion (`--cce-simd-vf-fusion`)
+
+pyasc2 lowers to the AscendC **high-level** API and deliberately uses **no
+micro-api**. The official positioning is that SIMD vector fusion is delegated to
+the bisheng compiler flag `--cce-simd-vf-fusion=true` rather than expressed by
+hand. This section verifies what that flag actually does to pyasc2-lowered code.
+
+**What pyasc emits today.** pyasc's JIT (`asc.runtime.compiler.Compiler.`
+`_get_compiler_cmd` in the `pyasc-v2-eval` tree) does **not** pass
+`--cce-simd-vf-fusion`, and CANN's default for ascend950 is
+`--cce-simd-vf-fusion=false`. It already passes `-Xclang -fcce-vf-vl=256` and
+`--cce-auto-sync`. The hand-written `ops-math`/`ops-nn` references compile the
+flag **on** via their `ascendc_config.json`.
+
+**The A/B.** [`demo_vf_fusion.py`](../tests/tools/demo_vf_fusion.py) compiles the
+*same* generated kernel twice on the same `Ascend950PR_9599` camodel — fusion
+**off** (the default) vs **on** — varying only `--cce-simd-vf-fusion`. The flag is
+injected by monkeypatching `_get_compiler_cmd` inside the measurement probe (the
+only built-in Python hook, `CompileOptions.bisheng_options`, is per-kernel), with
+a per-variant `PYASC_CACHE_DIR` so the off/on binaries cannot collide and an
+honesty guard that refuses to report a run where the flag did not actually reach
+bisheng. We report `fusion_speedup = ticks_off / ticks_on` (>1 means fusion
+helped) and the ratio-to-reference for both variants.
+
+```bash
+python tests/tools/demo_vf_fusion.py --cell rms_norm/float16   # one cell
+python tests/tools/demo_vf_fusion.py --all --runs 3            # full A/B
+python tests/tools/perf/aggregate_vf_fusion.py                # -> vf-fusion-summary.json
+```
+
+**Finding (measured, `Ascend950PR_9599`).** Enabling the flag does **not** improve
+pyasc2-lowered AscendC in the cases measured:
+
+| cell | ticks off | ticks on | speedup | r→ref off | r→ref on | verdict |
+|------|-----------|----------|---------|-----------|----------|---------|
+| `abs/float16` | 4692 | 4686 | 1.001 | 0.93 | 0.93 | neutral |
+| `tanh/float16` | 5276 | 5275 | 1.000 | 0.72 | 0.73 | neutral |
+| `rms_norm/float16` | 3921 | 5101 | **0.769** | 1.06 | 0.81 | **regressed** |
+
+Simple elementwise kernels (`abs`, `tanh`) are unmoved by the flag — there is no
+multi-op vector chain to fuse and pyasc's `-fcce-vf-vl` lowering is already
+vector-friendly. The reduction-heavy `rms_norm` *regresses ~23%* with fusion on,
+and notably the fusion-**off** pyasc kernel (`r→ref 1.06`) actually beats the
+hand-written reference, which itself compiles fusion-on. In other words, for
+pyasc2's lowering the flag is at best neutral and can be actively harmful; the
+default lowering is already competitive without it.
+
+This is published, **report-only**: the `perf-gate` job also runs
+`demo_vf_fusion.py --all`, `aggregate_vf_fusion.py` writes
+`evidence/vf-fusion-summary.json`, and the dashboard renders a **Compiler SIMD
+fusion** panel (per-cell `off → on` ticks, speedup, and an `improved`/`neutral`/
+`regressed` badge). Nothing here gates the build.
+
 ## Comparability contract
 
 | axis            | value                                                    |

@@ -59,10 +59,13 @@ for d in "$ARTIFACTS_ROOT"/evidence-*; do
       ;;
     perf)
       # Report-only perf-gate: combined perf-vs-AscendC records + the
-      # aggregated perf-summary that feeds the dashboard perf panel.
-      mkdir -p "$EVIDENCE_OUT/perf-vs-ascendc"
+      # aggregated perf-summary that feeds the dashboard perf panel, plus the
+      # --cce-simd-vf-fusion A/B records + summary for the SIMD-fusion panel.
+      mkdir -p "$EVIDENCE_OUT/perf-vs-ascendc" "$EVIDENCE_OUT/vf-fusion"
       cp -f "$d"/perf-vs-ascendc/*.json "$EVIDENCE_OUT"/perf-vs-ascendc/ 2>/dev/null || true
       cp -f "$d"/perf-summary.json "$EVIDENCE_OUT"/ 2>/dev/null || true
+      cp -f "$d"/vf-fusion/*.json "$EVIDENCE_OUT"/vf-fusion/ 2>/dev/null || true
+      cp -f "$d"/vf-fusion-summary.json "$EVIDENCE_OUT"/ 2>/dev/null || true
       ;;
     *-on|*-off)
       mode=${leg##*-}

@@ -1,0 +1,91 @@
+{
+  "cell": "tanh/float16",
+  "op": "tanh",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 3825,
+  "ticks_off": 5276,
+  "ticks_on": 5275,
+  "fusion_speedup": 1.0002,
+  "ratio_off": 0.725,
+  "ratio_on": 0.7251,
+  "gate": 0.7,
+  "status": "neutral",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "tanh/float16",
+    "op": "tanh",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 3825,
+    "ref_ticks_runs": [
+      3826,
+      3825
+    ],
+    "ref_ticks_method": "median_of_2",
+    "ref_ticks_spread": 0.0003,
+    "wall_ms_last": 37138.5,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-math",
+    "reference_source": "ops-math canonical operator (tanh, aclnnop/aclnn_tanh.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=tanh",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run2.log"
+  },
+  "gen_detail_off": {
+    "cell": "tanh_f16",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 5276,
+    "gen_ticks_runs": [
+      5277,
+      5276
+    ],
+    "gen_ticks_method": "median_of_2",
+    "gen_ticks_spread": 0.0002,
+    "vf_fusion": "false",
+    "wall_ms_last": 27786.3,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-false.run2.log"
+  },
+  "gen_detail_on": {
+    "cell": "tanh_f16",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+    "dtype": "float16",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 5275,
+    "gen_ticks_runs": [
+      5276,
+      5274
+    ],
+    "gen_ticks_method": "median_of_2",
+    "gen_ticks_spread": 0.0004,
+    "vf_fusion": "true",
+    "wall_ms_last": 28771.1,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096_vf-true.run2.log"
+  }
+}

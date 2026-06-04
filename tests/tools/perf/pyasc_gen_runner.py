@@ -100,6 +100,29 @@ import numpy as np
 import asc.runtime.config as config
 from asc.lib.runtime import synchronize
 
+# Optional A/B injection of the bisheng SIMD vector-fusion flag. Empty string
+# leaves pyasc's default compile flags untouched (CANN ascend950 default is
+# --cce-simd-vf-fusion=false); "true"/"false" force --cce-simd-vf-fusion=<value>
+# onto every JIT compile command. The only built-in Python hook (CompileOptions
+# .bisheng_options) is per-kernel, so we patch the compiler instead and the
+# checked-in kernels need no edits. This flag is the single A/B variable; if the
+# compiler entry point is missing we fail loudly rather than silently measuring
+# an un-flagged build (which would corrupt the comparison).
+VF_FUSION = "{vf_fusion}"
+if VF_FUSION:
+    import asc.runtime.compiler as _cc
+    if not hasattr(_cc.Compiler, "_get_compiler_cmd"):
+        print("PROBE_ERROR cannot inject --cce-simd-vf-fusion: "
+              "asc.runtime.compiler.Compiler._get_compiler_cmd missing")
+        sys.exit(6)
+    _vf_orig_cmd = _cc.Compiler._get_compiler_cmd
+    def _vf_patched_cmd(self, *a, **k):
+        cmd = [c for c in _vf_orig_cmd(self, *a, **k)
+               if not str(c).startswith("--cce-simd-vf-fusion")]
+        return cmd + ["--cce-simd-vf-fusion=%s" % VF_FUSION]
+    _cc.Compiler._get_compiler_cmd = _vf_patched_cmd
+    print("VF_FUSION_PATCH --cce-simd-vf-fusion=%s" % VF_FUSION)
+
 KERNEL_PATH = {kernel_path!r}
 SHAPE = {shape!r}
 DTYPE = "{dtype}"
@@ -190,7 +213,7 @@ print(f"PROBE_DONE launch={{launch.__name__}} nparams={{nparams}}")
 
 
 def _probe_source(kernel_path: Path, shape: list[int], dtype: str, platform: str,
-                  arg_specs: list | None, op_name: str) -> str:
+                  arg_specs: list | None, op_name: str, vf_fusion: str = "") -> str:
     return PROBE_TEMPLATE.format(
         kernel_path=str(kernel_path),
         shape=tuple(shape),
@@ -198,6 +221,7 @@ def _probe_source(kernel_path: Path, shape: list[int], dtype: str, platform: str
         platform=platform,
         arg_specs_json=json.dumps(arg_specs),
         op_name=op_name,
+        vf_fusion=vf_fusion,
     )
 
 
@@ -207,9 +231,13 @@ _WALL_RE = re.compile(r"Model RUN TIME:\s*([\d.]+)")
 
 def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
             ascend: Path, runs: int, python: str, verbose: bool,
-            arg_specs: list | None = None, op_name: str = "") -> dict:
+            arg_specs: list | None = None, op_name: str = "",
+            vf_fusion: str | None = None) -> dict:
     if not kernel_path.exists():
         raise GenError(f"cached kernel not found: {kernel_path}")
+    if vf_fusion not in (None, "", "true", "false"):
+        raise GenError(f"vf_fusion must be None/''/'true'/'false', got {vf_fusion!r}")
+    vf = vf_fusion or ""
     sim_lib = ascend / "tools" / "simulator" / ARCH_PIN / "lib"
     if not sim_lib.is_dir():
         raise GenError(f"simulator lib dir missing: {sim_lib}")
@@ -217,16 +245,23 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
     if not (eval_python / "asc" / "__init__.py").exists():
         raise GenError(f"pyasc-v2-eval asc package not found under {eval_python}")
 
-    probe = BUILD_CACHE / "drivers" / f"probe_{kernel_path.parent.name}_{'x'.join(map(str, shape))}.py"
+    # Per-variant tag so the off/on runs use isolated probe files, logs, JIT
+    # caches and dump dirs. The vf flag is injected inside _get_compiler_cmd
+    # (below the CompileOptions hash), so without a separate PYASC_CACHE_DIR the
+    # "on" run could read the "off" run's cached binary and silently tie.
+    tag = f"vf-{vf}" if vf else "default"
+    probe = (BUILD_CACHE / "drivers" /
+             f"probe_{kernel_path.parent.name}_{'x'.join(map(str, shape))}_{tag}.py")
     probe.parent.mkdir(parents=True, exist_ok=True)
-    probe.write_text(_probe_source(kernel_path, shape, dtype, ARCH_PIN, arg_specs, op_name))
+    probe.write_text(_probe_source(kernel_path, shape, dtype, ARCH_PIN, arg_specs, op_name, vf))
 
     setenv = ascend / "set_env.sh"
     env_prefix = (
         f"source {setenv}; "
         f"export PYTHONPATH={eval_python}:$PYTHONPATH; "
         f"export LD_LIBRARY_PATH={sim_lib}:$LD_LIBRARY_PATH; "
-        f"export PYASC_DUMP_PATH=/tmp/pyasc-eval-dump; "
+        f"export PYASC_DUMP_PATH=/tmp/pyasc-eval-dump/{tag}; "
+        f"export PYASC_CACHE_DIR=/tmp/pyasc-eval-cache/{tag}; "
     )
     if verbose:
         print(f"[gen] {kernel_path.parent.name} @ {'x'.join(map(str, shape))}: {runs} single-launch processes")
@@ -245,6 +280,12 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
         if "PROBE_DONE" not in text or m is None:
             tail = "\n".join(text.splitlines()[-25:])
             raise GenError(f"pyasc probe run {i + 1} did not complete cleanly:\n{tail}")
+        if vf and "VF_FUSION_PATCH" not in text:
+            tail = "\n".join(text.splitlines()[-25:])
+            raise GenError(
+                f"vf_fusion={vf} requested but the compiler patch was not applied "
+                f"(no VF_FUSION_PATCH marker in run {i + 1}); refusing to report an "
+                f"un-flagged measurement:\n{tail}")
         ticks.append(int(m.group(1)))
         w = _WALL_RE.search(text)
         if w:
@@ -271,6 +312,7 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
         "gen_ticks_runs": ticks,
         "gen_ticks_method": f"median_of_{runs}",
         "gen_ticks_spread": round(spread, 4),
+        "vf_fusion": vf or None,
         "wall_ms_last": wall,
         "camodel_log": str(last_log),
     }
@@ -290,6 +332,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eval-root", default=str(DEFAULT_EVAL_ROOT))
     ap.add_argument("--ascend-home", default=str(DEFAULT_ASCEND))
     ap.add_argument("--python", default="python3.11")
+    ap.add_argument("--vf-fusion", choices=["true", "false"],
+                    help="force --cce-simd-vf-fusion=<value> onto the JIT compile")
     ap.add_argument("--out", help="evidence JSON path")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("-q", "--quiet", action="store_true")
@@ -324,7 +368,7 @@ def main(argv: list[str] | None = None) -> int:
         result = measure(kernel_path, shape, dtype, eval_root=Path(args.eval_root),
                          ascend=Path(args.ascend_home), runs=args.runs,
                          python=args.python, verbose=verbose, arg_specs=arg_specs,
-                         op_name=op_name)
+                         op_name=op_name, vf_fusion=args.vf_fusion)
     except GenError as exc:
         print(f"[BLOCKED] {exc}", file=sys.stderr)
         return 1

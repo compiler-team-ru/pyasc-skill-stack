@@ -124,6 +124,12 @@ jobs:
   # ~0.10) stay green. The committed evidence/perf-summary.json (produced
   # here, committed by skills-value-report) is what generate_dashboard.py
   # renders in the perf panel.
+  #
+  # The same job also runs the --cce-simd-vf-fusion off-vs-on A/B
+  # (demo_vf_fusion.py) on each generated kernel and publishes
+  # evidence/vf-fusion-summary.json for the dashboard's "Compiler SIMD fusion"
+  # panel (verifies the "pyasc2 uses no micro-api; the compiler does fusion"
+  # positioning). Also report-only.
   # ==========================================================================
   perf-gate:
     runs-on: ubuntu-latest
@@ -165,9 +171,26 @@ jobs:
               python3.11 tests/tools/demo_vector_ops.py --all --runs 3' \
             || echo "::warning::perf harness reported a non-zero exit (gate misses are expected and non-blocking)"
 
-      - name: Aggregate perf summary
+      - name: A/B compiler SIMD fusion (--cce-simd-vf-fusion off vs on)
         if: always()
-        run: python3.10 tests/tools/perf/aggregate_perf.py
+        run: |
+          # Compiles each generated kernel with the bisheng vector-fusion flag
+          # off vs on on the same camodel (the "pyasc2 uses no micro-api; the
+          # compiler does fusion" verification). Report-only like the perf gate;
+          # ref builds are reused from the demo_vector_ops run's _build_cache.
+          docker run --rm \
+            --ulimit nofile=65536:65536 \
+            -v "$(pwd)":/workspace -w /workspace \
+            ${{ env.PYASC_PERF_IMAGE }} \
+            bash -lc 'source "$ASCEND_HOME_PATH/set_env.sh" 2>/dev/null; \
+              python3.11 tests/tools/demo_vf_fusion.py --all --runs 3' \
+            || echo "::warning::vf-fusion A/B reported a non-zero exit (non-blocking)"
+
+      - name: Aggregate perf + vf-fusion summaries
+        if: always()
+        run: |
+          python3.10 tests/tools/perf/aggregate_perf.py
+          python3.10 tests/tools/perf/aggregate_vf_fusion.py
 
       - name: Upload perf evidence artifact
         if: always()
@@ -177,6 +200,8 @@ jobs:
           path: |
             evidence/perf-vs-ascendc/*.json
             evidence/perf-summary.json
+            evidence/vf-fusion/*.json
+            evidence/vf-fusion-summary.json
           if-no-files-found: ignore
 
   # ==========================================================================
@@ -598,10 +623,13 @@ jobs:
           bash tests/tools/merge_evidence_artifacts.sh artifacts evidence
           ls -1 evidence/
 
-      - name: Re-aggregate perf summary
-        # Recompute evidence/perf-summary.json from the merged perf-vs-ascendc
-        # records so the dashboard perf panel reflects this night's run.
-        run: python3.10 tests/tools/perf/aggregate_perf.py
+      - name: Re-aggregate perf + vf-fusion summaries
+        # Recompute evidence/perf-summary.json and evidence/vf-fusion-summary.json
+        # from the merged records so the dashboard perf + SIMD-fusion panels
+        # reflect this night's run.
+        run: |
+          python3.10 tests/tools/perf/aggregate_perf.py
+          python3.10 tests/tools/perf/aggregate_vf_fusion.py
 
       - name: Snapshot prior summary for --merge-history
         # Phase 10 noise-floor: capture the last main summary BEFORE we
@@ -665,10 +693,14 @@ jobs:
               git add evidence/history
             fi
           fi
-          # Perf evidence is independent of the generative partial-run guard
-          # (report-only perf-gate), so commit it in both branches when present.
+          # Perf + vf-fusion evidence is independent of the generative
+          # partial-run guard (report-only perf-gate), so commit it in both
+          # branches when present.
           if [ -d evidence/perf-vs-ascendc ]; then
             git add evidence/perf-vs-ascendc/*.json evidence/perf-summary.json 2>/dev/null || true
+          fi
+          if [ -d evidence/vf-fusion ]; then
+            git add evidence/vf-fusion/*.json evidence/vf-fusion-summary.json 2>/dev/null || true
           fi
           if git diff --cached --quiet; then
             echo "No new evidence to commit."

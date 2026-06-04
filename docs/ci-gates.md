@@ -76,6 +76,19 @@ green.
   redeploys the dashboard, whose perf panel renders `perf-summary.json` (falling
   back to each cell's curated `perf_ratio_demo` in `capabilities.yaml` when no
   measured summary is present, e.g. local/dev renders).
+- **Compiler SIMD-fusion A/B (same job):** the `perf-gate` job also runs
+  [tests/tools/demo_vf_fusion.py](../tests/tools/demo_vf_fusion.py) `--all`, which
+  recompiles each generated kernel with `--cce-simd-vf-fusion` **off vs on** on
+  the same camodel (verifying the "pyasc2 uses no micro-api; the compiler does
+  fusion" positioning — see
+  [docs/perf-vs-ascendc-demo.md](perf-vs-ascendc-demo.md)). It is also
+  report-only.
+  [tests/tools/perf/aggregate_vf_fusion.py](../tests/tools/perf/aggregate_vf_fusion.py)
+  writes `evidence/vf-fusion-summary.json` (per-cell `ticks_off`/`ticks_on`/
+  `fusion_speedup` + an `improved`/`neutral`/`regressed` verdict); both it and
+  `evidence/vf-fusion/*.json` ride the same `evidence-perf` artifact and are
+  committed by `skills-value-report`. The dashboard renders them in a **Compiler
+  SIMD fusion** panel.
 
 ## Environment variables
 

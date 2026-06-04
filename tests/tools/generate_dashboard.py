@@ -28,6 +28,7 @@ CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 SKILLS_VALUE_FILE = EVIDENCE_DIR / "skills-value-summary.json"
 PERF_SUMMARY_FILE = EVIDENCE_DIR / "perf-summary.json"
+VF_FUSION_SUMMARY_FILE = EVIDENCE_DIR / "vf-fusion-summary.json"
 
 
 def _load_yaml(path: Path) -> dict:
@@ -275,6 +276,10 @@ def build_data(cap: dict) -> dict:
         },
         "skills_value": skills_value,
         "perf_summary": perf_summary,
+        # Compiler SIMD vector-fusion A/B (--cce-simd-vf-fusion off vs on),
+        # already dashboard-shaped by aggregate_vf_fusion.py. None when no run
+        # has landed yet -> the panel hides itself.
+        "vf_fusion": _load_evidence(VF_FUSION_SUMMARY_FILE) or None,
     }
 
 
@@ -393,6 +398,34 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .perf-pass { color: var(--confirmed); background: var(--confirmed-bg); }
 .perf-fail { color: var(--blocked); background: var(--blocked-bg); }
 .perf-gen_blocked, .perf-unknown { color: var(--untested); background: var(--untested-bg); }
+.vf-fusion-panel {
+  display: none;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.vf-fusion-panel.has-data { display: block; }
+.vf-fusion-panel .vf-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.vf-fusion-panel .vf-title { font-weight: 600; font-size: 14px; }
+.vf-fusion-panel .vf-sub { font-size: 12px; color: var(--fg-muted); }
+.vf-fusion-panel .vf-lead { font-size: 12px; color: var(--fg-muted); margin: 4px 0 10px; }
+.vf-fusion-panel .vf-lead code { font-size: 11px; }
+.vf-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.vf-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; background: var(--bg); }
+.vf-card .vc-cell { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.vf-card .vc-ticks { font-size: 12px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.vf-card .vc-ratios { font-size: 11px; color: var(--fg-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.vf-speedup { font-variant-numeric: tabular-nums; font-weight: 600; }
+.vf-badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 10px; vertical-align: middle;
+}
+.vf-improved { color: var(--confirmed); background: var(--confirmed-bg); }
+.vf-regressed { color: var(--blocked); background: var(--blocked-bg); }
+.vf-neutral { color: var(--golden-only); background: var(--golden-only-bg, var(--bg-alt)); }
+.vf-gen_blocked { color: var(--untested); background: var(--untested-bg); }
 .skills-value-banner {
   display: none;
   padding: 16px 18px;
@@ -1026,6 +1059,8 @@ footer a { color: var(--fg-muted); }
 
 <div class="perf-banner" id="perf-banner"></div>
 
+<div class="vf-fusion-panel" id="vf-fusion-panel"></div>
+
 <div class="skills-value-banner" id="skills-value-banner"></div>
 
 <div class="protocol-decomp-panel" id="protocol-decomp-panel"></div>
@@ -1094,6 +1129,7 @@ function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
   renderRuntimeBanner();
   renderPerfBanner();
+  renderVfFusion();
   renderSkillsValueBanner();
   renderProtocolDecomp();
   renderTierCards();
@@ -1898,6 +1934,62 @@ function renderPerfBanner() {
       + '<div class="pc-ticks"><span class="perf-ratio">' + fmtRatio(p.ratio) + '</span>'
       + (ticks ? ' \u2014 ' + ticks : '') + '</div>'
       + note
+      + '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  el.classList.add("has-data");
+}
+
+function fmtSpeedup(s) {
+  if (s == null || isNaN(s)) return "\u2014";
+  return Number(s).toFixed(3) + "\u00d7";
+}
+
+function vfBadge(status) {
+  const label = (status || "gen_blocked").replace(/_/g, " ");
+  return '<span class="vf-badge vf-' + (status || "gen_blocked") + '">' + label + '</span>';
+}
+
+function renderVfFusion() {
+  const vf = DATA.vf_fusion;
+  const el = document.getElementById("vf-fusion-panel");
+  if (!vf || !vf.cells || !vf.cells.length) { el.style.display = "none"; return; }
+  const c = vf.counts || {};
+  const total = c.total || vf.cells.length;
+  const improved = c.improved || 0;
+  const regressed = c.regressed || 0;
+  const neutral = c.neutral || 0;
+  const when = vf.generated_at ? (" (measured " + vf.generated_at + ")") : "";
+
+  let html = '<div class="vf-head">'
+    + '<span class="vf-title">Compiler SIMD fusion (<code>--cce-simd-vf-fusion</code>)</span>'
+    + '<span class="vf-speedup">' + improved + '/' + total + '</span>'
+    + '<span class="vf-sub">kernels speed up with fusion on; median '
+    + fmtSpeedup(vf.median_speedup) + ' over ' + total + ' cells'
+    + ' (neutral ' + neutral + ', regressed ' + regressed + ')' + when + '.</span>'
+    + '</div>';
+  html += '<div class="vf-lead">pyasc2 lowers to the AscendC high-level API and uses '
+    + 'no micro-api: SIMD vector fusion is delegated to the bisheng flag '
+    + '<code>--cce-simd-vf-fusion=true</code>. This A/B compiles the same generated '
+    + 'kernel with the flag <strong>off</strong> (pyasc/CANN default) vs <strong>on</strong> '
+    + 'on the Ascend950PR_9599 camodel; <code>speedup = ticks_off / ticks_on</code> '
+    + '(&gt;1 means fusion helped). The hand-written reference always compiles fusion-on, '
+    + 'so <code>r&#8594;ref</code> shows how each variant compares to it.</div>';
+  html += '<div class="vf-cards">';
+  const cells = vf.cells.slice().sort((a, b) => (a.cell || "").localeCompare(b.cell || ""));
+  for (const p of cells) {
+    const ticks = (p.ticks_off != null && p.ticks_on != null)
+      ? ('off ' + p.ticks_off + ' \u2192 on ' + p.ticks_on + ' ticks')
+      : (p.status === "gen_blocked" ? (p.gen_blocker ? 'blocked' : 'not measured') : '');
+    const ratios = (p.ratio_off != null || p.ratio_on != null)
+      ? ('r\u2192ref ' + fmtRatio(p.ratio_off) + ' (off) / ' + fmtRatio(p.ratio_on) + ' (on)')
+      : '';
+    html += '<div class="vf-card">'
+      + '<div class="vc-cell">' + (p.cell || "?") + ' ' + vfBadge(p.status) + '</div>'
+      + '<div class="vc-ticks"><span class="vf-speedup">' + fmtSpeedup(p.fusion_speedup) + '</span>'
+      + (ticks ? ' \u2014 ' + ticks : '') + '</div>'
+      + (ratios ? '<div class="vc-ratios">' + ratios + '</div>' : '')
       + '</div>';
   }
   html += '</div>';

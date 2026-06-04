@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-06-04T09:35:07Z",
+  "flag": "--cce-simd-vf-fusion",
+  "counts": {
+    "improved": 0,
+    "neutral": 2,
+    "regressed": 1,
+    "gen_blocked": 0,
+    "total": 3
+  },
+  "median_speedup": 1.0002,
+  "cells": [
+    {
+      "cell": "abs/float16",
+      "op": "abs",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "ref_ticks": 4346,
+      "ticks_off": 4692,
+      "ticks_on": 4686,
+      "fusion_speedup": 1.0013,
+      "ratio_off": 0.9263,
+      "ratio_on": 0.9274,
+      "gate": 0.7,
+      "status": "neutral",
+      "flag": "--cce-simd-vf-fusion",
+      "evidence_file": "evidence/vf-fusion/abs-float16-20260604T122850.json",
+      "measured_at": "2026-06-04T12:28:50Z",
+      "source": "measured"
+    },
+    {
+      "cell": "rms_norm/float16",
+      "op": "rms_norm",
+      "dtype": "float16",
+      "shape": [
+        8,
+        256
+      ],
+      "arch": "Ascend950PR_9599",
+      "ref_ticks": 4149,
+      "ticks_off": 3921,
+      "ticks_on": 5101,
+      "fusion_speedup": 0.7687,
+      "ratio_off": 1.0581,
+      "ratio_on": 0.8134,
+      "gate": 0.7,
+      "status": "regressed",
+      "flag": "--cce-simd-vf-fusion",
+      "evidence_file": "evidence/vf-fusion/rms_norm-float16-20260604T123110.json",
+      "measured_at": "2026-06-04T12:31:10Z",
+      "source": "measured"
+    },
+    {
+      "cell": "tanh/float16",
+      "op": "tanh",
+      "dtype": "float16",
+      "shape": [
+        32,
+        4096
+      ],
+      "arch": "Ascend950PR_9599",
+      "ref_ticks": 3825,
+      "ticks_off": 5276,
+      "ticks_on": 5275,
+      "fusion_speedup": 1.0002,
+      "ratio_off": 0.725,
+      "ratio_on": 0.7251,
+      "gate": 0.7,
+      "status": "neutral",
+      "flag": "--cce-simd-vf-fusion",
+      "evidence_file": "evidence/vf-fusion/tanh-float16-20260604T123451.json",
+      "measured_at": "2026-06-04T12:34:51Z",
+      "source": "measured"
+    }
+  ]
+}
