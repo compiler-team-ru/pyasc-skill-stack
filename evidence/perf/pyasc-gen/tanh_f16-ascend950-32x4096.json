@@ -1,0 +1,23 @@
+{
+  "cell": "tanh_f16",
+  "kernel": "teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 5272,
+  "gen_ticks_runs": [
+    5272,
+    5276,
+    5271
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.0009,
+  "wall_ms_last": 29509.3,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_tanh_f16_32x4096.run3.log"
+}

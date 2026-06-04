@@ -35,6 +35,10 @@ APT_REQUIRED=(
     python3.10
     python3.10-venv
     python3-pip
+    # ops-nn build.sh --pkg gates on these (ops-math does not); needed to build
+    # the ops-nn AscendC references (rms_norm, batch_norm_v3, apply_adam).
+    dos2unix
+    pigz
 )
 
 usage() {

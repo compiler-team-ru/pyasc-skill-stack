@@ -1,0 +1,23 @@
+{
+  "cell": "kernels",
+  "kernel": "golden/kernels/rms_norm_f32.py",
+  "dtype": "float32",
+  "shape": [
+    8,
+    256
+  ],
+  "n_elements": 2048,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 4885,
+  "gen_ticks_runs": [
+    4885,
+    4883,
+    4889
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.0012,
+  "wall_ms_last": 12841.0,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_kernels_8x256.run3.log"
+}

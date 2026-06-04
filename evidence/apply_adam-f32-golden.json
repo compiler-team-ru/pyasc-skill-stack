@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "apply_adam",
+  "dtype": "float32",
+  "kernel_path": "golden/kernels/apply_adam_f32.py",
+  "date": "2026-06-03T21:50:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599; shapes (16,2048) and (32,4096) verified numerically exact vs NumPy Adam (atol=1e-5, rtol=1e-4 on var/m/v). Total tick 24665 across both launches; single 32x4096 launch ~17670."
+  },
+  "runtime_verified": true,
+  "notes": "Golden in-place Adam optimizer update (matches aclnnApplyAdam non-Nesterov) verified on CANN 9.0.0 simulator on Ascend950PR_9599 (C310). Vector-only (AIV). HONEST PERF: memory-bound (4 loads + 3 stores/element f32); a zero-arithmetic memcpy of the same tensors floors at ~16966-17647 ticks across all tile sizes, ~2.1x the hand-written aclnnApplyAdam (8107). Ratio ~0.46; cannot clear the 0.70 gate by kernel tuning (DMA-modeling wall, not a correctness or compute issue). Correctness-confirmed generative cell with a documented perf miss. Reference identity: pure ApplyAdamD has no public aclnn; aclnnApplyAdam is the only callable canonical reference (stated explicitly, not silently substituted)."
+}

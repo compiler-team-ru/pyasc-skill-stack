@@ -1,0 +1,148 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "batch_norm_v3",
+  "dtype": "float32",
+  "prompt": "Operator: BatchNormV3 training-mode forward. x [N,C,L]=[32,64,64] float32; weight/bias [C] float32; eps=1e-5. Per channel reduce over N and L: mean=sum/(N*L), var=sumsq/(N*L)-mean^2, invstd=1/sqrt(var+eps); out=x*scale+shift with scale=weight*invstd, shift=bias-scale*mean. Outputs out [N,C,L], saveMean [C], saveInvStd [C]. Inputs MUST be torch.Tensor (C310 zeroes numpy for this reduction pattern). On-chip strided reduction (NO host transpose): view x as [N*C, L]; CORE_NUM=8, ch=8 channels/core; per sample n load a [ch, L] strided tile at row n*C+c0 and accumulate `asc2.reduce_sum(blk, 1)` -> [ch] per-channel partials (2D reduce over the L axis is exact; a 3D [1,ch,L] reduce over axis 2 silently fills only channel 0 -- avoid it). Use asc2.rsqrt on the [ch] var tile; broadcast scale/shift with `asc2.broadcast_to(asc2.expand_dims(scale, 1), ch, L)` (broadcast_to takes VARARG dims, not a list). Tile-shape dims must be literal ints (module constants N_SIZE/C_SIZE/L_SIZE/CH), NOT ConstExpr. HONEST PERF NOTE: this strided per-channel reduction is DMA/instruction-bound (~62588 ticks vs 6110 aclnnBatchNorm, ratio ~0.10); the goal here is a correct vector-only realization, not beating the reference. Tolerance: mean/invstd 1e-3, out 1e-2 vs torch fp64. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/batch_norm_v3_f32.py for the exact channel-vectorized strided-reduce + broadcast affine structure.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/batch_norm_v3_f32/kernel.py",
+  "date": "2026-06-03T19:28:43Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 900,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 78762,
+    "output": 14152,
+    "cache_read": 487385,
+    "total": 92914
+  },
+  "elapsed_total_s": 498.65,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "oracle_guided",
+      "elapsed_s": 498.65,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 78762,
+        "output": 14152,
+        "cache_read": 487385,
+        "total": 92914,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "pass",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'batch_norm_v3'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x3, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "",
+  "history": []
+}

@@ -55,7 +55,13 @@ _gen = _load("pyasc_gen_runner", PERF_DIR / "pyasc_gen_runner.py")
 
 KERNELS_ROOT = REPO_ROOT / "teams" / "pyasc-kernel-dev-team" / "kernels"
 
-# cell -> {ref op/dtype, gen kernel path + dtype, comparability shape}
+GOLDEN_ROOT = REPO_ROOT / "golden" / "kernels"
+
+# cell -> {ref op/dtype, gen kernel path + dtype, comparability shape}.
+# ``ref_op`` keys into ascendc_ref_runner.OP_SPECS (which knows the source repo
+# ops-math vs ops-nn). ``kernel`` is the generated/golden pyasc kernel measured
+# on the same camodel at the same ``shape``. Cells whose kernel does not exist
+# yet record honestly as ref-captured + gen_blocked rather than fabricating.
 CELLS = {
     "abs/float16": {
         "ref_op": "abs", "ref_dtype": "f16",
@@ -71,6 +77,36 @@ CELLS = {
         "ref_op": "reduce_sum", "ref_dtype": "f32",
         "kernel": KERNELS_ROOT / "reduce_sum_f32" / "kernel.py", "gen_dtype": "float32",
         "shape": [32, 4096],
+    },
+    "tanh/float16": {
+        "ref_op": "tanh", "ref_dtype": "f16",
+        "kernel": KERNELS_ROOT / "tanh_f16" / "kernel.py", "gen_dtype": "float16",
+        "shape": [32, 4096],
+    },
+    "drop_out_do_mask/float16": {
+        "ref_op": "drop_out_do_mask", "ref_dtype": "f16",
+        "kernel": KERNELS_ROOT / "drop_out_do_mask_f16" / "kernel.py", "gen_dtype": "float16",
+        "shape": [32, 4096],
+    },
+    "rms_norm/float16": {
+        "ref_op": "rms_norm", "ref_dtype": "f16",
+        "kernel": GOLDEN_ROOT / "rms_norm_f16.py", "gen_dtype": "float16",
+        "shape": [8, 256],
+    },
+    "rms_norm/float32": {
+        "ref_op": "rms_norm", "ref_dtype": "f32",
+        "kernel": GOLDEN_ROOT / "rms_norm_f32.py", "gen_dtype": "float32",
+        "shape": [8, 256],
+    },
+    "apply_adam/float32": {
+        "ref_op": "apply_adam", "ref_dtype": "f32",
+        "kernel": KERNELS_ROOT / "apply_adam_f32" / "kernel.py", "gen_dtype": "float32",
+        "shape": [32, 4096],
+    },
+    "batch_norm_v3/float32": {
+        "ref_op": "batch_norm_v3", "ref_dtype": "f32",
+        "kernel": GOLDEN_ROOT / "batch_norm_v3_f32.py", "gen_dtype": "float32",
+        "shape": [32, 64, 64],
     },
 }
 
@@ -154,6 +190,8 @@ def run_cell(cell: str, *, runs: int, regen: bool, verbose: bool) -> dict:
             spec["kernel"], shape, spec["gen_dtype"],
             eval_root=_gen.DEFAULT_EVAL_ROOT, ascend=_gen.DEFAULT_ASCEND,
             runs=runs, python="python3.11", verbose=verbose,
+            arg_specs=_gen.arg_specs_for(cell, shape, spec["gen_dtype"]),
+            op_name=cell.split("/")[0],
         )
     except Exception as exc:  # noqa: BLE001 - record honest blocker, keep ref
         return {

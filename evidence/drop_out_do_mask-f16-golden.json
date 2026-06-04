@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "drop_out_do_mask",
+  "dtype": "float16",
+  "kernel_path": "golden/kernels/drop_out_do_mask_f16.py",
+  "date": "2026-06-03T20:55:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599; shapes (16,2048) and (32,4096) verified (atol=rtol=1e-2 vs data*mask*(1/keep_prob)). Total tick 9952 at the 2-shape verifier."
+  },
+  "runtime_verified": true,
+  "notes": "Golden DropoutDoMask apply-phase verified on CANN 9.0.0 simulator on Ascend950PR_9599 (C310). Vector-only two-load masked-multiply (TILE_SIZE=2048, CORE_NUM=16). Comparability: dense float16 keep-mask vs canonical bit-packed uint8 mask; dominant per-element multiply+scale cost is identical; reference is the true aclnnDropoutDoMask."
+}

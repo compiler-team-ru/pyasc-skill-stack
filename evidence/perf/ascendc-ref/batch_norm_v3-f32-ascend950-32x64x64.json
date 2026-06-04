@@ -1,0 +1,28 @@
+{
+  "cell": "batch_norm_v3/float32",
+  "op": "batch_norm_v3",
+  "dtype": "float32",
+  "shape": [
+    32,
+    64,
+    64
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 6110,
+  "ref_ticks_runs": [
+    6110,
+    6110,
+    6111
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0002,
+  "wall_ms_last": 59925.8,
+  "reference_kind": "canonical_only",
+  "reference_repo": "ops-nn",
+  "reference_source": "ops-nn canonical operator (batch_norm_v3, aclnnop/aclnn_batch_norm.h), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=batch_norm_v3",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_batch_norm_v3_f32_32x64x64.run3.log"
+}

@@ -1,0 +1,23 @@
+{
+  "cell": "apply_adam_f32",
+  "kernel": "teams/pyasc-kernel-dev-team/kernels/apply_adam_f32/kernel.py",
+  "dtype": "float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "metric": "camodel_total_tick",
+  "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+  "gen_ticks": 17983,
+  "gen_ticks_runs": [
+    17981,
+    17983,
+    17984
+  ],
+  "gen_ticks_method": "median_of_3",
+  "gen_ticks_spread": 0.0002,
+  "wall_ms_last": 100744.0,
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_apply_adam_f32_32x4096.run3.log"
+}

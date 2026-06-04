@@ -49,6 +49,35 @@ CELL_TO_KERNEL = {
     "abs/float16": (KERNELS_ROOT / "abs_f16" / "kernel.py", "float16"),
     "add/float16": (KERNELS_ROOT / "add_f16" / "kernel.py", "float16"),
     "reduce_sum/float32": (KERNELS_ROOT / "reduce_sum_f32" / "kernel.py", "float32"),
+    "tanh/float16": (KERNELS_ROOT / "tanh_f16" / "kernel.py", "float16"),
+    "rms_norm/float16": (KERNELS_ROOT / "rms_norm_f16" / "kernel.py", "float16"),
+    "rms_norm/float32": (KERNELS_ROOT / "rms_norm_f32" / "kernel.py", "float32"),
+    "drop_out_do_mask/float16": (KERNELS_ROOT / "drop_out_do_mask_f16" / "kernel.py", "float16"),
+    "batch_norm_v3/float32": (KERNELS_ROOT / "batch_norm_v3_f32" / "kernel.py", "float32"),
+    "apply_adam/float32": (KERNELS_ROOT / "apply_adam_f32" / "kernel.py", "float32"),
+}
+
+
+# Per-cell input-arg builders for the gen probe. None (or absent) -> auto
+# elementwise (numpy inputs at SHAPE for every required positional param).
+# Multi-shape / multi-framework ops describe their launch args explicitly so
+# the *_launch wrapper receives correctly-shaped, correctly-framed inputs.
+def _rms_norm_inputs(shape: list[int], dtype: str) -> list:
+    rows, cols = shape
+    return [
+        {"kind": "tensor", "shape": [rows, cols], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [cols], "dtype": dtype, "fw": "torch"},
+    ]
+
+
+def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
+    op = cell.split("/")[0]
+    builder = _CELL_INPUT_BUILDERS.get(op)
+    return builder(shape, dtype) if builder else None
+
+
+_CELL_INPUT_BUILDERS = {
+    "rms_norm": _rms_norm_inputs,
 }
 
 
@@ -66,7 +95,7 @@ class GenError(RuntimeError):
 # ticks-calculation.md §3: for single-launch processes Total tick == per-launch
 # ticks; §2: JIT compile does not advance the tick counter).
 PROBE_TEMPLATE = r'''
-import importlib.util, inspect, sys
+import importlib.util, inspect, json, sys
 import numpy as np
 import asc.runtime.config as config
 from asc.lib.runtime import synchronize
@@ -76,6 +105,17 @@ SHAPE = {shape!r}
 DTYPE = "{dtype}"
 BACKEND = "Model"
 PLATFORM = "{platform}"
+OP_NAME = "{op_name}"
+# Optional per-op argument specs (JSON). None -> auto elementwise (one numpy
+# input per REQUIRED positional param, all at SHAPE). Multi-shape / multi-dtype
+# ops (rms_norm gamma is 1-D, dropout mask is uint8, etc.) provide explicit
+# specs so the launch gets correctly-shaped, correctly-framed inputs.
+ARG_SPECS = json.loads({arg_specs_json!r})
+
+try:
+    import torch
+except Exception:
+    torch = None
 
 spec = importlib.util.spec_from_file_location("gen_kernel_mod", KERNEL_PATH)
 mod = importlib.util.module_from_spec(spec)
@@ -84,33 +124,64 @@ spec.loader.exec_module(mod)
 
 config.set_platform(config.Backend(BACKEND), config.Platform(PLATFORM))
 
-launch = None
-for name in dir(mod):
-    obj = getattr(mod, name)
-    if callable(obj) and name.endswith("_launch"):
-        launch = obj
-        break
-if launch is None:
+# Pick the public host dispatcher. A kernel module may expose several
+# ``*_launch`` callables (e.g. rms_norm has private ``_full_row_launch`` /
+# ``_split_d_launch`` helpers plus the public ``rms_norm_launch`` dispatcher);
+# ``dir()`` sorts the underscore-prefixed helpers first, so prefer the public,
+# op-named wrapper instead of blindly taking the first match.
+_cands = [n for n in dir(mod) if callable(getattr(mod, n)) and n.endswith("_launch")]
+_public = [n for n in _cands if not n.startswith("_")]
+_pool = _public or _cands
+_exact = [n for n in _pool if n == OP_NAME + "_launch"]
+_chosen = (_exact or _pool)[0] if _pool else None
+if _chosen is None:
     print("PROBE_ERROR no *_launch wrapper found in kernel module")
     sys.exit(3)
+launch = getattr(mod, _chosen)
 
-# Only the REQUIRED positional parameters are input tensors; parameters
-# with defaults (e.g. a generated ``out_pad=OUT_PAD`` scalar) must keep
-# their default, otherwise we'd pass an ndarray where a scalar is expected
-# and the kernel silently runs a no-op (see Phase 11b reduce_sum probe).
-_sig = inspect.signature(launch)
-_input_params = [
-    p for p in _sig.parameters.values()
-    if p.default is inspect.Parameter.empty
-    and p.kind in (inspect.Parameter.POSITIONAL_ONLY,
-                   inspect.Parameter.POSITIONAL_OR_KEYWORD)
-]
-nparams = len(_input_params)
 rng = np.random.default_rng(seed=2026)
-npdt = np.float16 if DTYPE == "float16" else np.float32
-def make_input():
-    return (rng.random(SHAPE, dtype=np.float32) * 10 - 5).astype(npdt)
-args = [make_input() for _ in range(nparams)]
+
+def _npdt(name):
+    return {{"float16": np.float16, "float32": np.float32,
+            "uint8": np.uint8, "int32": np.int32}}[name]
+
+def _make_tensor(shape, dtype, fw):
+    if dtype == "uint8":
+        arr = rng.integers(0, 256, size=shape, dtype=np.uint8)
+    else:
+        arr = (rng.random(shape, dtype=np.float32) * 10 - 5).astype(_npdt(dtype))
+    if fw == "torch":
+        if torch is None:
+            print("PROBE_ERROR torch required but unavailable")
+            sys.exit(4)
+        return torch.from_numpy(np.ascontiguousarray(arr))
+    return arr
+
+if ARG_SPECS is None:
+    # Auto: only REQUIRED positional params get a numpy input at SHAPE; params
+    # with defaults (e.g. a generated ``out_pad=OUT_PAD`` scalar) keep their
+    # default, else we'd pass an ndarray where a scalar is expected and the
+    # kernel silently runs a no-op (see Phase 11b reduce_sum probe).
+    _sig = inspect.signature(launch)
+    _input_params = [
+        p for p in _sig.parameters.values()
+        if p.default is inspect.Parameter.empty
+        and p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                       inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+    nparams = len(_input_params)
+    args = [_make_tensor(SHAPE, DTYPE, "numpy") for _ in range(nparams)]
+else:
+    args = []
+    for s in ARG_SPECS:
+        if s["kind"] == "tensor":
+            args.append(_make_tensor(tuple(s["shape"]), s["dtype"], s.get("fw", "numpy")))
+        elif s["kind"] == "scalar":
+            args.append(s["value"])
+        else:
+            print(f"PROBE_ERROR unknown arg spec kind {{s.get('kind')}}")
+            sys.exit(5)
+    nparams = len(args)
 
 launch(*args)
 synchronize()
@@ -118,12 +189,15 @@ print(f"PROBE_DONE launch={{launch.__name__}} nparams={{nparams}}")
 '''
 
 
-def _probe_source(kernel_path: Path, shape: list[int], dtype: str, platform: str) -> str:
+def _probe_source(kernel_path: Path, shape: list[int], dtype: str, platform: str,
+                  arg_specs: list | None, op_name: str) -> str:
     return PROBE_TEMPLATE.format(
         kernel_path=str(kernel_path),
         shape=tuple(shape),
         dtype=dtype,
         platform=platform,
+        arg_specs_json=json.dumps(arg_specs),
+        op_name=op_name,
     )
 
 
@@ -132,7 +206,8 @@ _WALL_RE = re.compile(r"Model RUN TIME:\s*([\d.]+)")
 
 
 def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
-            ascend: Path, runs: int, python: str, verbose: bool) -> dict:
+            ascend: Path, runs: int, python: str, verbose: bool,
+            arg_specs: list | None = None, op_name: str = "") -> dict:
     if not kernel_path.exists():
         raise GenError(f"cached kernel not found: {kernel_path}")
     sim_lib = ascend / "tools" / "simulator" / ARCH_PIN / "lib"
@@ -144,7 +219,7 @@ def measure(kernel_path: Path, shape: list[int], dtype: str, *, eval_root: Path,
 
     probe = BUILD_CACHE / "drivers" / f"probe_{kernel_path.parent.name}_{'x'.join(map(str, shape))}.py"
     probe.parent.mkdir(parents=True, exist_ok=True)
-    probe.write_text(_probe_source(kernel_path, shape, dtype, ARCH_PIN))
+    probe.write_text(_probe_source(kernel_path, shape, dtype, ARCH_PIN, arg_specs, op_name))
 
     setenv = ascend / "set_env.sh"
     env_prefix = (
@@ -220,18 +295,25 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args(argv)
 
+    arg_specs = None
+    op_name = ""
     if args.kernel:
         kernel_path = Path(args.kernel)
         if not args.dtype:
             raise SystemExit("--dtype required when using --kernel")
         dtype = args.dtype
         cell_tag = kernel_path.parent.name
+        if args.cell:
+            op_name = args.cell.split("/")[0]
+            arg_specs = arg_specs_for(args.cell, _parse_shape(args.shape), dtype)
     elif args.cell:
         if args.cell not in CELL_TO_KERNEL:
             print(f"unknown cell '{args.cell}'", file=sys.stderr)
             return 2
         kernel_path, dtype = CELL_TO_KERNEL[args.cell]
         cell_tag = args.cell.replace("/", "-")
+        op_name = args.cell.split("/")[0]
+        arg_specs = arg_specs_for(args.cell, _parse_shape(args.shape), dtype)
     else:
         print("provide --cell OR (--kernel and --dtype)", file=sys.stderr)
         return 2
@@ -241,7 +323,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = measure(kernel_path, shape, dtype, eval_root=Path(args.eval_root),
                          ascend=Path(args.ascend_home), runs=args.runs,
-                         python=args.python, verbose=verbose)
+                         python=args.python, verbose=verbose, arg_specs=arg_specs,
+                         op_name=op_name)
     except GenError as exc:
         print(f"[BLOCKED] {exc}", file=sys.stderr)
         return 1

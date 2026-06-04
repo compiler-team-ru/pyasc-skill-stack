@@ -1,0 +1,27 @@
+{
+  "cell": "tanh/float16",
+  "op": "tanh",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 3830,
+  "ref_ticks_runs": [
+    3832,
+    3830,
+    3829
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0008,
+  "wall_ms_last": 40454.0,
+  "reference_kind": "canonical_only",
+  "reference_repo": "ops-math",
+  "reference_source": "ops-math canonical operator (tanh, aclnnop/aclnn_tanh.h), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=tanh",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_tanh_f16_32x4096.run3.log"
+}

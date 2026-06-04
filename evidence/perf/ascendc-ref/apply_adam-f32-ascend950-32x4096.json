@@ -1,0 +1,27 @@
+{
+  "cell": "apply_adam/float32",
+  "op": "apply_adam",
+  "dtype": "float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 8107,
+  "ref_ticks_runs": [
+    8104,
+    8115,
+    8107
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0014,
+  "wall_ms_last": 66373.9,
+  "reference_kind": "canonical_only",
+  "reference_repo": "ops-nn",
+  "reference_source": "ops-nn canonical operator (apply_adam, aclnnop/aclnn_apply_adam.h), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=apply_adam",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_apply_adam_f32_32x4096.run3.log"
+}

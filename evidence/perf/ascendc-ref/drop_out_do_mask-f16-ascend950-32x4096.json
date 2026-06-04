@@ -1,0 +1,27 @@
+{
+  "cell": "drop_out_do_mask/float16",
+  "op": "drop_out_do_mask",
+  "dtype": "float16",
+  "shape": [
+    32,
+    4096
+  ],
+  "n_elements": 131072,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 4706,
+  "ref_ticks_runs": [
+    4706,
+    4706,
+    4704
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0004,
+  "wall_ms_last": 31161.7,
+  "reference_kind": "canonical_only",
+  "reference_repo": "ops-math",
+  "reference_source": "ops-math canonical operator (drop_out_do_mask, aclnnop/aclnn_dropout_do_mask.h), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=drop_out_do_mask",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_drop_out_do_mask_f16_32x4096.run3.log"
+}

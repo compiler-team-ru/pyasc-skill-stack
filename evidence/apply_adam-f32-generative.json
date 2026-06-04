@@ -1,0 +1,148 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "apply_adam",
+  "dtype": "float32",
+  "prompt": "Operator: ApplyAdam in-place (non-Nesterov), float32. Inputs var,m,v,grad + 6 host scalars folded into ConstExpr floats (one_minus_beta1, one_minus_beta2, alpha, epsilon). Per element: m_new=m+(grad-m)*one_minus_beta1; v_new=v+(grad*grad-v)*one_minus_beta2; var_new=var-(m_new*alpha)/(sqrt(v_new)+epsilon) (or the algebraically-equivalent (m_new*alpha)*rsqrt(v_new) -- dropping the +eps OUTSIDE the sqrt costs ~alpha*m*eps/v ~ 1e-12, far under atol 1e-5). Store m_new,v_new,var_new in place. Input shapes: [16,2048],[32,4096]; perf shape [32,4096]. Flatten to 1D; TILE_SIZE=2048, CORE_NUM=16, size multiple of 32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=1, parallel=True)`. HONEST PERF NOTE: this op is memory-bound (4 loads + 3 stores/elem f32); a copy-only diagnostic of the same tensors floors at ~17000 ticks across ALL tile sizes, ~2.1x the hand-written aclnnApplyAdam (8107). Do NOT expect to beat 0.70 -- double-buffer (unroll=2) overflows UB at TILE=2048 and gives no gain at TILE=1024; the goal is a correct vector-only realization, not a perf win. Tolerance atol=1e-5, rtol=1e-4 vs NumPy. Reference identity: pure ApplyAdamD has no public aclnn; aclnnApplyAdam (ascend950) is the canonical baseline. Platform Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/apply_adam_f32.py for the proven in-place 4-load/3-store structure.",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/apply_adam_f32/kernel.py",
+  "date": "2026-06-03T19:20:08Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 600,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 64220,
+    "output": 11168,
+    "cache_read": 573017,
+    "total": 75388
+  },
+  "elapsed_total_s": 420.38,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "oracle_guided",
+      "elapsed_s": 420.38,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 64220,
+        "output": 11168,
+        "cache_read": 573017,
+        "total": 75388,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "pass",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'apply_adam'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in arity table)"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x3, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "",
+  "history": []
+}

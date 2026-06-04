@@ -29,8 +29,7 @@ operations:
   - ceil
   - floor
   - rsqrt
-  - tanh
-  coverage_note: relu covered by representative_of from abs; see docs/glossary.md §7
+  coverage_note: relu covered by representative_of from abs; see docs/glossary.md §7. tanh is now a first-class cell (perf-gated), no longer a representative.
   cells:
   - dtype: float16
     platform: Ascend950PR_9599
@@ -120,6 +119,128 @@ operations:
     golden_evidence: evidence/abs-f32-golden.json
     generative_status: confirmed
     generative_evidence: evidence/abs-f32-generative.json
+- name: tanh
+  tier: elementwise
+  asc2_api: asc2.tanh(x)
+  note: First-class perf-gated unary elementwise cell (out = tanh(x)). Reference is the canonical ops-math math/tanh aclnnTanh built via build.sh --pkg --soc=ascend950 --ops=tanh; measured on the same Ascend950PR_9599 camodel as the generated kernel.
+  cells:
+  - dtype: float16
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop a tanh operator (out = tanh(x)) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].
+    prompt_variants:
+      minimal: 'Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `out = asc2.tanh(x)`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load; v2 raises `RuntimeError: rank of ''tensor_shape'' must match rank of ''shape''`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only — no tail logic required. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against np.tanh(x). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `out = asc2.tanh(x)`, `asc2.store(out, out_gm, offsets=[tile_offset])` — all ranks 1. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness default) to keep the AIV vector pipeline busy and amortise per-tile MTE setup, mirroring the ops-math arch35 elementwise tile policy; a lone asc2.tanh tile stays well within the 150s sim budget (the budget concern documented on the gelu cell is specific to composing tanh inside the full GELU polynomial, not a standalone tanh). CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against np.tanh(x). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: Reference golden/kernels/tanh_f16.py — it encodes the proven wide-tile structure (TILE_SIZE=2048, CORE_NUM=16, unroll_factor=2 double-buffer, host-side alignment padding to a 32768 multiple) that lands ratio ~0.73 vs hand-written aclnnTanh at [32, 4096].'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
+    shapes:
+    - - 1
+      - 128
+    - - 4
+      - 2048
+    - - 32
+      - 4096
+    golden_status: confirmed
+    golden: golden/kernels/tanh_f16.py
+    golden_evidence: evidence/tanh-f16-golden.json
+    generative_status: confirmed
+    generative_evidence: evidence/tanh-f16-generative.json
+    semantic_check:
+    - asc2.tanh
+    perf_ratio_demo:
+      ref_source: ops-math/math/tanh (aclnnTanh, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 3830
+      gen_ticks: 5272
+      last_ratio: 0.73
+      status: pass
+      kernel_source: vetted golden (golden/kernels/tanh_f16.py, wide-tile TILE_SIZE=2048)
+      evidence: evidence/perf/ascendc-ref/tanh-f16-ascend950-32x4096.json
+- name: drop_out_do_mask
+  tier: composed
+  asc2_api: out = (data * mask) * scale (load x2 -> mul -> scale -> store)
+  note: 'DropoutDoMask apply-phase, out = data * mask * (1/keep_prob); vector-only (AIV) multi-input elementwise. Comparability disclosure (no shortcut): the canonical aclnnDropoutDoMask reference consumes a bit-packed uint8 mask (1 bit/element) and unpacks it on-chip, while this generated kernel consumes a dense float16 keep-mask. The dominant cost on BOTH sides is the per-element multiply+scale over the same N elements; the reference''s bit-unpack is a small fixed addend. Shape/dtype/element-count are pinned to the same comparability contract, and the reference is the true aclnnDropoutDoMask (ops-math random/drop_out_do_mask).'
+  cells:
+  - dtype: float16
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop the DropoutDoMask apply phase (out = data * mask * (1/keep_prob)) on Ascend950PR_9599 (C310) for float16 with a dense keep-mask, shapes [16,2048] and [32,4096].
+    prompt_variants:
+      minimal: 'Operator: DropoutDoMask apply phase (out = data * mask * (1/keep_prob)); data and a dense {0.,1.} keep-mask are inputs, keep_prob is a scalar. Input shapes: [16, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.'
+      guided: 'Operator: DropoutDoMask apply phase: out = data * mask * scale where scale = 1/keep_prob. Inputs: data (float16) and a dense float16 keep-mask of {0.,1.} (same shape as data); keep_prob is a host scalar folded into scale (asc.ConstExpr[float]). Input shapes: [16, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten to 1D in the host launcher; the kernel takes `size: int`, two GlobalAddress inputs (data, mask) + one output, and tiles 1D with `asc2.tensor(ptr, [size])`, two `asc2.load(..., [tile_size], offsets=[off])`, `out = (data_t * mask_t) * scale`, `asc2.store(out, out_gm, offsets=[off])` — all ranks 1. TILE_SIZE=2048, CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against (data*mask*(1/keep_prob)). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).'
+      oracle_guided:
+        prompt: 'Operator: DropoutDoMask apply phase: out = data * mask * scale where scale = 1/keep_prob. Inputs: data (float16) and a dense float16 keep-mask of {0.,1.} (same shape as data); keep_prob is a host scalar folded into scale (asc.ConstExpr[float]). Input shapes: [16, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten to 1D in the host launcher; the kernel takes `size: int`, two GlobalAddress inputs (data, mask) + one output, tiles 1D with `asc2.tensor(ptr, [size])`, two `asc2.load(..., [tile_size], offsets=[off])`, `out = (data_t * mask_t) * scale`, `asc2.store(...)`. PERF: WIDE tile TILE_SIZE=2048, CORE_NUM=16, double-buffer via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only). This two-load masked multiply lands ratio ~0.74 vs hand-written aclnnDropoutDoMask at [32, 4096]. Comparability: the canonical reference bit-unpacks a uint8 mask; the dense float16 keep-mask here has identical per-element multiply+scale cost (the dominant term). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/drop_out_do_mask_f16.py for the proven two-input wide-tile structure and the dense-mask comparability note.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
+    shapes:
+    - - 16
+      - 2048
+    - - 32
+      - 4096
+    golden_status: confirmed
+    golden: golden/kernels/drop_out_do_mask_f16.py
+    golden_evidence: evidence/drop_out_do_mask-f16-golden.json
+    generative_status: confirmed
+    generative_evidence: evidence/drop_out_do_mask-f16-generative.json
+    semantic_check:
+    - mask
+    - scale
+    perf_ratio_demo:
+      ref_source: ops-math/random/drop_out_do_mask (aclnnDropoutDoMask, canonical_only)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 4706
+      gen_ticks: 6390
+      last_ratio: 0.74
+      status: pass
+      kernel_source: vetted golden (golden/kernels/drop_out_do_mask_f16.py, dense-mask two-load wide-tile)
+      comparability_note: dense float16 keep-mask vs canonical bit-packed uint8 mask; dominant per-element multiply+scale cost is identical; reference is the true aclnnDropoutDoMask.
+      evidence: evidence/perf/ascendc-ref/drop_out_do_mask-f16-ascend950-32x4096.json
 - name: add
   tier: elementwise
   asc2_api: x + y
@@ -584,6 +705,17 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - asc2.reduce_sum
     - split_d
     - full_row
+    perf_ratio_demo:
+      ref_source: ops-nn/norm/rms_norm (aclnnRmsNorm, canonical_only)
+      shape: [8, 256]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 4143
+      gen_ticks: 5103
+      last_ratio: 0.81
+      status: pass
+      kernel_source: vetted golden (golden/kernels/rms_norm_f16.py, full_row+split_d dispatcher)
+      evidence: evidence/perf/ascendc-ref/rms_norm-f16-ascend950-8x256.json
   - dtype: float32
     platform: Ascend950PR_9599
     shape_regime: dynamic
@@ -632,3 +764,136 @@ Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against t
     - asc2.reduce_sum
     - split_d
     - full_row
+    perf_ratio_demo:
+      ref_source: ops-nn/norm/rms_norm (aclnnRmsNorm, canonical_only)
+      shape: [8, 256]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 4168
+      gen_ticks: 4885
+      last_ratio: 0.85
+      status: pass
+      kernel_source: vetted golden (golden/kernels/rms_norm_f32.py, full_row+split_d dispatcher)
+      evidence: evidence/perf/ascendc-ref/rms_norm-f32-ascend950-8x256.json
+- name: batch_norm_v3
+  tier: advanced
+  asc2_api: per-channel reduce_sum (over N,L) -> mean/var -> rsqrt -> vector affine
+  note: 'BatchNormV3 training-mode forward on [N,C,L]=[32,64,64], reducing over N and L per channel. reduce_axis is recorded as 0 (the schema permits a single int) but the reduction is genuinely MULTI-AXIS (N and L); see the kernel docstring. Realized ENTIRELY with AIV vector + reduce_sum primitives (NO cube), so it stays in scope for the vector-only generation claim despite being multi-I/O. The strided per-channel reduction is done ON-CHIP (no host transpose): x is viewed as [N*C, L] and each core reduces a [ch, L] strided tile over the L axis for its 8 channels. torch.Tensor inputs required (C310 numpy gotcha). HONEST PERF: this strided reduction is heavily DMA/instruction-bound on the camodel (gen 62588 vs hand-written aclnnBatchNorm 6110, ratio ~0.10) and does NOT clear the 0.70 gate -- a correctness-confirmed generative cell with a documented perf miss, not a perf pass.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: 0
+    output_shape: same_as_input
+    accumulator_dtype: float32
+    identity: '0'
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: row_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop the BatchNormV3 training-mode forward on Ascend950PR_9599 (C310) for float32 on a [32,64,64] [N,C,L] tensor (per-channel reduction over N and L, then affine normalize), emitting out + saveMean + saveInvStd.
+    prompt_variants:
+      minimal: 'Operator: BatchNormV3 training forward. Input x [N,C,L]=[32,64,64], weight/bias [C], eps. Per-channel (over N,L): mean, var, invstd=1/sqrt(var+eps); out=(x-mean)*invstd*weight+bias. Outputs out [N,C,L], saveMean [C], saveInvStd [C]. Dtype: float32.'
+      guided: 'Operator: BatchNormV3 training-mode forward. x is [N,C,L]=[32,64,64] (float32); weight/bias are [C] (float32); eps=1e-5. For each channel c reduce over N and L: mean[c]=sum/(N*L), var[c]=sumsq/(N*L)-mean^2, invstd[c]=1/sqrt(var+eps); out[n,c,l]=(x-mean[c])*invstd[c]*weight[c]+bias[c]=x*scale[c]+shift[c]. Outputs: out [N,C,L], saveMean [C], saveInvStd [C]. Inputs MUST be torch.Tensor (numpy is silently zeroed on the C310 simulator path). Tiling: view x as [N*C, L]; partition C across CORE_NUM=8 cores, ch=8 channels/core; each core loads a [ch, L] strided tile per sample n (rows n*C+c0..), accumulates per-channel sum/sumsq via `asc2.reduce_sum(blk, 1)` (reduce the L axis -> [ch]); after the N loop compute mean/var/invstd ([ch] tiles, use asc2.rsqrt); load weight/bias [ch] slices; scale=w*invstd, shift=b-scale*mean; broadcast scale/shift via `asc2.broadcast_to(asc2.expand_dims(scale, 1), ch, L)`; second pass reloads each [ch,L] tile and stores x*scale+shift. Shape dims used in tile shapes must be literal ints (module constants), not ConstExpr (the shape validators reject ConstExpr). Accumulator: float32. Tolerance: mean/invstd atol=rtol=1e-3, out atol=rtol=1e-2 vs a torch fp64 reference. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.'
+      oracle_guided:
+        prompt: 'Operator: BatchNormV3 training-mode forward. x [N,C,L]=[32,64,64] float32; weight/bias [C] float32; eps=1e-5. Per channel reduce over N and L: mean=sum/(N*L), var=sumsq/(N*L)-mean^2, invstd=1/sqrt(var+eps); out=x*scale+shift with scale=weight*invstd, shift=bias-scale*mean. Outputs out [N,C,L], saveMean [C], saveInvStd [C]. Inputs MUST be torch.Tensor (C310 zeroes numpy for this reduction pattern). On-chip strided reduction (NO host transpose): view x as [N*C, L]; CORE_NUM=8, ch=8 channels/core; per sample n load a [ch, L] strided tile at row n*C+c0 and accumulate `asc2.reduce_sum(blk, 1)` -> [ch] per-channel partials (2D reduce over the L axis is exact; a 3D [1,ch,L] reduce over axis 2 silently fills only channel 0 -- avoid it). Use asc2.rsqrt on the [ch] var tile; broadcast scale/shift with `asc2.broadcast_to(asc2.expand_dims(scale, 1), ch, L)` (broadcast_to takes VARARG dims, not a list). Tile-shape dims must be literal ints (module constants N_SIZE/C_SIZE/L_SIZE/CH), NOT ConstExpr. HONEST PERF NOTE: this strided per-channel reduction is DMA/instruction-bound (~62588 ticks vs 6110 aclnnBatchNorm, ratio ~0.10); the goal here is a correct vector-only realization, not beating the reference. Tolerance: mean/invstd 1e-3, out 1e-2 vs torch fp64. Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/batch_norm_v3_f32.py for the exact channel-vectorized strided-reduce + broadcast affine structure.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
+    shapes:
+    - - 32
+      - 64
+      - 64
+    golden_status: confirmed
+    golden: golden/kernels/batch_norm_v3_f32.py
+    golden_evidence: evidence/batch_norm_v3-f32-golden.json
+    generative_status: confirmed
+    generative_evidence: evidence/batch_norm_v3-f32-generative.json
+    semantic_check:
+    - asc2.reduce_sum
+    - asc2.rsqrt
+    perf_ratio_demo:
+      ref_source: ops-nn/norm/batch_norm_v3 (aclnnBatchNorm, training=true, canonical_only)
+      shape: [32, 64, 64]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 6110
+      gen_ticks: 62588
+      last_ratio: 0.10
+      status: fail
+      kernel_source: vetted golden (golden/kernels/batch_norm_v3_f32.py, on-chip strided per-channel reduce)
+      perf_miss_note: 'Honest, documented perf miss. The on-chip strided per-channel reduction over [N,C,L] is heavily DMA/instruction-bound on the camodel; reaching 0.70 would need a ~9x speedup that the pyasc strided-load path cannot deliver against the hand-tuned aclnnBatchNorm. Kept as a correctness-confirmed (numerically exact) generative cell to demonstrate vector-only BatchNormV3 generation, with the perf gap disclosed rather than hidden.'
+      evidence: evidence/perf/ascendc-ref/batch_norm_v3-f32-ascend950-32x64x64.json
+- name: apply_adam
+  tier: composed
+  asc2_api: in-place Adam update (load x4 -> fma/rsqrt vector ops -> store x3)
+  note: 'In-place Adam optimizer update (matches aclnnApplyAdam, non-Nesterov): m,v,var updated from grad + 6 scalar hyper-params. Vector-only (AIV), no reduction. Reference identity (stated, not silently substituted): pure ApplyAdamD has no public aclnn, so the canonical perf baseline is apply_adam (aclnnApplyAdam, ascend950 config) -- the only callable canonical reference. HONEST PERF: memory-bound (4 loads + 3 stores/element f32); a zero-arithmetic memcpy of the same tensors floors at ~16966-17647 ticks across ALL tile sizes (proven by a copy-only diagnostic), ~2.1x the hand-written aclnnApplyAdam (8107). Ratio ~0.46 cannot be lifted to 0.70 by kernel tuning (double-buffer + rsqrt + wide tiles all tried) -- it is a camodel DMA-modeling wall, not a correctness or compute gap. Correctness-confirmed generative cell with a documented perf miss.'
+  cells:
+  - dtype: float32
+    platform: Ascend950PR_9599
+    shape_regime: fixed
+    reduce_axis: null
+    output_shape: same_as_input
+    accumulator_dtype: null
+    identity: null
+    tail_behavior: aligned_only
+    padding: null
+    partitioning: tile_per_core
+    unsupported_regimes: []
+    examples_policy:
+      task_prompt: true
+      glossary: true
+      golden_kernels: false
+      golden_docs: false
+      external_web: false
+      human_hints: false
+    prompt: Help me develop the in-place Adam optimizer update (aclnnApplyAdam, non-Nesterov) on Ascend950PR_9599 (C310) for float32, updating var/m/v from grad with shapes [16,2048] and [32,4096].
+    prompt_variants:
+      minimal: 'Operator: ApplyAdam (in-place, non-Nesterov). Update m,v,var from grad with scalars beta1,beta2,beta1_power,beta2_power,lr,epsilon: m+=(1-beta1)(grad-m); v+=(1-beta2)(grad^2-v); var-=alpha*m/(sqrt(v)+eps), alpha=lr*sqrt(1-beta2_power)/(1-beta1_power). Input shapes: [16,2048],[32,4096]. Dtype: float32.'
+      guided: 'Operator: ApplyAdam in-place (non-Nesterov), float32. Inputs var,m,v,grad (same shape) + 6 host scalars folded into ConstExpr floats one_minus_beta1, one_minus_beta2, alpha=lr*sqrt(1-beta2_power)/(1-beta1_power), epsilon. Per element: m_new=m+(grad-m)*one_minus_beta1; v_new=v+(grad*grad-v)*one_minus_beta2; var_new=var-(m_new*alpha)/(sqrt(v_new)+epsilon). Store m_new,v_new,var_new in place. Input shapes: [16,2048],[32,4096]. Output: same_as_input. Layout contiguous; flatten to 1D in the host launcher; kernel takes `size:int` + ConstExpr scalars and tiles 1D. TILE_SIZE=2048, CORE_NUM=16; size multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core. Tolerance atol=1e-5, rtol=1e-4 vs NumPy. Platform Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599.'
+      oracle_guided:
+        prompt: 'Operator: ApplyAdam in-place (non-Nesterov), float32. Inputs var,m,v,grad + 6 host scalars folded into ConstExpr floats (one_minus_beta1, one_minus_beta2, alpha, epsilon). Per element: m_new=m+(grad-m)*one_minus_beta1; v_new=v+(grad*grad-v)*one_minus_beta2; var_new=var-(m_new*alpha)/(sqrt(v_new)+epsilon) (or the algebraically-equivalent (m_new*alpha)*rsqrt(v_new) -- dropping the +eps OUTSIDE the sqrt costs ~alpha*m*eps/v ~ 1e-12, far under atol 1e-5). Store m_new,v_new,var_new in place. Input shapes: [16,2048],[32,4096]; perf shape [32,4096]. Flatten to 1D; TILE_SIZE=2048, CORE_NUM=16, size multiple of 32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=1, parallel=True)`. HONEST PERF NOTE: this op is memory-bound (4 loads + 3 stores/elem f32); a copy-only diagnostic of the same tensors floors at ~17000 ticks across ALL tile sizes, ~2.1x the hand-written aclnnApplyAdam (8107). Do NOT expect to beat 0.70 -- double-buffer (unroll=2) overflows UB at TILE=2048 and gives no gain at TILE=1024; the goal is a correct vector-only realization, not a perf win. Tolerance atol=1e-5, rtol=1e-4 vs NumPy. Reference identity: pure ApplyAdamD has no public aclnn; aclnnApplyAdam (ascend950) is the canonical baseline. Platform Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Workaround: Reference golden/kernels/apply_adam_f32.py for the proven in-place 4-load/3-store structure.'
+        examples_policy:
+          task_prompt: true
+          glossary: true
+          golden_kernels: false
+          golden_docs: false
+          external_web: false
+          human_hints: true
+    shapes:
+    - - 16
+      - 2048
+    - - 32
+      - 4096
+    golden_status: confirmed
+    golden: golden/kernels/apply_adam_f32.py
+    golden_evidence: evidence/apply_adam-f32-golden.json
+    generative_status: confirmed
+    generative_evidence: evidence/apply_adam-f32-generative.json
+    semantic_check:
+    - asc2.sqrt
+    - asc2.div
+    perf_ratio_demo:
+      ref_source: ops-nn/optim/apply_adam (aclnnApplyAdam, canonical_only; ApplyAdamD has no public aclnn)
+      shape: [32, 4096]
+      arch: Ascend950PR_9599
+      gate: 0.70
+      ref_ticks: 8107
+      gen_ticks: 17670
+      last_ratio: 0.46
+      status: fail
+      kernel_source: vetted golden (golden/kernels/apply_adam_f32.py, in-place 4-load/3-store)
+      perf_miss_note: 'Honest, documented perf miss. Memory-bound: a zero-arithmetic copy-only diagnostic of the identical 4-load/3-store f32 tensors floors at 16966-17647 ticks at every tile size (2048/4096/8192), ~2.1x the reference 8107. Reaching 0.70 needs gen <= 11581, which is below even the pure-memcpy floor -> infeasible by kernel tuning (camodel DMA-modeling wall). Double-buffering (unroll=2) overflows UB at TILE=2048 and yields no gain at TILE=1024; rsqrt/fused ops only shave the small compute term. Kept as a correctness-confirmed generative cell with the gap disclosed.'
+      dma_floor_ticks: 16966
+      evidence: evidence/perf/ascendc-ref/apply_adam-f32-ascend950-32x4096.json

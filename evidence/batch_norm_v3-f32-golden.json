@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "batch_norm_v3",
+  "dtype": "float32",
+  "kernel_path": "golden/kernels/batch_norm_v3_f32.py",
+  "date": "2026-06-03T21:35:00Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599; shape [32,64,64] verified numerically exact vs torch fp64 BatchNorm (max|dmean|=3.7e-9, max|dinvstd|=2.4e-7, max|dout|=4.8e-7; gates atol/rtol mean=invstd=1e-3, out=1e-2). Total tick 62588 for the single [32,64,64] launch."
+  },
+  "runtime_verified": true,
+  "notes": "Golden BatchNormV3 training-mode forward verified on CANN 9.0.0 simulator on Ascend950PR_9599 (C310). Vector-only (AIV reduce_sum + vector affine, no cube). On-chip strided per-channel reduction over the [N,C,L] layout (channels vectorized 8-wide per core via a [ch,L] strided tile, reduce over L). torch.Tensor inputs required (C310 numpy gotcha). PERF: heavily DMA/instruction-bound (62588 ticks vs 6110 hand-written aclnnBatchNorm); this is a correctness-confirmed generative cell with a DOCUMENTED, honest perf miss (ratio ~0.10), not a perf pass."
+}

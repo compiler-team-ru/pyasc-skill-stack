@@ -1,0 +1,27 @@
+{
+  "cell": "rms_norm/float32",
+  "op": "rms_norm",
+  "dtype": "float32",
+  "shape": [
+    8,
+    256
+  ],
+  "n_elements": 2048,
+  "arch": "Ascend950PR_9599",
+  "simulator_chip": "dav_3510",
+  "metric": "camodel_total_tick",
+  "ref_ticks": 4168,
+  "ref_ticks_runs": [
+    4168,
+    4167,
+    4170
+  ],
+  "ref_ticks_method": "median_of_3",
+  "ref_ticks_spread": 0.0007,
+  "wall_ms_last": 12318.9,
+  "reference_kind": "canonical_only",
+  "reference_repo": "ops-nn",
+  "reference_source": "ops-nn canonical operator (rms_norm, aclnnop/aclnn_rms_norm.h), build.sh --pkg --soc=ascend950",
+  "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=rms_norm",
+  "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_rms_norm_f32_8x256.run3.log"
+}

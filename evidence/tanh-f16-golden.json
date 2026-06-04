@@ -1,0 +1,17 @@
+{
+  "schema_version": "3",
+  "kind": "golden",
+  "operation": "tanh",
+  "dtype": "float16",
+  "kernel_path": "golden/kernels/tanh_f16.py",
+  "date": "2026-06-03T20:39:06Z",
+  "verification": {
+    "mode": "simulator",
+    "backend": "Model",
+    "platform": "Ascend950PR_9599",
+    "status": "pass",
+    "detail": "Kernel executed on Model/Ascend950PR_9599; shapes [1,128],[4,2048],[32,4096] all verified (atol=rtol=1e-2 vs np.tanh). Total tick 12115 at the 3-shape verifier."
+  },
+  "runtime_verified": true,
+  "notes": "Golden tanh kernel verified on CANN 9.0.0 simulator on Ascend950PR_9599 (C310). Wide-tile (TILE_SIZE=2048, CORE_NUM=16) elementwise policy mirroring abs_f16; a lone asc2.tanh stays within the 150s sim budget."
+}

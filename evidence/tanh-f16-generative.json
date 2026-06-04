@@ -1,0 +1,148 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "tanh",
+  "dtype": "float16",
+  "prompt": "Operator: tanh (out = tanh(x)). Input shapes: [1, 128], [4, 2048], [32, 4096]; perf shape [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `out = asc2.tanh(x)`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. PERF: use a WIDE tile TILE_SIZE=2048 (NOT the 128 correctness default) to keep the AIV vector pipeline busy and amortise per-tile MTE setup, mirroring the ops-math arch35 elementwise tile policy; a lone asc2.tanh tile stays well within the 150s sim budget (the budget concern documented on the gelu cell is specific to composing tanh inside the full GELU polynomial, not a standalone tanh). CORE_NUM=16; size must be a multiple of TILE_SIZE*CORE_NUM=32768 (aligned_only); partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-2, rtol=1e-2 against np.tanh(x). Platform: Ascend950PR_9599. Build/run: python3.11 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md). Workaround: Reference golden/kernels/tanh_f16.py \u2014 it encodes the proven wide-tile structure (TILE_SIZE=2048, CORE_NUM=16, unroll_factor=2 double-buffer, host-side alignment padding to a 32768 multiple) that lands ratio ~0.73 vs hand-written aclnnTanh at [32, 4096].",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/tanh_f16/kernel.py",
+  "date": "2026-06-03T17:48:43Z",
+  "pyasc_revision": {
+    "url": "https://gitcode.com/compiler-team/pyasc.git",
+    "branch": "(detached)",
+    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "dirty": false,
+    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 600,
+    "completed": true,
+    "artifacts_found": [
+      "kernel.py",
+      "design.md",
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
+    ]
+  },
+  "skills_mode": "on",
+  "model_profile": "cloud-default",
+  "model": "dashscope/glm-5",
+  "tokens": {
+    "input": 103386,
+    "output": 14340,
+    "cache_read": 579305,
+    "total": 117726
+  },
+  "elapsed_total_s": 485.89,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "oracle_guided",
+      "elapsed_s": 485.89,
+      "exit": 0,
+      "outcome": "pass",
+      "tokens": {
+        "input": 103386,
+        "output": 14340,
+        "cache_read": 579305,
+        "total": 117726,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "pass"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "pass",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": true,
+    "detail": "no semantic markers defined for 'tanh'",
+    "markers_found": []
+  },
+  "score": {
+    "value": 16.0,
+    "threshold": 12,
+    "accepted": true,
+    "checks": {
+      "jit_decorator": {
+        "passed": true,
+        "detail": "1 JIT function(s)"
+      },
+      "no_return_value": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "no_banned_constructs": {
+        "passed": true,
+        "detail": "OK"
+      },
+      "asc2_load_store": {
+        "passed": true,
+        "detail": "load+store"
+      },
+      "asc2_tensor": {
+        "passed": true,
+        "detail": "present"
+      },
+      "loop_range": {
+        "passed": true,
+        "detail": "range/asc2.range present"
+      },
+      "verification": {
+        "passed": true,
+        "detail": "verification call present"
+      },
+      "launch_pattern": {
+        "passed": true,
+        "detail": "kernel launch found"
+      },
+      "global_address": {
+        "passed": true,
+        "detail": "GlobalAddress found"
+      },
+      "valid_python": {
+        "passed": true,
+        "detail": "parsed without errors"
+      },
+      "input_arity": {
+        "passed": true,
+        "detail": "expected>=1 params, found 2"
+      },
+      "output_dtype": {
+        "passed": true,
+        "detail": "found dtype ref"
+      },
+      "tiling_consistency": {
+        "passed": true,
+        "detail": "tiling logic found"
+      },
+      "multi_shape_verification": {
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
+      },
+      "no_hardcoded_shapes": {
+        "passed": true,
+        "detail": "shapes parameterized"
+      },
+      "semantic_api_usage": {
+        "passed": true,
+        "detail": "skipped (no --op or op not in semantic table)"
+      }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
+    }
+  },
+  "static_verify": "pass",
+  "notes": "",
+  "history": []
+}
