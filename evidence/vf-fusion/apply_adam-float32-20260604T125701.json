@@ -1,0 +1,91 @@
+{
+  "cell": "apply_adam/float32",
+  "op": "apply_adam",
+  "dtype": "float32",
+  "shape": [
+    32,
+    4096
+  ],
+  "arch": "Ascend950PR_9599",
+  "ref_ticks": 8107,
+  "ticks_off": 19440,
+  "ticks_on": 17675,
+  "fusion_speedup": 1.0999,
+  "ratio_off": 0.417,
+  "ratio_on": 0.4587,
+  "gate": 0.7,
+  "status": "improved",
+  "flag": "--cce-simd-vf-fusion",
+  "ref_detail": {
+    "cell": "apply_adam/float32",
+    "op": "apply_adam",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "simulator_chip": "dav_3510",
+    "metric": "camodel_total_tick",
+    "ref_ticks": 8107,
+    "ref_ticks_runs": [
+      8106,
+      8108
+    ],
+    "ref_ticks_method": "median_of_2",
+    "ref_ticks_spread": 0.0002,
+    "wall_ms_last": 65734.9,
+    "reference_kind": "canonical_only",
+    "reference_repo": "ops-nn",
+    "reference_source": "ops-nn canonical operator (apply_adam, aclnnop/aclnn_apply_adam.h), build.sh --pkg --soc=ascend950",
+    "build_cmd": "bash build.sh --pkg --soc=ascend950 --ops=apply_adam",
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/perf_apply_adam_f32_32x4096.run2.log"
+  },
+  "gen_detail_off": {
+    "cell": "apply_adam_f32",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/apply_adam_f32/kernel.py",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 19440,
+    "gen_ticks_runs": [
+      19441,
+      19440
+    ],
+    "gen_ticks_method": "median_of_2",
+    "gen_ticks_spread": 0.0001,
+    "vf_fusion": "false",
+    "wall_ms_last": 110568.0,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_apply_adam_f32_32x4096_vf-false.run2.log"
+  },
+  "gen_detail_on": {
+    "cell": "apply_adam_f32",
+    "kernel": "/home/aloschilov/workspace/pyasc-skill-stack/teams/pyasc-kernel-dev-team/kernels/apply_adam_f32/kernel.py",
+    "dtype": "float32",
+    "shape": [
+      32,
+      4096
+    ],
+    "n_elements": 131072,
+    "arch": "Ascend950PR_9599",
+    "metric": "camodel_total_tick",
+    "method": "single-launch process, Total tick, median of processes (ticks-calculation.md 3)",
+    "gen_ticks": 17675,
+    "gen_ticks_runs": [
+      17677,
+      17673
+    ],
+    "gen_ticks_method": "median_of_2",
+    "gen_ticks_spread": 0.0002,
+    "vf_fusion": "true",
+    "wall_ms_last": 87911.1,
+    "camodel_log": "/home/aloschilov/workspace/pyasc-skill-stack/evidence/perf/_build_cache/logs/probe_apply_adam_f32_32x4096_vf-true.run2.log"
+  }
+}

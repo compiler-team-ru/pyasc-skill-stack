@@ -214,14 +214,20 @@ pyasc2-lowered AscendC in the cases measured:
 | `abs/float16` | 4692 | 4686 | 1.001 | 0.93 | 0.93 | neutral |
 | `tanh/float16` | 5276 | 5275 | 1.000 | 0.72 | 0.73 | neutral |
 | `rms_norm/float16` | 3921 | 5101 | **0.769** | 1.06 | 0.81 | **regressed** |
+| `apply_adam/float32` | 19440 | 17675 | **1.100** | 0.42 | 0.46 | improved |
+| `batch_norm_v3/float32` | 64143 | 62491 | 1.026 | 0.10 | 0.10 | improved |
 
-Simple elementwise kernels (`abs`, `tanh`) are unmoved by the flag — there is no
-multi-op vector chain to fuse and pyasc's `-fcce-vf-vl` lowering is already
-vector-friendly. The reduction-heavy `rms_norm` *regresses ~23%* with fusion on,
-and notably the fusion-**off** pyasc kernel (`r→ref 1.06`) actually beats the
-hand-written reference, which itself compiles fusion-on. In other words, for
-pyasc2's lowering the flag is at best neutral and can be actively harmful; the
-default lowering is already competitive without it.
+The effect is strongly op-dependent. Simple elementwise kernels (`abs`, `tanh`)
+are unmoved — there is no multi-op vector chain to fuse and pyasc's `-fcce-vf-vl`
+lowering is already vector-friendly. The reduction-heavy `rms_norm` *regresses
+~23%* with fusion on, and notably the fusion-**off** pyasc kernel (`r→ref 1.06`)
+actually beats the hand-written reference, which itself compiles fusion-on. The
+multi-stream optimizer/normalization kernels do gain: `apply_adam` improves ~10%
+(ratio-to-ref 0.42 → 0.46) and `batch_norm_v3` ~2.6% (still a documented
+DMA-bound miss at 0.10 either way). Net: for pyasc2's lowering the flag is a
+modest, op-specific lever — sometimes a small win, sometimes neutral, and on
+reduction-bound `rms_norm` actively harmful — not the blanket fusion enabler the
+positioning implies. The default lowering is already competitive without it.
 
 This is published, **report-only**: the `perf-gate` job also runs
 `demo_vf_fusion.py --all`, `aggregate_vf_fusion.py` writes

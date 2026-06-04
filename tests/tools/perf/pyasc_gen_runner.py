@@ -70,6 +70,20 @@ def _rms_norm_inputs(shape: list[int], dtype: str) -> list:
     ]
 
 
+def _batch_norm_v3_inputs(shape: list[int], dtype: str) -> list:
+    # batch_norm_v3_launch(x[N,C,L], weight[C], bias[C], eps=default). The
+    # affine params are per-channel [C]; eps takes the launcher default. Inputs
+    # MUST be torch (the C310 path mishandles numpy for this reduction, same as
+    # rms_norm) - the auto elementwise path would hand three [N,C,L] tensors and
+    # the launcher's weight.reshape(C) would abort before dispatch.
+    n, c, l = shape
+    return [
+        {"kind": "tensor", "shape": [n, c, l], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [c], "dtype": dtype, "fw": "torch"},
+        {"kind": "tensor", "shape": [c], "dtype": dtype, "fw": "torch"},
+    ]
+
+
 def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
     op = cell.split("/")[0]
     builder = _CELL_INPUT_BUILDERS.get(op)
@@ -78,6 +92,7 @@ def arg_specs_for(cell: str, shape: list[int], dtype: str) -> list | None:
 
 _CELL_INPUT_BUILDERS = {
     "rms_norm": _rms_norm_inputs,
+    "batch_norm_v3": _batch_norm_v3_inputs,
 }
 
 
