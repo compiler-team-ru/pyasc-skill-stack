@@ -142,6 +142,40 @@ python tests/tools/demo_vector_ops.py --all                         # full table
 python tests/tools/demo_vector_ops.py --all --regen --runs 3        # live regen + measure
 ```
 
+## Dashboard + CI (actual nightly runs)
+
+The perf demo is wired into the GitHub Pages dashboard and run for real on a
+nightly schedule.
+
+- **Aggregator** ([`aggregate_perf.py`](../tests/tools/perf/aggregate_perf.py)):
+  scans `evidence/perf-vs-ascendc/*.json` (latest record per cell) and writes
+  `evidence/perf-summary.json` (`counts` + per-cell `ref_ticks`/`gen_ticks`/
+  `ratio`/`status`), carrying over the `perf_miss_note`/`comparability_note`
+  from each cell's curated `perf_ratio_demo` in `capabilities.yaml`.
+- **Dashboard** ([`generate_dashboard.py`](../tests/tools/generate_dashboard.py)):
+  renders a **Performance vs hand-written AscendC** panel ("X/Y cells clear the
+  ratio ≥ 0.70 gate") plus a per-row ratio + pass/fail badge in the capability
+  matrix. It reads `perf-summary.json` (measured), falling back to each cell's
+  `perf_ratio_demo` (curated) when no measured summary is present — so local/dev
+  renders still show perf.
+- **Perf gate** (nightly, **report-only**, `continue-on-error`): the
+  `perf-gate` job in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+  pulls the docker_full perf image `ghcr.io/<owner>/pyasc-sim-perf:py3.11` and
+  runs `demo_vector_ops.py --all --runs 3` inside it, then `aggregate_perf.py`.
+  The 0.70 gate is reported, **never enforced**, so honest misses stay green.
+  The single-writer `skills-value-report` job commits `perf-summary.json` +
+  `perf-vs-ascendc/*.json` to `main`, and `pages.yml` redeploys the dashboard.
+- **docker_full perf image** ([`docker/Dockerfile.perf`](../docker/Dockerfile.perf)):
+  extends `pyasc-sim` with the vendored `ops-math`/`ops-nn` reference repos, the
+  `pyasc-v2-eval` tree (built native extension), and the `dav_3510`/
+  `Ascend950PR_9599` simulators. Built **manually** on the host that has the
+  private clones (CI cannot reach them):
+
+```bash
+docker/build-perf-image.sh            # build only (local tag)
+docker/build-perf-image.sh --push     # build + push to ghcr.io
+```
+
 ## Comparability contract
 
 | axis            | value                                                    |

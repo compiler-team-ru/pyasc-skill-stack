@@ -654,6 +654,8 @@ def smoke_detect_partial_run() -> None:
 def smoke_dashboard_payload() -> None:
     print("[10/11] dashboard inlines the new explainability/efficiency keys...")
     original = (REPO / "evidence" / "skills-value-summary.json").read_text()
+    perf_path = REPO / "evidence" / "perf-summary.json"
+    perf_original = perf_path.read_text() if perf_path.exists() else None
     try:
         synth = {
             "schema_version": "2",
@@ -709,6 +711,30 @@ def smoke_dashboard_payload() -> None:
         (REPO / "evidence" / "skills-value-summary.json").write_text(
             json.dumps(synth, indent=2)
         )
+        # Fixture perf summary (actual-run shape) so the perf panel renders
+        # both a passing and a documented-miss cell.
+        perf_synth = {
+            "generated_at": "2026-05-19T01:00:00Z",
+            "gate": 0.70,
+            "counts": {"pass": 1, "fail": 1, "gen_blocked": 0,
+                       "unknown": 0, "total": 2},
+            "cells": [
+                {"cell": "abs/float16", "op": "abs", "dtype": "float16",
+                 "shape": [32, 4096], "arch": "Ascend950PR_9599",
+                 "gate": 0.70, "ref_ticks": 4349, "gen_ticks": 4690,
+                 "ratio": 0.93, "status": "pass",
+                 "reference_source": "ops-math/math/abs",
+                 "source": "measured"},
+                {"cell": "batch_norm_v3/float32", "op": "batch_norm_v3",
+                 "dtype": "float32", "shape": [32, 64, 64],
+                 "arch": "Ascend950PR_9599", "gate": 0.70,
+                 "ref_ticks": 6110, "gen_ticks": 62588, "ratio": 0.10,
+                 "status": "fail",
+                 "perf_miss_note": "SMOKE-PERF-MISS-NOTE: DMA-bound miss.",
+                 "source": "measured"},
+            ],
+        }
+        perf_path.write_text(json.dumps(perf_synth, indent=2))
         out = Path(tempfile.mkdtemp())
         try:
             subprocess.run([
@@ -720,6 +746,10 @@ def smoke_dashboard_payload() -> None:
             shutil.rmtree(out, ignore_errors=True)
     finally:
         (REPO / "evidence" / "skills-value-summary.json").write_text(original)
+        if perf_original is not None:
+            perf_path.write_text(perf_original)
+        elif perf_path.exists():
+            perf_path.unlink()
     # Inlined summary payload contains the new fields.
     expects_inlined = [
         '"partial_run": true',
@@ -730,6 +760,9 @@ def smoke_dashboard_payload() -> None:
         '"F10_no_artifact": 8',
         '"attempts_to_pass_on_mean": 1.18',
         '"pass_rate_on_ci"',
+        # Perf summary (actual-run feed) inlined into DATA.
+        '"perf_summary"',
+        'SMOKE-PERF-MISS-NOTE',
     ]
     for needle in expects_inlined:
         assert needle in h, f"missing inlined payload key: {needle!r}"
@@ -751,6 +784,12 @@ def smoke_dashboard_payload() -> None:
         "renderProtocolDecomp",
         "PDP_DELTA_LABELS",
         "protocol-decomp-panel",
+        # Perf panel renderer + CSS hooks.
+        "renderPerfBanner",
+        "perf-banner",
+        "perf-cards",
+        "Performance vs hand-written AscendC",
+        "clear the ratio",
     ]
     for needle in expects_static:
         assert needle in h, f"missing template symbol: {needle!r}"

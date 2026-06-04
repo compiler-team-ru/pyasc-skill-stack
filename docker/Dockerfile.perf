@@ -1,0 +1,83 @@
+# pyasc-sim-perf: the docker_full perf image.
+#
+# Extends the standard pyasc-sim image (CANN 9.0 + Python 3.11 + pyasc/asc2 +
+# the Ascend950PR_9599 camodel) with everything the perf-vs-AscendC harness
+# needs to run BOTH sides end-to-end on a GitHub-hosted ubuntu-latest runner:
+#
+#   - ops-math / ops-nn        canonical AscendC reference operator repos
+#                              (the `ascendc_ref_runner.py` build+measure side)
+#   - pyasc-v2-eval            the pinned evaluation pyasc tree with its built
+#                              native extension (the `pyasc_gen_runner.py` side;
+#                              PYASC_EVAL_ROOT points here)
+#   - dav_3510 simulator       powers the canonical aclnn reference drivers
+#                              (overlaid from the host CANN if the base image
+#                              does not already ship it)
+#   - dos2unix / pigz / cmake  build deps used by ops-*/build.sh
+#
+# This image is large (~2 GB of vendored reference sources) and is built
+# MANUALLY on the host that has the private ops-* clones + pyasc-v2-eval (CI
+# runners cannot reach them). See docker/build-perf-image.sh, which stages the
+# build context (repos + simulator dirs) and pushes the result to ghcr.io.
+#
+# Build (via the helper, recommended):
+#   docker/build-perf-image.sh            # build only
+#   docker/build-perf-image.sh --push     # build + push to ghcr.io
+#
+# Usage (run the full perf demo inside the image):
+#   docker run --rm --ulimit nofile=65536:65536 \
+#     -v "$(pwd)":/workspace -w /workspace \
+#     ghcr.io/aloschilov/pyasc-sim-perf:py3.11 \
+#     python3.11 tests/tools/demo_vector_ops.py --all --runs 3
+#
+# Architecture: build on the same arch as the vendored pyasc-v2-eval native
+# extension (aarch64 here). Cross-arch builds are out of scope.
+
+ARG BASE_IMAGE=ghcr.io/aloschilov/pyasc-sim:py3.11
+FROM ${BASE_IMAGE}
+
+# Reference build toolchain used by ops-math/ops-nn build.sh. build-essential,
+# clang/lld and ccache already come from the base pyasc-sim image; cmake is
+# installed real (not the broken ~/.local/bin shim the harness otherwise works
+# around) and dos2unix/pigz are required by ops-nn's build.sh.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        dos2unix pigz cmake rsync \
+    && rm -rf /var/lib/apt/lists/*
+
+# Vendored reference sources + evaluation pyasc tree. Staged into the build
+# context by docker/build-perf-image.sh (.git and build artifacts stripped).
+COPY ops-math /opt/ops-math
+COPY ops-nn /opt/ops-nn
+COPY pyasc-v2-eval /opt/pyasc-v2-eval
+
+# Simulator dirs staged from the host CANN. dav_3510 drives the canonical aclnn
+# reference drivers; Ascend950PR_9599 is the shared camodel for the generated
+# side. We only overlay a sim the base image is missing, then hard-fail if the
+# ref-side dav_3510 is still absent (so a broken image never reaches CI).
+COPY sim/ /opt/staged-sim/
+RUN set -eux ; \
+    SIMROOT="$ASCEND_HOME_PATH/tools/simulator" ; \
+    mkdir -p "$SIMROOT" ; \
+    for d in /opt/staged-sim/*/ ; do \
+        [ -d "$d" ] || continue ; \
+        name="$(basename "$d")" ; \
+        if [ ! -d "$SIMROOT/$name/lib" ]; then \
+            echo "overlaying simulator from host CANN: $name" ; \
+            cp -a "$d" "$SIMROOT/$name" ; \
+        else \
+            echo "simulator already present in base image: $name" ; \
+        fi ; \
+    done ; \
+    rm -rf /opt/staged-sim ; \
+    test -d "$SIMROOT/dav_3510/lib" \
+        || { echo "ERROR: dav_3510 simulator missing — reference drivers cannot build" >&2 ; exit 1 ; } ; \
+    test -d "$SIMROOT/Ascend950PR_9599/lib" \
+        || { echo "ERROR: Ascend950PR_9599 simulator missing" >&2 ; exit 1 ; }
+
+# Harness env: the runners default to host paths under /home/aloschilov; pin
+# them at the in-image vendored locations so no host checkout is needed.
+ENV OPS_MATH_HOME=/opt/ops-math \
+    OPS_NN_HOME=/opt/ops-nn \
+    PYASC_EVAL_ROOT=/opt/pyasc-v2-eval
+
+WORKDIR /workspace
+CMD ["/bin/bash"]

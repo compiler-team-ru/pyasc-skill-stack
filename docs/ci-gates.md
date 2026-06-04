@@ -45,6 +45,38 @@ Runs in 15-30 minutes. Requires opencode CLI and CANN simulator.
 
 Requires: opencode CLI on PATH, CANN simulator environment.
 
+## Perf gate (`perf-gate`, report-only)
+
+A separate **nightly, non-blocking** GitHub Actions job (`continue-on-error:
+true`) that measures perf-vs-AscendC for every demo cell and publishes the
+result to the dashboard. It is **not** part of `ci-gate.sh`; it runs only on the
+schedule / `workflow_dispatch tier=nightly`, alongside `nightly-gate`.
+
+For each cell the harness ([tests/tools/demo_vector_ops.py](../tests/tools/demo_vector_ops.py)
+`--all`) builds the canonical `ops-math`/`ops-nn` AscendC reference and the
+generated pyasc kernel on the same `Ascend950PR_9599` camodel, then computes
+`ratio = ref_ticks / gen_ticks`. The 0.70 gate is **reported, never enforced**,
+so documented honest misses (`apply_adam` ~0.46, `batch_norm_v3` ~0.10) stay
+green.
+
+- **Image:** runs inside the docker_full perf image
+  `ghcr.io/<owner>/pyasc-sim-perf:py3.11`, which extends `pyasc-sim` with the
+  vendored `ops-math`/`ops-nn` reference repos, the `pyasc-v2-eval` tree, and
+  the `dav_3510`/`Ascend950PR_9599` simulators. Built **manually** on the host
+  that has the private clones via
+  [docker/build-perf-image.sh](../docker/build-perf-image.sh)
+  (`docker/build-perf-image.sh --push`); CI only `docker pull`s it.
+- **Output:** `evidence/perf-vs-ascendc/*.json` + an aggregated
+  `evidence/perf-summary.json` (via
+  [tests/tools/perf/aggregate_perf.py](../tests/tools/perf/aggregate_perf.py)),
+  uploaded as the `evidence-perf` artifact.
+- **Commit + publish:** the single-writer `skills-value-report` job merges the
+  `evidence-perf` artifact, re-aggregates, and commits `perf-summary.json` +
+  `perf-vs-ascendc/*.json` to `main`. The `pages.yml` `evidence/**` trigger then
+  redeploys the dashboard, whose perf panel renders `perf-summary.json` (falling
+  back to each cell's curated `perf_ratio_demo` in `capabilities.yaml` when no
+  measured summary is present, e.g. local/dev renders).
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -53,6 +85,8 @@ Requires: opencode CLI on PATH, CANN simulator environment.
 | `ASCEND_HOME_PATH` | (from set_env.sh) | CANN toolkit root |
 | `LD_LIBRARY_PATH` | (must include simulator) | Simulator libraries |
 | `NODE_TLS_REJECT_UNAUTHORIZED` | `0` (for opencode) | Bypass TLS issues |
+| `PYASC_PERF_IMAGE` | `ghcr.io/<owner>/pyasc-sim-perf:py3.11` | docker_full perf image (perf-gate) |
+| `OPS_MATH_HOME` / `OPS_NN_HOME` | `/opt/ops-math` / `/opt/ops-nn` (in perf image) | Canonical AscendC reference repos |
 
 ## Exit codes
 

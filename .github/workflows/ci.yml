@@ -26,6 +26,11 @@ env:
   # pyasc-v2-eval pin therefore requires rebuilding+repushing this image
   # so docker fallback runs stay consistent with the host-runtime baseline.
   PYASC_SIM_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim:py3.11
+  # docker_full perf image: pyasc-sim + vendored ops-math/ops-nn +
+  # pyasc-v2-eval + dav_3510/Ascend950PR_9599 sims. Built manually on the
+  # host (docker/build-perf-image.sh) and pushed; CI only pulls it. The
+  # nightly perf-gate runs the full perf-vs-AscendC harness inside it.
+  PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11
   # Hard pin so the harness aborts if a runner accidentally imports a
   # pyasc tree other than pyasc-v2-eval (e.g. the user's dev fork).
   PYASC_EVAL_ROOT: /home/aloschilov/workspace/pyasc-v2-eval
@@ -106,6 +111,73 @@ jobs:
             exit 1
           fi
           echo "All golden kernels passed."
+
+  # ==========================================================================
+  # Perf gate (REPORT-ONLY): measure perf-vs-AscendC for every demo cell in
+  # the docker_full perf image and publish the result to the dashboard.
+  #
+  # For each cell the harness builds the canonical ops-math/ops-nn AscendC
+  # reference and the generated pyasc kernel on the same Ascend950PR_9599
+  # camodel, then computes ratio = ref_ticks / gen_ticks. This is a NIGHTLY,
+  # NON-BLOCKING job (continue-on-error): the 0.70 gate is reported, never
+  # enforced, so documented honest misses (apply_adam ~0.46, batch_norm_v3
+  # ~0.10) stay green. The committed evidence/perf-summary.json (produced
+  # here, committed by skills-value-report) is what generate_dashboard.py
+  # renders in the perf panel.
+  # ==========================================================================
+  perf-gate:
+    runs-on: ubuntu-latest
+    needs: [merge-gate]
+    continue-on-error: true
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.tier == 'nightly')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull pyasc-sim-perf image
+        run: docker pull ${{ env.PYASC_PERF_IMAGE }}
+
+      - name: Measure perf-vs-AscendC for all cells
+        run: |
+          # OPS_MATH_HOME / OPS_NN_HOME / PYASC_EVAL_ROOT are baked into the
+          # perf image. Mount the checkout rw so evidence lands back on the
+          # runner; the build cache (evidence/perf/_build_cache) is ephemeral.
+          docker run --rm \
+            --ulimit nofile=65536:65536 \
+            -v "$(pwd)":/workspace -w /workspace \
+            ${{ env.PYASC_PERF_IMAGE }} \
+            bash -lc 'source "$ASCEND_HOME_PATH/set_env.sh" 2>/dev/null; \
+              python3.11 tests/tools/demo_vector_ops.py --all --runs 3' \
+            || echo "::warning::perf harness reported a non-zero exit (gate misses are expected and non-blocking)"
+
+      - name: Aggregate perf summary
+        if: always()
+        run: python3.10 tests/tools/perf/aggregate_perf.py
+
+      - name: Upload perf evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-perf
+          path: |
+            evidence/perf-vs-ascendc/*.json
+            evidence/perf-summary.json
+          if-no-files-found: ignore
 
   # ==========================================================================
   # Nightly gate: OpenCode skills intervention on the cloud profile.
@@ -469,7 +541,7 @@ jobs:
   # ==========================================================================
   skills-value-report:
     runs-on: ubuntu-latest
-    needs: [nightly-gate, local-stability-gate]
+    needs: [nightly-gate, local-stability-gate, perf-gate]
     if: >-
       always() &&
       (github.event_name == 'schedule' ||
@@ -525,6 +597,11 @@ jobs:
           # tests/tools/test_skills_value_pipeline.py).
           bash tests/tools/merge_evidence_artifacts.sh artifacts evidence
           ls -1 evidence/
+
+      - name: Re-aggregate perf summary
+        # Recompute evidence/perf-summary.json from the merged perf-vs-ascendc
+        # records so the dashboard perf panel reflects this night's run.
+        run: python3.10 tests/tools/perf/aggregate_perf.py
 
       - name: Snapshot prior summary for --merge-history
         # Phase 10 noise-floor: capture the last main summary BEFORE we
@@ -587,6 +664,11 @@ jobs:
             if [ -d evidence/history ]; then
               git add evidence/history
             fi
+          fi
+          # Perf evidence is independent of the generative partial-run guard
+          # (report-only perf-gate), so commit it in both branches when present.
+          if [ -d evidence/perf-vs-ascendc ]; then
+            git add evidence/perf-vs-ascendc/*.json evidence/perf-summary.json 2>/dev/null || true
           fi
           if git diff --cached --quiet; then
             echo "No new evidence to commit."

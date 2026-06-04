@@ -27,6 +27,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 CAPABILITIES_FILE = REPO_ROOT / "capabilities.yaml"
 EVIDENCE_DIR = REPO_ROOT / "evidence"
 SKILLS_VALUE_FILE = EVIDENCE_DIR / "skills-value-summary.json"
+PERF_SUMMARY_FILE = EVIDENCE_DIR / "perf-summary.json"
 
 
 def _load_yaml(path: Path) -> dict:
@@ -69,6 +70,14 @@ def build_data(cap: dict) -> dict:
             "generative_confirmed": 0,
             "total_cells": 0,
         }
+
+    # Measured perf (actual nightly runs) keyed by "op/dtype". Falls back to
+    # each cell's curated perf_ratio_demo block when the summary is absent
+    # (e.g. local/dev render before a nightly perf-gate has committed it).
+    perf_doc = _load_evidence(PERF_SUMMARY_FILE) or {}
+    perf_by_cell: dict[str, dict] = {
+        c.get("cell"): c for c in perf_doc.get("cells", []) if c.get("cell")
+    }
 
     all_dtypes: list[str] = []
     rows: list[dict] = []
@@ -187,6 +196,29 @@ def build_data(cap: dict) -> dict:
                     "trend": trend,
                 }
 
+            cell_key = f"{op_name}/{dtype}"
+            perf = perf_by_cell.get(cell_key)
+            if perf is None:
+                prd = cell.get("perf_ratio_demo")
+                if prd:
+                    status = str(prd.get("status", "")).lower()
+                    perf = {
+                        "cell": cell_key,
+                        "ratio": prd.get("last_ratio"),
+                        "ref_ticks": prd.get("ref_ticks"),
+                        "gen_ticks": prd.get("gen_ticks"),
+                        "gate": prd.get("gate", 0.70),
+                        "status": status if status in ("pass", "fail", "gen_blocked") else "unknown",
+                        "shape": prd.get("shape"),
+                        "reference_source": prd.get("ref_source", ""),
+                        "perf_miss_note": prd.get("perf_miss_note", ""),
+                        "comparability_note": prd.get("comparability_note", ""),
+                        "evidence_file": prd.get("evidence", ""),
+                        "source": "curated",
+                    }
+            if perf:
+                row["perf"] = perf
+
             rows.append(row)
 
     rt_pass = rt_static = rt_skip = rt_none = 0
@@ -203,6 +235,31 @@ def build_data(cap: dict) -> dict:
 
     skills_value = _load_evidence(SKILLS_VALUE_FILE)
 
+    # Perf summary: prefer the committed perf-summary.json (actual nightly
+    # runs); otherwise synthesize counts from the per-row curated fallback.
+    if perf_doc.get("cells"):
+        perf_summary = {
+            "generated_at": perf_doc.get("generated_at", ""),
+            "gate": perf_doc.get("gate", 0.70),
+            "counts": perf_doc.get("counts", {}),
+            "source": "measured",
+        }
+    else:
+        counts = {"pass": 0, "fail": 0, "gen_blocked": 0, "unknown": 0, "total": 0}
+        for row in rows:
+            p = row.get("perf")
+            if not p:
+                continue
+            counts["total"] += 1
+            st = p.get("status", "unknown")
+            counts[st] = counts.get(st, 0) + 1
+        perf_summary = {
+            "generated_at": "",
+            "gate": 0.70,
+            "counts": counts,
+            "source": "curated",
+        }
+
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "tiers": tier_progress,
@@ -217,6 +274,7 @@ def build_data(cap: dict) -> dict:
             "total": len(rows),
         },
         "skills_value": skills_value,
+        "perf_summary": perf_summary,
     }
 
 
@@ -307,6 +365,34 @@ h1 { font-size: 24px; margin-bottom: 4px; }
 .rb-dot-static { background: var(--golden-only); }
 .rb-dot-skip { background: var(--pending); }
 .rb-dot-none { background: var(--untested); }
+.perf-banner {
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.perf-banner .pb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.perf-banner .pb-title { font-weight: 600; font-size: 14px; }
+.perf-banner .pb-sub { font-size: 12px; color: var(--fg-muted); }
+.perf-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.perf-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--bg);
+}
+.perf-card .pc-cell { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.perf-card .pc-ticks { font-size: 12px; color: var(--fg-muted); }
+.perf-card .pc-note { font-size: 11px; color: var(--fg-muted); margin-top: 6px; }
+.perf-ratio { font-variant-numeric: tabular-nums; font-weight: 600; }
+.perf-badge {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 10px; vertical-align: middle;
+}
+.perf-pass { color: var(--confirmed); background: var(--confirmed-bg); }
+.perf-fail { color: var(--blocked); background: var(--blocked-bg); }
+.perf-gen_blocked, .perf-unknown { color: var(--untested); background: var(--untested-bg); }
 .skills-value-banner {
   display: none;
   padding: 16px 18px;
@@ -938,6 +1024,8 @@ footer a { color: var(--fg-muted); }
 
 <div class="runtime-banner" id="runtime-banner"></div>
 
+<div class="perf-banner" id="perf-banner"></div>
+
 <div class="skills-value-banner" id="skills-value-banner"></div>
 
 <div class="protocol-decomp-panel" id="protocol-decomp-panel"></div>
@@ -1005,6 +1093,7 @@ const TIER_ORDER = Object.entries(DATA.tiers)
 function init() {
   document.getElementById("gen-time").textContent = DATA.generated_at;
   renderRuntimeBanner();
+  renderPerfBanner();
   renderSkillsValueBanner();
   renderProtocolDecomp();
   renderTierCards();
@@ -1757,6 +1846,65 @@ function renderRuntimeBanner() {
     + '<span class="rb-item"><span class="rb-dot rb-dot-none"></span> No evidence: ' + s.no_evidence + '/' + s.total + '</span>';
 }
 
+function fmtRatio(v) {
+  if (v == null) return "\u2014";
+  return Number(v).toFixed(2);
+}
+
+function perfBadge(status) {
+  const label = (status || "unknown").replace(/_/g, " ");
+  return '<span class="perf-badge perf-' + (status || "unknown") + '">' + label + '</span>';
+}
+
+function renderPerfBanner() {
+  const ps = DATA.perf_summary;
+  const el = document.getElementById("perf-banner");
+  if (!ps) { el.style.display = "none"; return; }
+  const c = ps.counts || {};
+  const gate = ps.gate != null ? ps.gate : 0.70;
+  const total = c.total || 0;
+  const srcLabel = ps.source === "measured"
+    ? ("measured nightly" + (ps.generated_at ? " (" + ps.generated_at + ")" : ""))
+    : "curated (capabilities.yaml; no measured run committed yet)";
+
+  // Pull per-cell perf off the matrix rows (deduped by cell key).
+  const seen = {};
+  const cells = [];
+  for (const r of DATA.rows) {
+    if (!r.perf) continue;
+    const key = r.perf.cell || (r.op + "/" + r.dtype);
+    if (seen[key]) continue;
+    seen[key] = true;
+    cells.push(r.perf);
+  }
+  cells.sort((a, b) => (a.cell || "").localeCompare(b.cell || ""));
+
+  let html = '<div class="pb-head">'
+    + '<span class="pb-title">Performance vs hand-written AscendC</span>'
+    + '<span class="perf-ratio">' + (c.pass || 0) + '/' + total + '</span>'
+    + '<span class="pb-sub">cells clear the ratio \u2265 ' + gate + ' gate '
+    + '(ref_ticks / gen_ticks on the Ascend950PR_9599 camodel). Source: ' + srcLabel + '.</span>'
+    + '</div>';
+  html += '<div class="perf-cards">';
+  for (const p of cells) {
+    const ticks = (p.ref_ticks != null && p.gen_ticks != null)
+      ? ('ref ' + p.ref_ticks + ' / gen ' + p.gen_ticks + ' ticks')
+      : '';
+    const note = (p.status !== "pass" && (p.perf_miss_note || p.comparability_note))
+      ? '<div class="pc-note">' + (p.perf_miss_note || p.comparability_note) + '</div>'
+      : '';
+    html += '<div class="perf-card">'
+      + '<div class="pc-cell">' + (p.cell || "?") + ' ' + perfBadge(p.status) + '</div>'
+      + '<div class="pc-ticks"><span class="perf-ratio">' + fmtRatio(p.ratio) + '</span>'
+      + (ticks ? ' \u2014 ' + ticks : '') + '</div>'
+      + note
+      + '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  el.classList.add("has-data");
+}
+
 function renderTierCards() {
   const el = document.getElementById("tier-cards");
   let html = "";
@@ -1984,6 +2132,7 @@ function renderTable() {
     { key: "prompt", label: "Prompt" },
     { key: "golden_status", label: "Golden" },
     { key: "generative_status", label: "Generative" },
+    { key: "perf", label: "Perf (ratio)" },
   ];
 
   const thead = document.getElementById("thead-row");
@@ -2014,6 +2163,11 @@ function renderTable() {
     html += `<td>${makeBadge(r.golden_status, r.golden_evidence, "golden", r.prompt)}</td>`;
     const genHistory = r.generative_evidence ? r.generative_evidence.history : null;
     html += `<td>${makeBadge(r.generative_status, r.generative_evidence, "generative", r.prompt)}${renderSparkline(genHistory)}</td>`;
+    if (r.perf) {
+      html += `<td><span class="perf-ratio">${fmtRatio(r.perf.ratio)}</span> ${perfBadge(r.perf.status)}</td>`;
+    } else {
+      html += `<td class="muted">\u2014</td>`;
+    }
     html += "</tr>";
   }
 

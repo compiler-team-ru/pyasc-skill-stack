@@ -57,6 +57,13 @@ for d in "$ARTIFACTS_ROOT"/evidence-*; do
     cloud-off)
       cp -f "$d"/*-generative-cloud-default-off.json "$EVIDENCE_OUT"/ 2>/dev/null || true
       ;;
+    perf)
+      # Report-only perf-gate: combined perf-vs-AscendC records + the
+      # aggregated perf-summary that feeds the dashboard perf panel.
+      mkdir -p "$EVIDENCE_OUT/perf-vs-ascendc"
+      cp -f "$d"/perf-vs-ascendc/*.json "$EVIDENCE_OUT"/perf-vs-ascendc/ 2>/dev/null || true
+      cp -f "$d"/perf-summary.json "$EVIDENCE_OUT"/ 2>/dev/null || true
+      ;;
     *-on|*-off)
       mode=${leg##*-}
       profile=${leg%-"$mode"}
