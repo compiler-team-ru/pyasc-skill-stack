@@ -138,6 +138,44 @@ finally:
     mod.run_host_verify = real_host
     mod.run_docker_verify = real_docker
 
+# Case 5: host_pyasc_pin_error only matters for the host backend.
+# Regression guard for the b1ec515 nightly breakage: the docker backend
+# carries its own pinned pyasc, so an empty host `import asc` (sha="")
+# must NOT abort a docker run. main() achieves this by only calling
+# host_pyasc_pin_error when the resolved backend is "host".
+empty_rev = {"sha": "", "root": "", "dirty": False, "branch": ""}
+err, warn = mod.host_pyasc_pin_error(
+    empty_rev, eval_root="/x/pyasc-v2-eval", allow_dirty=False)
+if not err:
+    errors.append("host_pyasc_pin_error did not flag an empty-sha host pin")
+else:
+    print("  [OK] host_pyasc_pin_error flags an absent host pyasc checkout")
+
+# Simulate main()'s gating decision for each backend with that same
+# un-importable host pyasc: docker must skip the pin guard entirely.
+real_probe = mod.host_runtime_available
+mod.host_runtime_available = lambda platform="Ascend950PR_9599": (False, "no-host-test")
+try:
+    resolved = mod.resolve_runtime_backend("auto")
+    aborts = resolved == "host" and mod.host_pyasc_pin_error(
+        empty_rev, eval_root="/x/pyasc-v2-eval", allow_dirty=False)[0]
+    if aborts:
+        errors.append("auto+no-host would abort on host pin guard (expected docker bypass)")
+    else:
+        print("  [OK] auto->docker bypasses the host-pyasc pin guard")
+finally:
+    mod.host_runtime_available = real_probe
+
+# A clean, canonical host pin returns no error/warning.
+ok_rev = {"sha": "abc123", "root": "/x/pyasc-v2-eval",
+          "dirty": False, "branch": "main"}
+err_ok, warn_ok = mod.host_pyasc_pin_error(
+    ok_rev, eval_root="/x/pyasc-v2-eval", allow_dirty=False)
+if err_ok or warn_ok:
+    errors.append(f"clean host pin unexpectedly flagged: err={err_ok!r} warn={warn_ok!r}")
+else:
+    print("  [OK] host_pyasc_pin_error accepts a clean canonical pin")
+
 if errors:
     print("FAIL: runtime-backend dispatch:")
     for e in errors:

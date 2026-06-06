@@ -626,6 +626,61 @@ def resolve_runtime_backend(
     return "docker"
 
 
+def host_pyasc_pin_error(
+    pyasc_revision: dict,
+    *,
+    eval_root: str,
+    allow_dirty: bool,
+) -> tuple[str | None, str | None]:
+    """Validate the host pyasc pin for a ``--runtime`` collection.
+
+    Only meaningful for the ``host`` backend: the docker backend carries
+    its own pinned pyasc inside the image, so callers MUST skip this check
+    when the resolved backend is ``docker`` (otherwise CI runners, which
+    have no host ``asc``, would abort before ever spawning the container).
+
+    Returns ``(error, warning)``. ``error`` is a fatal message (caller
+    should print + exit) or ``None`` when the pin is acceptable.
+    ``warning`` is an advisory message (caller should print but continue)
+    or ``None``.
+    """
+    if not pyasc_revision["sha"]:
+        return (
+            "--runtime requires an importable pyasc; "
+            "`import asc` did not resolve to a git checkout. "
+            "Install the editable from /home/aloschilov/workspace/pyasc-v2-eval "
+            "(see docs/cann-setup.md).",
+            None,
+        )
+    eval_basename = os.path.basename(eval_root.rstrip("/"))
+    if not pyasc_revision["root"].rstrip("/").endswith(eval_basename):
+        if allow_dirty:
+            return (
+                None,
+                f"imported pyasc is at {pyasc_revision['root']!r}, "
+                f"not under {eval_root!r}. Recording anyway because "
+                f"--allow-dirty-pyasc is set; result is NOT comparable "
+                f"to the canonical baseline.",
+            )
+        return (
+            f"--runtime resolved pyasc to {pyasc_revision['root']!r} but "
+            f"expected a tree under {eval_root!r}. Something (likely an "
+            f"opencode skill step) overwrote the editable install. "
+            f"Re-pin with:\n    pip install -e {eval_root}\n"
+            f"or pass --allow-dirty-pyasc to record evidence anyway.",
+            None,
+        )
+    if pyasc_revision["dirty"] and not allow_dirty:
+        return (
+            f"pyasc working tree at {pyasc_revision['root']} is dirty; "
+            f"refuse to record evidence against an un-pinnable revision. "
+            f"Pass --allow-dirty-pyasc to override (e.g. while iterating "
+            f"locally).",
+            None,
+        )
+    return None, None
+
+
 def run_host_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
                     platform: str = "Ascend950PR_9599") -> dict:
     """Run simulator verification directly on the host via run_and_verify.py.
@@ -1356,50 +1411,28 @@ def main() -> None:
     # Capture pyasc revision up-front so downstream JSON always has it.
     pyasc_revision = collect_pyasc_revision()
     if args.runtime:
-        # Hard guards only fire for runs that actually exercise pyasc
-        # (--runtime). Static-only collection still records the field for
-        # auditability but tolerates an absent/dirty tree.
-        if not pyasc_revision["sha"]:
-            print(
-                "ERROR: --runtime requires an importable pyasc; "
-                "`import asc` did not resolve to a git checkout. "
-                "Install the editable from /home/aloschilov/workspace/pyasc-v2-eval "
-                "(see docs/cann-setup.md).",
-                file=sys.stderr,
+        # The host-pyasc pin guards only make sense for the host backend.
+        # The docker backend carries its own pinned pyasc inside the
+        # pyasc-sim image, so a CI runner (no host ASCEND_HOME_PATH / no
+        # `import asc`) legitimately resolves --runtime-backend=auto to
+        # docker and MUST NOT be aborted by the host-checkout checks.
+        resolved_backend = resolve_runtime_backend(
+            args.runtime_backend,
+            platform=load_platform_from_capabilities(args.op, args.dtype),
+        )
+        if resolved_backend == "host":
+            eval_root = os.environ.get(
+                "PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
+            error, warning = host_pyasc_pin_error(
+                pyasc_revision,
+                eval_root=eval_root,
+                allow_dirty=args.allow_dirty_pyasc,
             )
-            sys.exit(1)
-        eval_root = os.environ.get("PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
-        eval_basename = os.path.basename(eval_root.rstrip("/"))
-        if not pyasc_revision["root"].rstrip("/").endswith(eval_basename):
-            if args.allow_dirty_pyasc:
-                print(
-                    f"  WARN: imported pyasc is at {pyasc_revision['root']!r}, "
-                    f"not under {eval_root!r}. Recording anyway because "
-                    f"--allow-dirty-pyasc is set; result is NOT comparable "
-                    f"to the canonical baseline.",
-                    file=sys.stderr,
-                )
-            else:
-                print(
-                    f"ERROR: --runtime resolved pyasc to "
-                    f"{pyasc_revision['root']!r} but expected a tree under "
-                    f"{eval_root!r}. Something (likely an opencode skill "
-                    f"step) overwrote the editable install. Re-pin with:\n"
-                    f"    pip install -e {eval_root}\n"
-                    f"or pass --allow-dirty-pyasc to record evidence "
-                    f"anyway.",
-                    file=sys.stderr,
-                )
+            if warning:
+                print(f"  WARN: {warning}", file=sys.stderr)
+            if error:
+                print(f"ERROR: {error}", file=sys.stderr)
                 sys.exit(1)
-        if pyasc_revision["dirty"] and not args.allow_dirty_pyasc:
-            print(
-                f"ERROR: pyasc working tree at {pyasc_revision['root']} is "
-                f"dirty; refuse to record evidence against an "
-                f"un-pinnable revision. Pass --allow-dirty-pyasc to "
-                f"override (e.g. while iterating locally).",
-                file=sys.stderr,
-            )
-            sys.exit(1)
 
     print(f"  Generative evidence for {args.op}/{args.dtype}")
     print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
