@@ -34,7 +34,10 @@ OWNER="${OWNER:-aloschilov}"
 WORKSPACE_ROOT="${WORKSPACE_ROOT:-$(cd "$REPO_ROOT/.." && pwd)}"
 ASCEND_HOME_PATH="${ASCEND_HOME_PATH:-/usr/local/Ascend/cann-9.0.0}"
 BASE_IMAGE="${BASE_IMAGE:-ghcr.io/${OWNER}/pyasc-sim:py3.11}"
-IMAGE="${IMAGE:-ghcr.io/${OWNER}/pyasc-sim-perf:py3.11}"
+# ARM64-ONLY: the camodel sims + pyasc native extension are arm64, so this
+# image only runs on arm64 (CI's perf-gate uses ubuntu-24.04-arm). The tag
+# carries an explicit -arm64 suffix to keep it distinct from the amd64 base.
+IMAGE="${IMAGE:-ghcr.io/${OWNER}/pyasc-sim-perf:py3.11-arm64}"
 
 SIMROOT="$ASCEND_HOME_PATH/tools/simulator"
 

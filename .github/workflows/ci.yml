@@ -30,7 +30,11 @@ env:
   # pyasc-v2-eval + dav_3510/Ascend950PR_9599 sims. Built manually on the
   # host (docker/build-perf-image.sh) and pushed; CI only pulls it. The
   # nightly perf-gate runs the full perf-vs-AscendC harness inside it.
-  PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11
+  # ARM64-ONLY: the camodel sims + pyasc native extension are arm64, so the
+  # image is built on the aarch64 host and consumed by the arm64 perf-gate
+  # (runs-on: ubuntu-24.04-arm). The tag carries an explicit -arm64 suffix
+  # so it is never confused with the amd64 pyasc-sim base.
+  PYASC_PERF_IMAGE: ghcr.io/${{ github.repository_owner }}/pyasc-sim-perf:py3.11-arm64
   # Hard pin so the harness aborts if a runner accidentally imports a
   # pyasc tree other than pyasc-v2-eval (e.g. the user's dev fork).
   PYASC_EVAL_ROOT: /home/aloschilov/workspace/pyasc-v2-eval
@@ -132,7 +136,10 @@ jobs:
   # positioning). Also report-only.
   # ==========================================================================
   perf-gate:
-    runs-on: ubuntu-latest
+    # Native arm64 runner: the perf image (camodel sims + pyasc native
+    # extension) is arm64-only, so it cannot run on the amd64 ubuntu-latest
+    # used by the other gates. Free for public repos.
+    runs-on: ubuntu-24.04-arm
     needs: [merge-gate]
     continue-on-error: true
     if: >-
@@ -155,10 +162,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pull-availability guard: the perf image is rebuilt+pushed manually
+      # from the arm64 host, so a base bump can transiently leave the tag
+      # missing. Treat that as a clean skip (report-only gate) instead of a
+      # hard failure, and -- crucially -- do NOT upload/commit anything when
+      # we skipped, so a run that measured nothing cannot overwrite the
+      # committed perf evidence with stale checkout copies.
       - name: Pull pyasc-sim-perf image
-        run: docker pull ${{ env.PYASC_PERF_IMAGE }}
+        id: perf_image
+        run: |
+          if docker pull "$PYASC_PERF_IMAGE"; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::perf image $PYASC_PERF_IMAGE unavailable; skipping perf measurement this run (rebuild+push the arm64 image with docker/build-perf-image.sh --push)"
+          fi
+        env:
+          PYASC_PERF_IMAGE: ${{ env.PYASC_PERF_IMAGE }}
 
       - name: Measure perf-vs-AscendC for all cells
+        if: steps.perf_image.outputs.available == 'true'
         run: |
           # OPS_MATH_HOME / OPS_NN_HOME / PYASC_EVAL_ROOT are baked into the
           # perf image. Mount the checkout rw so evidence lands back on the
@@ -172,7 +195,7 @@ jobs:
             || echo "::warning::perf harness reported a non-zero exit (gate misses are expected and non-blocking)"
 
       - name: A/B compiler SIMD fusion (--cce-simd-vf-fusion off vs on)
-        if: always()
+        if: steps.perf_image.outputs.available == 'true'
         run: |
           # Compiles each generated kernel with the bisheng vector-fusion flag
           # off vs on on the same camodel (the "pyasc2 uses no micro-api; the
@@ -187,13 +210,13 @@ jobs:
             || echo "::warning::vf-fusion A/B reported a non-zero exit (non-blocking)"
 
       - name: Aggregate perf + vf-fusion summaries
-        if: always()
+        if: steps.perf_image.outputs.available == 'true'
         run: |
           python3.10 tests/tools/perf/aggregate_perf.py
           python3.10 tests/tools/perf/aggregate_vf_fusion.py
 
       - name: Upload perf evidence artifact
-        if: always()
+        if: steps.perf_image.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: evidence-perf
