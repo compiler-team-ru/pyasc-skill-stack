@@ -176,6 +176,51 @@ if err_ok or warn_ok:
 else:
     print("  [OK] host_pyasc_pin_error accepts a clean canonical pin")
 
+# Case 6: docker_image_pin records an auditable, non-empty pin for the
+# docker backend (which has no host `import asc` to read a git sha from).
+# When `docker image inspect` resolves a registry digest, that wins; when
+# it cannot (no docker / image not pulled), the bare image reference is the
+# guaranteed-non-empty fallback so the schema-v4 pin gate is satisfiable.
+fake_ref = "ghcr.io/example/pyasc-sim:py3.11"
+fake_digest = fake_ref + "@sha256:" + ("a" * 64)
+real_run = mod.subprocess.run
+
+class _CP:
+    def __init__(self, code, out):
+        self.returncode = code
+        self.stdout = out
+        self.stderr = ""
+
+def _fake_run_digest(args, **kw):
+    if args[:3] == ["docker", "image", "inspect"]:
+        return _CP(0, fake_digest + "\n")
+    return real_run(args, **kw)
+
+mod.subprocess.run = _fake_run_digest
+try:
+    pin = mod.docker_image_pin(fake_ref)
+    if pin != fake_digest:
+        errors.append(f"docker_image_pin digest path -> {pin!r}")
+    else:
+        print("  [OK] docker_image_pin prefers the registry digest")
+finally:
+    mod.subprocess.run = real_run
+
+def _fake_run_missing(args, **kw):
+    if args[:3] == ["docker", "image", "inspect"]:
+        raise FileNotFoundError("docker not installed")
+    return real_run(args, **kw)
+
+mod.subprocess.run = _fake_run_missing
+try:
+    pin = mod.docker_image_pin(fake_ref)
+    if pin != fake_ref:
+        errors.append(f"docker_image_pin fallback -> {pin!r} (expected bare ref)")
+    else:
+        print("  [OK] docker_image_pin falls back to the bare image ref")
+finally:
+    mod.subprocess.run = real_run
+
 if errors:
     print("FAIL: runtime-backend dispatch:")
     for e in errors:

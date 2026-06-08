@@ -43,9 +43,12 @@ else
 fi
 
 # Schema v4 gate: every current-schema generative evidence file under
-# evidence/ must carry a non-empty pyasc_revision.sha. Legacy quarantined
-# files under evidence/legacy-* and the on-disk runtime-archive are
-# excluded (they were emitted before the field existed).
+# evidence/ must be attributable to a specific pyasc build -- either a
+# non-empty pyasc_revision.sha (host-backend runs) or a docker image pin
+# (pyasc_revision.backend == "docker" with a non-empty pyasc_revision.image),
+# since docker-backend runs have no host `import asc` to read a git sha from.
+# Legacy quarantined files under evidence/legacy-* and the on-disk
+# runtime-archive are excluded (they were emitted before the field existed).
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 EVIDENCE_DIR="$REPO_ROOT/evidence"
 if [ -d "$EVIDENCE_DIR" ]; then
@@ -70,11 +73,15 @@ for path in sorted(root.rglob("*.json")):
     if str(data.get("schema_version", "")) < "4":
         continue
     rev = data.get("pyasc_revision") or {}
-    if not rev.get("sha"):
-        missing.append(str(path.relative_to(root)))
+    if rev.get("sha"):
+        continue
+    if rev.get("backend") == "docker" and rev.get("image"):
+        continue
+    missing.append(str(path.relative_to(root)))
 
 if missing:
-    print("FAIL: schema_version>=4 evidence missing pyasc_revision.sha:",
+    print("FAIL: schema_version>=4 evidence missing pyasc_revision pin "
+          "(need sha, or backend=docker + image):",
           file=sys.stderr)
     for p in missing:
         print(f"  {p}", file=sys.stderr)
@@ -84,5 +91,5 @@ PY
         print_fail "pyasc_revision gate (schema v4) failed"
         exit 1
     fi
-    print_pass "pyasc_revision gate: every schema-v4 evidence file carries an SHA"
+    print_pass "pyasc_revision gate: every schema-v4 evidence file carries a pin (host sha or docker image)"
 fi

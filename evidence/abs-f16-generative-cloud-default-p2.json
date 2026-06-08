@@ -11,7 +11,9 @@
     "branch": "",
     "sha": "",
     "dirty": false,
-    "root": ""
+    "root": "",
+    "backend": "docker",
+    "image": "ghcr.io/aloschilov/pyasc-sim:py3.11@sha256:6b54f8433b85df33c6762f81af0fe3a118bf452d62bd1c8c4ce4e6cbf69bbf04"
   },
   "agent": {
     "platform": "opencode",

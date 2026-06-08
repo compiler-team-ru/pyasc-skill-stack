@@ -681,6 +681,29 @@ def host_pyasc_pin_error(
     return None, None
 
 
+def docker_image_pin(image: str) -> str:
+    """Return an immutable, auditable pin for a docker-backend run.
+
+    Prefers the registry digest (``repo@sha256:...``) of the locally
+    pulled image, falls back to the local image id, then to the bare
+    image reference -- so the result is always non-empty and uniquely
+    identifies the pyasc build that produced the evidence (the host has
+    no importable ``asc`` to read a git sha from when running in docker).
+    """
+    for fmt in ("{{index .RepoDigests 0}}", "{{.Id}}"):
+        try:
+            out = subprocess.run(
+                ["docker", "image", "inspect", "--format", fmt, image],
+                capture_output=True, text=True, timeout=15,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            break
+        cand = out.stdout.strip()
+        if out.returncode == 0 and cand and cand != "<no value>":
+            return cand
+    return image
+
+
 def run_host_verify(kernel_path: Path, project_dir: Path, timeout: int = 300,
                     platform: str = "Ascend950PR_9599") -> dict:
     """Run simulator verification directly on the host via run_and_verify.py.
@@ -1420,6 +1443,7 @@ def main() -> None:
             args.runtime_backend,
             platform=load_platform_from_capabilities(args.op, args.dtype),
         )
+        pyasc_revision["backend"] = resolved_backend
         if resolved_backend == "host":
             eval_root = os.environ.get(
                 "PYASC_EVAL_ROOT", DEFAULT_PYASC_EVAL_ROOT)
@@ -1433,6 +1457,17 @@ def main() -> None:
             if error:
                 print(f"ERROR: {error}", file=sys.stderr)
                 sys.exit(1)
+        elif resolved_backend == "docker":
+            # The docker image carries its own pinned pyasc and the host
+            # has no importable asc to read a git sha from. Record the
+            # image identity (registry digest) as the auditable pin so the
+            # evidence stays attributable to a specific pyasc build.
+            pyasc_revision["image"] = docker_image_pin(DOCKER_IMAGE)
+            print(
+                f"  runtime-backend=docker: pinning pyasc to image "
+                f"{pyasc_revision['image']}",
+                file=sys.stderr,
+            )
 
     print(f"  Generative evidence for {args.op}/{args.dtype}")
     print(f"  Profile: {args.model_profile}, skills_mode: {args.skills_mode}")
