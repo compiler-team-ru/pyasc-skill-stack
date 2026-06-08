@@ -4,48 +4,49 @@
   "operation": "abs",
   "dtype": "float32",
   "prompt": "Operator: abs (out = |x|). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float32. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])`, `asc2.load(x_gm, [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT use 2D `asc2.tensor(..., [num_rows, num_cols])` with 1D `[tile_size]` load and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`. Tail: aligned_only \u2014 no tail logic required. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.abs(x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_f32/kernel.py",
-  "date": "2026-05-28T10:32:23Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/abs_float32/kernel.py",
+  "date": "2026-06-08T05:46:32Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
-    "completed": false,
+    "timeout_s": 420,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
       "self_review.md",
-      "acceptance_review.md"
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 95198,
-    "output": 6180,
-    "cache_read": 305554,
-    "total": 101378
+    "input": 133911,
+    "output": 9512,
+    "cache_read": 368921,
+    "total": 143423
   },
-  "elapsed_total_s": 240.01,
+  "elapsed_total_s": 335.38,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
-      "exit": 124,
+      "elapsed_s": 335.38,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 95198,
-        "output": 6180,
-        "cache_read": 305554,
-        "total": 101378,
+        "input": 133911,
+        "output": 9512,
+        "cache_read": 368921,
+        "total": 143423,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -70,7 +71,7 @@
     ]
   },
   "score": {
-    "value": 15.0,
+    "value": 16.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -127,8 +128,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x1, shape loop=yes"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -138,10 +139,17 @@
         "passed": true,
         "detail": "found ['asc2.abs']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P6)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
@@ -165,6 +173,17 @@
       "skipped": false,
       "tokens_total": 338921,
       "elapsed_s": 720.0
+    },
+    {
+      "date": "2026-05-28T10:32:23Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 101378,
+      "elapsed_s": 240.01
     }
   ]
 }

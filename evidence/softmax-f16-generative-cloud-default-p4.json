@@ -5,44 +5,46 @@
   "dtype": "float16",
   "prompt": "Operator: softmax along last axis (out[i, :] = softmax(x[i, :]) so each row sums to 1); use asc2.softmax on a block of full rows. Input shapes: [32, 4096] ONLY (full-row regime; do not test other shapes \u2014 split_row is a separate cell, deferred to Phase 5/8). Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via block-of-rows distribution: block_size = ceildiv(num_rows, CORE_NUM), start_row = block_idx * block_size; each row fits in UB. Tail: aligned_only (split_row and long_rows_exceeding_UB are unsupported). Accumulator: float32 (softmax exp accumulates in fp32 internally). Tolerance: atol=5e-2, rtol=5e-2 against numpy reference computed as shifted = x - x.max(axis=1, keepdims=True); e = np.exp(shifted); expected = e / e.sum(axis=1, keepdims=True); verify in float32: np.testing.assert_allclose(out.astype(np.float32), expected.astype(np.float32), atol=5e-2, rtol=5e-2). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T10:07:50Z",
+  "date": "2026-06-08T07:20:26Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
+    "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
-      "kernel.py"
+      "kernel.py",
+      "design.md",
+      "verification.md"
     ]
   },
   "skills_mode": "off",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 36134,
-    "output": 1419,
-    "cache_read": 117075,
-    "total": 37553
+    "input": 53485,
+    "output": 5289,
+    "cache_read": 496853,
+    "total": 58774
   },
-  "elapsed_total_s": 105.24,
+  "elapsed_total_s": 275.22,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 105.24,
+      "elapsed_s": 275.22,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 36134,
-        "output": 1419,
-        "cache_read": 117075,
-        "total": 37553,
+        "input": 53485,
+        "output": 5289,
+        "cache_read": 496853,
+        "total": 58774,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -68,7 +70,7 @@
     ]
   },
   "score": {
-    "value": 14.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -125,8 +127,8 @@
         "detail": "tiling logic found"
       },
       "multi_shape_verification": {
-        "passed": false,
-        "detail": "single verify call, no shape loop"
+        "passed": true,
+        "detail": "verify x2, shape loop=no"
       },
       "no_hardcoded_shapes": {
         "passed": true,
@@ -136,10 +138,17 @@
         "passed": true,
         "detail": "found ['asc2.softmax', 'softmax']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P4)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -152,5 +161,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T10:07:50Z",
+      "overall_pass": true,
+      "score": 14.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 37553,
+      "elapsed_s": 105.24
+    }
+  ]
 }

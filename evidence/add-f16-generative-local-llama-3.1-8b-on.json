@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-05-16T06:54:17Z",
+  "date": "2026-06-08T06:27:09Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-llama-3.1-8b",
   "model": "ollama/llama3.1:8b",
   "tokens": {
-    "input": 12288,
-    "output": 1296,
+    "input": 12285,
+    "output": 1405,
     "cache_read": 0,
-    "total": 13584
+    "total": 13690
   },
-  "elapsed_total_s": 2614.81,
+  "elapsed_total_s": 1638.16,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 844.53,
+      "elapsed_s": 443.83,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 336,
+        "input": 4095,
+        "output": 238,
         "cache_read": 0,
-        "total": 4432,
+        "total": 4333,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 861.5,
+      "elapsed_s": 656.72,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 412,
+        "input": 4095,
+        "output": 740,
         "cache_read": 0,
-        "total": 4508,
+        "total": 4835,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 908.78,
+      "elapsed_s": 537.61,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 548,
+        "input": 4095,
+        "output": 427,
         "cache_read": 0,
-        "total": 4644,
+        "total": 4522,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -92,10 +99,24 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": [
+    {
+      "date": "2026-05-16T06:54:17Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 13584,
+      "elapsed_s": 2614.81
+    }
+  ]
 }

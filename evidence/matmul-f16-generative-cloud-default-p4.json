@@ -5,17 +5,17 @@
   "dtype": "float16",
   "prompt": "Operator: tiled matrix multiplication c = a @ b (float16 inputs, float32 output via cube accumulator). Input shapes: (M=K=N=16) and (M=32, K=16, N=32). Output shape: [M, N]. Dtype: float16 inputs; float32 output (cube accumulator). Layout: contiguous. Axis: -1 (K axis, contracted). Tiling: block_grid; inside @asc2.jit, use asc2.tensor for a/b/c and asc2.load with location=asc2.TileLocation.L0A for the left operand and asc2.TileLocation.L0B for the right operand, then compute `a_tile @ b_tile` (or asc2.matmul), then asc2.store the float32 result; tile sizes must be multiples of 16; pick small shapes that fit L0A/L0B (each \u2264 64 KiB) \u2014 start with m=k=n=16, core_num=1, m_tile=n_tile=16; matmul requires the cube unit on Ascend950PR_9599 (the only CI platform). Tail: aligned_only \u2014 shapes must be 16-multiples; unsupported_regimes lists non_16_multiple_shapes, k_tiled, abl1_full / al1_full / bl1_full. Accumulator: float32 (cube accumulator, mandatory). Tolerance: atol=1e-2, rtol=1e-2 against c_ref = a.to(torch.float32) @ b.to(torch.float32); verify with torch.testing.assert_close(c, c_ref, atol=1e-2, rtol=1e-2); host inputs MUST be torch.Tensor (a, b dtype=torch.float16; c zero-init torch.float32) because the C310 simulator silently produces zeros for matmul fed numpy arrays. Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-28T11:26:15Z",
+  "date": "2026-06-08T07:24:25Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
+    "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -25,24 +25,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 19608,
-    "output": 2288,
-    "cache_read": 146463,
-    "total": 21896
+    "input": 37068,
+    "output": 3781,
+    "cache_read": 170841,
+    "total": 40849
   },
-  "elapsed_total_s": 125.31,
+  "elapsed_total_s": 197.12,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 125.31,
+      "elapsed_s": 83.69,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 16542,
+        "output": 1977,
+        "cache_read": 47476,
+        "total": 18519,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 113.43,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 19608,
-        "output": 2288,
-        "cache_read": 146463,
-        "total": 21896,
+        "input": 20526,
+        "output": 1804,
+        "cache_read": 123365,
+        "total": 22330,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -61,9 +79,8 @@
   },
   "semantic_check": {
     "passed": true,
-    "detail": "found ['asc2.matmul', '@ ']",
+    "detail": "found ['@ ']",
     "markers_found": [
-      "asc2.matmul",
       "@ "
     ]
   },
@@ -134,12 +151,19 @@
       },
       "semantic_api_usage": {
         "passed": true,
-        "detail": "found ['asc2.matmul', '@ ']"
+        "detail": "found ['@ ']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P4)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -163,6 +187,17 @@
       "skipped": false,
       "tokens_total": 70727,
       "elapsed_s": 215.41
+    },
+    {
+      "date": "2026-05-28T11:26:15Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 21896,
+      "elapsed_s": 125.31
     }
   ]
 }

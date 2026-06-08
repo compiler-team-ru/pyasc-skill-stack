@@ -4,47 +4,67 @@
   "operation": "add",
   "dtype": "float16",
   "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: flatten each test shape to 1D (size = product of dims) inside the host launcher; the kernel takes `size: int` and tiles 1D with `asc2.tensor(x_ptr, [size])` / `asc2.tensor(y_ptr, [size])`, `asc2.load(.., [tile_size], offsets=[tile_offset])`, `asc2.store(out, out_gm, offsets=[tile_offset])` \u2014 all ranks 1. Do NOT mix a 2D tensor declaration with a 1D load shape and 2D `[row_idx, col_idx]` offsets; v2 raises `RuntimeError: rank of 'tensor_shape' must match rank of 'shape'`. TILE_SIZE=128, CORE_NUM=16; partition tile_per_core via `asc2.range(tile_per_block, unroll_factor=2, parallel=True)`; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against (x + y). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
-  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add/kernel.py",
-  "date": "2026-05-28T10:41:07Z",
+  "kernel_path": "teams/pyasc-kernel-dev-team/kernels/add_float16/kernel.py",
+  "date": "2026-06-08T06:44:52Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
-    "completed": false,
+    "timeout_s": 420,
+    "completed": true,
     "artifacts_found": [
       "kernel.py",
       "design.md",
-      "self_review.md"
+      "self_review.md",
+      "acceptance_review.md",
+      "verification.md"
     ]
   },
   "skills_mode": "on",
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 82044,
-    "output": 3933,
-    "cache_read": 168033,
-    "total": 85977
+    "input": 250118,
+    "output": 18994,
+    "cache_read": 1196702,
+    "total": 269112
   },
-  "elapsed_total_s": 240.01,
+  "elapsed_total_s": 707.58,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.01,
-      "exit": 124,
+      "elapsed_s": 357.49,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 85440,
+        "output": 9438,
+        "cache_read": 803946,
+        "total": 94878,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 350.09,
+      "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 82044,
-        "output": 3933,
-        "cache_read": 168033,
-        "total": 85977,
+        "input": 164678,
+        "output": 9556,
+        "cache_read": 392756,
+        "total": 174234,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -138,10 +158,17 @@
         "passed": true,
         "detail": "found ['x + y', '+ y']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P6)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P6",
     "name": "opencode-skills-on-guided",
@@ -165,6 +192,17 @@
       "skipped": false,
       "tokens_total": 167431,
       "elapsed_s": 480.05
+    },
+    {
+      "date": "2026-05-28T10:41:07Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 85977,
+      "elapsed_s": 240.01
     }
   ]
 }

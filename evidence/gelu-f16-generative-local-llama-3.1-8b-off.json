@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float16",
-  "prompt": "Help me develop a GELU activation operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf with np.vectorize (not np.erf or scipy).",
+  "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096]. GELU is defined as 0.5*x*(1+erf(x/sqrt(2))). For host-side verification, use math.erf via np.vectorize (np.erf and scipy.special.erf are not available).",
   "kernel_path": "",
-  "date": "2026-05-16T09:01:59Z",
+  "date": "2026-06-08T07:56:38Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-llama-3.1-8b",
   "model": "ollama/llama3.1:8b",
   "tokens": {
-    "input": 12288,
-    "output": 1901,
+    "input": 12285,
+    "output": 177,
     "cache_read": 0,
-    "total": 14189
+    "total": 12462
   },
-  "elapsed_total_s": 2736.96,
+  "elapsed_total_s": 1278.84,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 969.2,
+      "elapsed_s": 427.45,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 868,
+        "input": 4095,
+        "output": 65,
         "cache_read": 0,
-        "total": 4964,
+        "total": 4160,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 911.22,
+      "elapsed_s": 424.49,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 635,
+        "input": 4095,
+        "output": 95,
         "cache_read": 0,
-        "total": 4731,
+        "total": 4190,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 856.54,
+      "elapsed_s": 426.9,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 398,
+        "input": 4095,
+        "output": 17,
         "cache_read": 0,
-        "total": 4494,
+        "total": 4112,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -92,10 +99,24 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": [
+    {
+      "date": "2026-05-16T09:01:59Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 14189,
+      "elapsed_s": 2736.96
+    }
+  ]
 }

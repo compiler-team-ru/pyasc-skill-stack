@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "gelu",
   "dtype": "float32",
-  "prompt": "Help me develop a GELU activation operator (tanh / Pad\u00e9 approximation form) that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096]. GELU(x) = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3))). Use asc2.tanh; do NOT use asc2.erf (simulator erf is too noisy on float32). CRITICAL: when multiplying a Tile by a Python scalar inside the @asc2.jit body, the Tile MUST be on the LEFT (write `x_cubed * 0.044715`, NOT `0.044715 * x_cubed`). The asc2 Tile class does not implement __rmul__, so scalar-on-left raises AttributeError at codegen time. Compute sqrt(2/pi) and 0.044715 as Python module-level constants outside the @asc2.jit function. For host-side reference, use np.tanh. Use np.testing.assert_allclose(out, expected, atol=1e-2, rtol=1e-2).",
+  "prompt": "Help me develop a GELU activation operator on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096]. Use the lean exp/sigmoid restatement of the tanh/Pad\u00e9 form (mathematically identical to PyTorch's gelu(approximate='tanh'), but cheaper per tile and within the sim budget) - GELU(x) = x / (1 + exp(-sqrt(8/pi) * (x + 0.044715 * x^3))). Use asc2.exp; do NOT use asc2.tanh (it pushed the cell over the 150s sim budget) and do NOT use asc2.erf (simulator erf is too noisy on float32 \u2014 this is documented in the cell's regime_note).",
   "kernel_path": "",
-  "date": "2026-05-16T09:01:06Z",
+  "date": "2026-06-08T07:53:34Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-qwen-coder-7b",
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
-    "input": 12288,
-    "output": 1126,
+    "input": 12285,
+    "output": 1058,
     "cache_read": 0,
-    "total": 13414
+    "total": 13343
   },
-  "elapsed_total_s": 2342.2,
+  "elapsed_total_s": 1475.29,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 723.45,
+      "elapsed_s": 500.39,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 150,
+        "input": 4095,
+        "output": 406,
         "cache_read": 0,
-        "total": 4246,
+        "total": 4501,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 771.68,
+      "elapsed_s": 427.53,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 370,
+        "input": 4095,
+        "output": 166,
         "cache_read": 0,
-        "total": 4466,
+        "total": 4261,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 847.07,
+      "elapsed_s": 547.37,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 606,
+        "input": 4095,
+        "output": 486,
         "cache_read": 0,
-        "total": 4702,
+        "total": 4581,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -92,10 +99,24 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": [
+    {
+      "date": "2026-05-16T09:01:06Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 13414,
+      "elapsed_s": 2342.2
+    }
+  ]
 }

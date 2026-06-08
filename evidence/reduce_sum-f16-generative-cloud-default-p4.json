@@ -5,17 +5,17 @@
   "dtype": "float16",
   "prompt": "Operator: reduce_sum along last axis (out[i] = sum_j x[i, j]). Input shapes: [32, 4096]. Output shape: [32]. Dtype: float16. Layout: contiguous. Axis: -1 (last axis). Tiling: row_per_core via asc2.range for row distribution; call asc2.reduce_sum on each row; wrap the scalar result as asc2.full([1, OUT_PAD], s, dtype=row.dtype) with OUT_PAD=16 (float16 \u2192 16 elements \u00d7 2 bytes = 32-byte alignment); generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: host_pad (padding=16 element scalar pad). Accumulator: float32 (mixed-precision reduce: accumulate in fp32). Tolerance: atol=2.0, rtol=5e-2 against np.sum(x.astype(np.float32), axis=1) (fp16 reductions accumulate larger error). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-27T09:06:07Z",
+  "date": "2026-06-08T06:26:12Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
+    "timeout_s": 420,
     "completed": true,
     "artifacts_found": [
       "kernel.py"
@@ -25,24 +25,42 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 28864,
-    "output": 2319,
-    "cache_read": 489394,
-    "total": 31183
+    "input": 45748,
+    "output": 3331,
+    "cache_read": 291730,
+    "total": 49079
   },
-  "elapsed_total_s": 138.5,
+  "elapsed_total_s": 252.35,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 138.5,
+      "elapsed_s": 142.26,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 27969,
+        "output": 1947,
+        "cache_read": 115802,
+        "total": 29916,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 110.09,
       "exit": 0,
       "outcome": "pass",
       "tokens": {
-        "input": 28864,
-        "output": 2319,
-        "cache_read": 489394,
-        "total": 31183,
+        "input": 17779,
+        "output": 1384,
+        "cache_read": 175928,
+        "total": 19163,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -136,10 +154,17 @@
         "passed": true,
         "detail": "found ['asc2.reduce_sum', '.sum(']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P4)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -152,5 +177,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T09:06:07Z",
+      "overall_pass": true,
+      "score": 15.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 31183,
+      "elapsed_s": 138.5
+    }
+  ]
 }

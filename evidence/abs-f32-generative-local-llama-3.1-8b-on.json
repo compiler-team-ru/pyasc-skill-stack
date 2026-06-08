@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "abs",
   "dtype": "float32",
-  "prompt": "Help me develop an abs operator that supports float32 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "prompt": "Help me develop an abs operator (out = |x|) on Ascend950PR_9599 (C310) for float32 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-05-16T06:10:42Z",
+  "date": "2026-06-08T05:59:50Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-llama-3.1-8b",
   "model": "ollama/llama3.1:8b",
   "tokens": {
-    "input": 12288,
-    "output": 638,
+    "input": 12285,
+    "output": 465,
     "cache_read": 0,
-    "total": 12926
+    "total": 12750
   },
-  "elapsed_total_s": 2436.84,
+  "elapsed_total_s": 1241.28,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 816.67,
+      "elapsed_s": 423.98,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 235,
+        "input": 4095,
+        "output": 186,
         "cache_read": 0,
-        "total": 4331,
+        "total": 4281,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 810.55,
+      "elapsed_s": 426.39,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 213,
+        "input": 4095,
+        "output": 190,
         "cache_read": 0,
-        "total": 4309,
+        "total": 4285,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 809.62,
+      "elapsed_s": 390.91,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 190,
+        "input": 4095,
+        "output": 89,
         "cache_read": 0,
-        "total": 4286,
+        "total": 4184,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -92,10 +99,24 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": [
+    {
+      "date": "2026-05-16T06:10:42Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12926,
+      "elapsed_s": 2436.84
+    }
+  ]
 }

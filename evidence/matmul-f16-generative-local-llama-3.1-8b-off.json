@@ -1,0 +1,110 @@
+{
+  "schema_version": "4",
+  "kind": "generative",
+  "operation": "matmul",
+  "dtype": "float16",
+  "prompt": "Help me develop a tiled matmul operator on Ascend950PR_9599 (C310) for float16 inputs producing float32 output. Use small shapes such as M=K=N=16 or (M=32, K=16, N=32). Inputs must be torch.Tensor (numpy buffers are silently zeroed by the C310 simulator path for matmul). Load A to asc2.TileLocation.L0A and B to L0B, then compute `a @ b` (or asc2.matmul) and asc2.store the float32 result.",
+  "kernel_path": "",
+  "date": "2026-06-08T10:05:45Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
+  "agent": {
+    "platform": "opencode",
+    "timeout_s": 1200,
+    "completed": true,
+    "artifacts_found": []
+  },
+  "skills_mode": "off",
+  "model_profile": "local-llama-3.1-8b",
+  "model": "ollama/llama3.1:8b",
+  "tokens": {
+    "input": 12285,
+    "output": 1799,
+    "cache_read": 0,
+    "total": 14084
+  },
+  "elapsed_total_s": 1752.52,
+  "attempts": [
+    {
+      "n": 1,
+      "prompt_label": "primary",
+      "elapsed_s": 573.25,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4095,
+        "output": 575,
+        "cache_read": 0,
+        "total": 4670,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "primary",
+      "elapsed_s": 608.84,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4095,
+        "output": 735,
+        "cache_read": 0,
+        "total": 4830,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 570.43,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 4095,
+        "output": 489,
+        "cache_read": 0,
+        "total": 4584,
+        "cost_usd": 0.0
+      },
+      "model": "ollama/llama3.1:8b",
+      "kernel_found": false,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    }
+  ],
+  "verification": {
+    "mode": "static_only",
+    "status": "fail",
+    "shapes_verified": []
+  },
+  "semantic_check": {
+    "passed": false,
+    "detail": "no kernel found",
+    "markers_found": []
+  },
+  "score": {
+    "value": 0.0,
+    "threshold": 12,
+    "accepted": false,
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
+  },
+  "static_verify": "fail",
+  "notes": "Local stability run (local-llama-3.1-8b, skills=off)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": []
+}

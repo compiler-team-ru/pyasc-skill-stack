@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "reduce_sum",
   "dtype": "float32",
-  "prompt": "Help me develop a reduce_sum operator that supports float32 data type. The input shape is [32, 4096], reduce along the last axis to produce shape [32]. Each row should be summed independently.",
+  "prompt": "Help me develop a reduce_sum operator on Ascend950PR_9599 (C310) for float32, summing each row of a [32, 4096] tensor along the last axis to produce [32].",
   "kernel_path": "",
-  "date": "2026-05-16T07:34:27Z",
+  "date": "2026-06-08T07:04:03Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -14,29 +21,29 @@
   },
   "skills_mode": "off",
   "model_profile": "local-llama-3.1-8b",
-  "model": "ollama/llama3.1:8b",
+  "model": "llama3.1:8b",
   "tokens": {
-    "input": 12288,
-    "output": 897,
+    "input": 14842,
+    "output": 371,
     "cache_read": 0,
-    "total": 13185
+    "total": 15213
   },
-  "elapsed_total_s": 2479.56,
+  "elapsed_total_s": 1852.15,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 855.31,
+      "elapsed_s": 976.37,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 424,
+        "input": 6652,
+        "output": 127,
         "cache_read": 0,
-        "total": 4520,
+        "total": 6779,
         "cost_usd": 0.0
       },
-      "model": "ollama/llama3.1:8b",
+      "model": "llama3.1:8b",
       "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 800.98,
+      "elapsed_s": 410.5,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 209,
+        "input": 4095,
+        "output": 60,
         "cache_read": 0,
-        "total": 4305,
+        "total": 4155,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 823.27,
+      "elapsed_s": 465.28,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 264,
+        "input": 4095,
+        "output": 184,
         "cache_read": 0,
-        "total": 4360,
+        "total": 4279,
         "cost_usd": 0.0
       },
       "model": "ollama/llama3.1:8b",
@@ -92,10 +99,24 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-llama-3.1-8b, skills=off)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/25952543718",
-  "history": []
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
+  "history": [
+    {
+      "date": "2026-05-16T07:34:27Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 13185,
+      "elapsed_s": 2479.56
+    }
+  ]
 }

@@ -5,18 +5,18 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-28T11:18:31Z",
+  "date": "2026-06-08T07:15:01Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
-    "completed": false,
+    "timeout_s": 420,
+    "completed": true,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,38 +25,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 34281,
-    "output": 1664,
-    "cache_read": 121132,
-    "total": 35945
+    "input": 92323,
+    "output": 6693,
+    "cache_read": 616799,
+    "total": 99016
   },
-  "elapsed_total_s": 240.1,
+  "elapsed_total_s": 549.66,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.1,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 218.27,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 34281,
-        "output": 1664,
-        "cache_read": 121132,
-        "total": 35945,
+        "input": 55898,
+        "output": 3336,
+        "cache_read": 261151,
+        "total": 59234,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 194.22,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 21434,
+        "output": 1983,
+        "cache_read": 278879,
+        "total": 23417,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 137.17,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 14991,
+        "output": 1374,
+        "cache_read": 76769,
+        "total": 16365,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: AttributeError: module 'asc2' has no attribute 'ConstExpr'\nTraceback (most recent call last):\n  File \"/workspace/kernel.py\", line 25, in <module>\n    x_ptr, y_ptr, size: int, TILE_SIZE: asc2.ConstExpr[int]\n                                        ^^^^^^^^^^^^^^\nAttributeError: module 'asc2' has no attribute 'ConstExpr'\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -67,7 +103,7 @@
     ]
   },
   "score": {
-    "value": 16.0,
+    "value": 15.0,
     "threshold": 12,
     "accepted": true,
     "checks": {
@@ -104,8 +140,8 @@
         "detail": "kernel launch found"
       },
       "global_address": {
-        "passed": true,
-        "detail": "GlobalAddress found"
+        "passed": false,
+        "detail": "missing GlobalAddress type"
       },
       "valid_python": {
         "passed": true,
@@ -113,7 +149,7 @@
       },
       "input_arity": {
         "passed": true,
-        "detail": "expected>=1 params, found 2"
+        "detail": "expected>=1 params, found 4"
       },
       "output_dtype": {
         "passed": true,
@@ -135,10 +171,17 @@
         "passed": true,
         "detail": "found ['asc2.where']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P4)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P4",
     "name": "opencode-skills-off-agents-md",
@@ -162,6 +205,17 @@
       "skipped": false,
       "tokens_total": 78564,
       "elapsed_s": 386.4
+    },
+    {
+      "date": "2026-05-28T11:18:31Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 35945,
+      "elapsed_s": 240.1
     }
   ]
 }

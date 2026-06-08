@@ -5,17 +5,17 @@
   "dtype": "float16",
   "prompt": "Operator: add (out = x + y, element-wise). Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16.",
   "kernel_path": "",
-  "date": "2026-05-27T08:33:14Z",
+  "date": "2026-06-08T05:25:04Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
+    "timeout_s": 420,
     "completed": true,
     "artifacts_found": []
   },
@@ -23,24 +23,24 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 40309,
-    "output": 4291,
-    "cache_read": 312717,
-    "total": 44600
+    "input": 56099,
+    "output": 3354,
+    "cache_read": 517509,
+    "total": 59453
   },
-  "elapsed_total_s": 205.25,
+  "elapsed_total_s": 284.5,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "minimal",
-      "elapsed_s": 23.01,
+      "elapsed_s": 125.3,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 7179,
-        "output": 309,
-        "cache_read": 25164,
-        "total": 7488,
+        "input": 23948,
+        "output": 1446,
+        "cache_read": 262434,
+        "total": 25394,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -51,32 +51,32 @@
     {
       "n": 2,
       "prompt_label": "minimal",
-      "elapsed_s": 115.97,
+      "elapsed_s": 33.68,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 29839,
-        "output": 2753,
-        "cache_read": 230863,
-        "total": 32592,
+        "input": 9779,
+        "output": 368,
+        "cache_read": 31616,
+        "total": 10147,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
-      "kernel_found": true,
+      "kernel_found": false,
       "static_verify": "fail",
       "runtime_status": "fail"
     },
     {
       "n": 3,
       "prompt_label": "minimal",
-      "elapsed_s": 66.27,
+      "elapsed_s": 125.52,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 3291,
-        "output": 1229,
-        "cache_read": 56690,
-        "total": 4520,
+        "input": 22372,
+        "output": 1540,
+        "cache_read": 223459,
+        "total": 23912,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
@@ -99,10 +99,13 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P2)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P2",
     "name": "opencode-skills-off-minimal",
@@ -115,5 +118,17 @@
       "golden_kernels": false
     }
   },
-  "history": []
+  "history": [
+    {
+      "date": "2026-05-27T08:33:14Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 44600,
+      "elapsed_s": 205.25
+    }
+  ]
 }

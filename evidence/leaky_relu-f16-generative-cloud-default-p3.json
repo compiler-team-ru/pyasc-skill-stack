@@ -5,18 +5,18 @@
   "dtype": "float16",
   "prompt": "Operator: leaky_relu with alpha=0.01; use `asc2.where(x >= 0, x, x * alpha)` as the kernel op. Input shapes: [1, 128], [4, 2048], [32, 4096]. Output shape: same_as_input. Dtype: float16. Layout: contiguous. Axis: null. Tiling: TILE_SIZE divides every shape evenly; partition tile_per_core via asc2.range; use asc2.load/store and asc2.tensor; define alpha as a Python module-level constant; generate test data as rng.random(shape, dtype=np.float32).astype(np.float16). Tail: aligned_only. Accumulator: null. Tolerance: atol=1e-3, rtol=1e-3 against np.where(x >= 0, x, 0.01 * x). Platform: Ascend950PR_9599. Build/run: python3.10 kernel.py -r Model -v Ascend950PR_9599. Evidence: kernel.py (skills-on adds design.md + verification.md).",
   "kernel_path": "kernel.py",
-  "date": "2026-05-28T11:12:15Z",
+  "date": "2026-06-08T07:28:21Z",
   "pyasc_revision": {
-    "url": "https://gitcode.com/compiler-team/pyasc.git",
-    "branch": "(detached)",
-    "sha": "7b85554a2bcc67805f90c30b4e262a6209767839",
+    "url": "",
+    "branch": "",
+    "sha": "",
     "dirty": false,
-    "root": "/home/aloschilov/workspace/pyasc-v2-eval"
+    "root": ""
   },
   "agent": {
     "platform": "opencode",
-    "timeout_s": 240,
-    "completed": false,
+    "timeout_s": 420,
+    "completed": true,
     "artifacts_found": [
       "kernel.py"
     ]
@@ -25,38 +25,74 @@
   "model_profile": "cloud-default",
   "model": "dashscope/glm-5",
   "tokens": {
-    "input": 43801,
-    "output": 2133,
-    "cache_read": 236377,
-    "total": 45934
+    "input": 73626,
+    "output": 4783,
+    "cache_read": 364796,
+    "total": 78409
   },
-  "elapsed_total_s": 240.02,
+  "elapsed_total_s": 343.88,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "guided",
-      "elapsed_s": 240.02,
-      "exit": 124,
-      "outcome": "pass",
+      "elapsed_s": 51.51,
+      "exit": 0,
+      "outcome": "fail",
       "tokens": {
-        "input": 43801,
-        "output": 2133,
-        "cache_read": 236377,
-        "total": 45934,
+        "input": 7075,
+        "output": 791,
+        "cache_read": 18040,
+        "total": 7866,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "fail",
+      "runtime_status": "fail"
+    },
+    {
+      "n": 2,
+      "prompt_label": "guided",
+      "elapsed_s": 112.61,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 22103,
+        "output": 1683,
+        "cache_read": 128778,
+        "total": 23786,
         "cost_usd": 0.0
       },
       "model": "dashscope/glm-5",
       "kernel_found": true,
       "static_verify": "pass",
-      "runtime_status": "pass"
+      "runtime_status": "fail"
+    },
+    {
+      "n": 3,
+      "prompt_label": "guided",
+      "elapsed_s": 179.76,
+      "exit": 0,
+      "outcome": "fail",
+      "tokens": {
+        "input": 44448,
+        "output": 2309,
+        "cache_read": 217978,
+        "total": 46757,
+        "cost_usd": 0.0
+      },
+      "model": "dashscope/glm-5",
+      "kernel_found": true,
+      "static_verify": "pass",
+      "runtime_status": "fail"
     }
   ],
   "verification": {
     "mode": "simulator",
     "backend": "Model",
     "platform": "Ascend950PR_9599",
-    "status": "pass",
-    "detail": "Kernel executed on Model/Ascend950PR_9599, verification passed",
+    "status": "fail",
+    "detail": "Exit code 1: 0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\nements: 128 / 128 (100%)\nMax absolute difference: 0.9808121\nMax relative difference: 0.99001324\n x: array([8.522034e-03, 1.790047e-03, 2.641678e-04, 6.401062e-03,\n       3.656387e-03, 4.673004e-03, 7.987022e-04, 3.705978e-03,\n       6.435394e-03, 3.551483e-03, 8.316040e-03, 7.904053e-03,...\n y: array([0.852051, 0.178955, 0.026413, 0.640137, 0.365479, 0.467285,\n       0.079834, 0.370605, 0.643555, 0.35498 , 0.831055, 0.790527,\n       0.70459 , 0.905273, 0.721191, 0.177368, 0.858398, 0.652832,...\n",
     "shapes_verified": []
   },
   "semantic_check": {
@@ -135,10 +171,17 @@
         "passed": true,
         "detail": "found ['asc2.where']"
       }
+    },
+    "failure_category": null,
+    "gating_detail": {
+      "legacy_api_findings": [],
+      "missing_asc2_import": false,
+      "allow_legacy_apis": false
     }
   },
   "static_verify": "pass",
-  "notes": "",
+  "notes": "Nightly CI run (protocol=P3)",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "protocol": {
     "id": "P3",
     "name": "opencode-skills-off-guided",
@@ -162,6 +205,17 @@
       "skipped": false,
       "tokens_total": 136281,
       "elapsed_s": 395.47
+    },
+    {
+      "date": "2026-05-28T11:12:15Z",
+      "overall_pass": true,
+      "score": 16.0,
+      "static": "pass",
+      "runtime": "pass",
+      "semantic": true,
+      "skipped": false,
+      "tokens_total": 45934,
+      "elapsed_s": 240.02
     }
   ]
 }

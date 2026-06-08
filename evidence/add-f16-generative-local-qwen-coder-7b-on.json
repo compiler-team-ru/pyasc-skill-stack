@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "add",
   "dtype": "float16",
-  "prompt": "Help me develop an add operator that supports float16 data type. The shape is mainly [1,128], [4,2048], [32,4096].",
+  "prompt": "Help me develop an element-wise add operator (out = x + y) on Ascend950PR_9599 (C310) for float16 with shapes [1,128], [4,2048], [32,4096].",
   "kernel_path": "",
-  "date": "2026-05-19T16:45:52Z",
+  "date": "2026-06-08T05:59:35Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-qwen-coder-7b",
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
-    "input": 12288,
-    "output": 401,
+    "input": 12285,
+    "output": 429,
     "cache_read": 0,
-    "total": 12689
+    "total": 12714
   },
-  "elapsed_total_s": 2104.63,
+  "elapsed_total_s": 836.21,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 717.03,
+      "elapsed_s": 269.71,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 212,
+        "input": 4095,
+        "output": 107,
         "cache_read": 0,
-        "total": 4308,
+        "total": 4202,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 685.91,
+      "elapsed_s": 278.78,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 62,
+        "input": 4095,
+        "output": 172,
         "cache_read": 0,
-        "total": 4158,
+        "total": 4267,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 701.69,
+      "elapsed_s": 287.72,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 127,
+        "input": 4095,
+        "output": 150,
         "cache_read": 0,
-        "total": 4223,
+        "total": 4245,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -92,11 +99,13 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26104187949",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "history": [
     {
       "date": "2026-05-16T06:31:44Z",
@@ -130,6 +139,17 @@
       "skipped": false,
       "tokens_total": 12535,
       "elapsed_s": 2056.66
+    },
+    {
+      "date": "2026-05-19T16:45:52Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 12689,
+      "elapsed_s": 2104.63
     }
   ]
 }

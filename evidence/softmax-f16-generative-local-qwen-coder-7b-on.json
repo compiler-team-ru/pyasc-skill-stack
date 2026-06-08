@@ -1,11 +1,18 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "kind": "generative",
   "operation": "softmax",
   "dtype": "float16",
-  "prompt": "Help me develop a softmax operator that supports float16 data type. Test with shape [32, 4096] ONLY. Do not test additional shapes -- the simulator is slow. Apply softmax along the last axis so each row sums to 1. Use atol=5e-2, rtol=5e-2 for verification.",
+  "prompt": "Help me develop a softmax operator on Ascend950PR_9599 (C310) for float16, applied along the last axis on shape [32, 4096] ONLY (full-row regime). Each output row must sum to 1. Long rows that exceed UB and the split_row regime are out of scope for this cell \u2014 see unsupported_regimes.",
   "kernel_path": "",
-  "date": "2026-05-19T20:25:54Z",
+  "date": "2026-06-08T07:24:34Z",
+  "pyasc_revision": {
+    "url": "",
+    "branch": "",
+    "sha": "",
+    "dirty": false,
+    "root": ""
+  },
   "agent": {
     "platform": "opencode",
     "timeout_s": 1200,
@@ -16,24 +23,24 @@
   "model_profile": "local-qwen-coder-7b",
   "model": "ollama/qwen2.5-coder:7b",
   "tokens": {
-    "input": 12288,
-    "output": 770,
+    "input": 12285,
+    "output": 505,
     "cache_read": 0,
-    "total": 13058
+    "total": 12790
   },
-  "elapsed_total_s": 2195.91,
+  "elapsed_total_s": 861.96,
   "attempts": [
     {
       "n": 1,
       "prompt_label": "primary",
-      "elapsed_s": 676.29,
+      "elapsed_s": 289.06,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 20,
+        "input": 4095,
+        "output": 185,
         "cache_read": 0,
-        "total": 4116,
+        "total": 4280,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -44,14 +51,14 @@
     {
       "n": 2,
       "prompt_label": "primary",
-      "elapsed_s": 701.51,
+      "elapsed_s": 278.45,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 141,
+        "input": 4095,
+        "output": 164,
         "cache_read": 0,
-        "total": 4237,
+        "total": 4259,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -62,14 +69,14 @@
     {
       "n": 3,
       "prompt_label": "guided",
-      "elapsed_s": 818.11,
+      "elapsed_s": 294.45,
       "exit": 0,
       "outcome": "fail",
       "tokens": {
-        "input": 4096,
-        "output": 609,
+        "input": 4095,
+        "output": 156,
         "cache_read": 0,
-        "total": 4705,
+        "total": 4251,
         "cost_usd": 0.0
       },
       "model": "ollama/qwen2.5-coder:7b",
@@ -92,11 +99,13 @@
     "value": 0.0,
     "threshold": 12,
     "accepted": false,
-    "checks": {}
+    "checks": {},
+    "failure_category": null,
+    "gating_detail": {}
   },
   "static_verify": "fail",
   "notes": "Local stability run (local-qwen-coder-7b, skills=on)",
-  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/26104187949",
+  "ci_run_url": "https://github.com/aloschilov/pyasc-skill-stack/actions/runs/27116327401",
   "history": [
     {
       "date": "2026-05-16T10:07:51Z",
@@ -130,6 +139,17 @@
       "skipped": false,
       "tokens_total": 12913,
       "elapsed_s": 2155.53
+    },
+    {
+      "date": "2026-05-19T20:25:54Z",
+      "overall_pass": false,
+      "score": 0.0,
+      "static": "fail",
+      "runtime": "fail",
+      "semantic": false,
+      "skipped": false,
+      "tokens_total": 13058,
+      "elapsed_s": 2195.91
     }
   ]
 }
